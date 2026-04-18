@@ -25,28 +25,53 @@ window.loadProject = (projectId) => {
     const list = document.getElementById('runList');
     list.innerHTML = "";
     localRuns = doc.exists() ? doc.data().runs : [];
-    
-    // No more sorting! Just display them in the order they were added.
-    localRuns.forEach((task) => {
-      const li = document.createElement('li');
-      let isDone = task.includes("@done");
-      let cleanDisplay = task.replace(" @done", "");
 
-      const textSpan = document.createElement('span');
-      textSpan.className = "task-text";
-      textSpan.innerText = cleanDisplay; // Just show the text as typed
-      textSpan.onclick = () => window.toggleByText(task);
-      
-      if (isDone) li.classList.add('done');
+    // 1. Group the runs
+    const groups = {};
+    localRuns.forEach(run => {
+      // Look for @w1, @week1, or @week(1)
+      const weekMatch = run.match(/@w(?:eek)?\(?(\d+)\)?/i);
+      const weekLabel = weekMatch ? `WEEK ${weekMatch[1]}` : "CURRENT";
+      if (!groups[weekLabel]) groups[weekLabel] = [];
+      groups[weekLabel].push(run);
+    });
 
-      const delBtn = document.createElement('button');
-      delBtn.innerHTML = "✕";
-      delBtn.className = "delete-btn";
-      delBtn.onclick = (e) => { e.stopPropagation(); window.deleteByText(task); };
+    // 2. Sort the week headers
+    const sortedWeeks = Object.keys(groups).sort((a, b) => {
+      if (a === "CURRENT") return -1;
+      return parseInt(a.replace("WEEK ", "")) - parseInt(b.replace("WEEK ", ""));
+    });
 
-      li.appendChild(textSpan);
-      li.appendChild(delBtn);
-      list.appendChild(li);
+    // 3. Render
+    sortedWeeks.forEach(week => {
+      // Add Header
+      const header = document.createElement('li');
+      header.className = "week-header";
+      header.innerHTML = `<span>${week}</span>`;
+      list.appendChild(header);
+
+      groups[week].forEach(task => {
+        const li = document.createElement('li');
+        let isDone = task.includes("@done");
+        // Remove tags for display
+        let cleanText = task.replace(/@w(?:eek)?\(?(\d+)\)?/i, "").replace("@done", "").trim();
+
+        const textSpan = document.createElement('span');
+        textSpan.className = "task-text";
+        textSpan.innerText = cleanText;
+        textSpan.onclick = () => window.toggleByText(task);
+        
+        if (isDone) li.classList.add('done');
+
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = "✕";
+        delBtn.className = "delete-btn";
+        delBtn.onclick = (e) => { e.stopPropagation(); window.deleteByText(task); };
+
+        li.appendChild(textSpan);
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
     });
   });
 };
@@ -56,7 +81,6 @@ window.switchProject = (val) => { currentProject = val; window.loadProject(val);
 window.addRun = async () => {
   const input = document.getElementById('runInput');
   if (!input.value) return;
-  // Splits by line for bulk pasting, adds new ones to the END of the list
   const newEntries = input.value.split('\n').filter(line => line.trim() !== "");
   const updatedRuns = [...localRuns, ...newEntries];
   await setDoc(doc(db, "plans", currentProject), { runs: updatedRuns });
