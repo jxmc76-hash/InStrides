@@ -17,11 +17,9 @@ let currentProject = "fast-5k";
 let unsubscribe = null;
 let localRuns = [];
 
-// A list of emojis to rotate through so every project has a unique favicon
 const icons = ["🏃‍♂️", "⚡️", "👟", "🏔️", "🔥", "🏅", "💨", "🔋"];
 
 const updateFavicon = (projectId) => {
-    // Generate a unique index based on the name length
     const icon = icons[projectId.length % icons.length];
     const favicon = document.getElementById('favicon');
     favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${icon}</text></svg>`;
@@ -36,8 +34,6 @@ window.syncDropdown = async () => {
   querySnapshot.forEach((doc) => {
     const data = doc.data();
     const isArchived = data.archived || false;
-    
-    // Only show archived if the checkbox is ticked
     if (showArchived || !isArchived) {
         const display = doc.id.replace(/-/g, ' ').toUpperCase();
         optionsHtml += `<option value="${doc.id}">${isArchived ? '📁 ' : '🏃‍♂️ '}${display}</option>`;
@@ -72,6 +68,7 @@ window.loadProject = (projectId) => {
 
     Object.keys(groups).sort((a,b) => {
         if(a === "CURRENT") return -1;
+        if(b === "CURRENT") return 1;
         return parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,''));
     }).forEach(week => {
       const section = document.createElement('div');
@@ -97,7 +94,6 @@ window.archiveCurrentProject = async () => {
     const currentlyArchived = btn.innerText === "Unarchive";
     await updateDoc(docRef, { archived: !currentlyArchived });
     await window.syncDropdown();
-    // If we archived it and "Show Archived" is off, switch to a default plan
     if (!currentlyArchived && !document.getElementById('showArchived').checked) {
         currentProject = "fast-5k";
         window.loadProject(currentProject);
