@@ -18,18 +18,20 @@ let unsubscribe = null;
 let localRuns = [];
 
 const syncDropdown = async () => {
-  const querySnapshot = await getDocs(collection(db, "plans"));
-  const select = document.getElementById('projectSelect');
-  const addNewOpt = select.querySelector('option[value="ADD_NEW"]');
-  select.innerHTML = "";
-  querySnapshot.forEach((doc) => {
-    const opt = document.createElement('option');
-    opt.value = doc.id;
-    opt.innerHTML = `🏃‍♂️ ${doc.id.replace(/-/g, ' ').toUpperCase()}`;
-    select.appendChild(opt);
-  });
-  if (addNewOpt) select.appendChild(addNewOpt);
-  select.value = currentProject;
+  try {
+    const querySnapshot = await getDocs(collection(db, "plans"));
+    const select = document.getElementById('projectSelect');
+    const addNewOpt = `<option value="ADD_NEW">+ Add New Plan...</option>`;
+    
+    let optionsHtml = "";
+    querySnapshot.forEach((doc) => {
+      const display = doc.id.replace(/-/g, ' ').toUpperCase();
+      optionsHtml += `<option value="${doc.id}">🏃‍♂️ ${display}</option>`;
+    });
+    
+    select.innerHTML = optionsHtml + addNewOpt;
+    select.value = currentProject;
+  } catch (e) { console.error("Sync Error:", e); }
 };
 
 window.loadProject = (projectId) => {
@@ -61,20 +63,13 @@ window.loadProject = (projectId) => {
       groups[week].forEach((item) => {
         const li = document.createElement('li');
         if (item.text.includes("@done")) li.classList.add('done');
-        
         const dateMatch = item.text.match(/@date\((.*?)\)/i);
-        const completionDate = dateMatch ? dateMatch[1] : "";
-
-        let cleanText = item.text
-            .replace(/@w(?:eek)?\s?\(?(\d+)\)?/gi, "")
-            .replace(/@date\(.*?\)/gi, "")
-            .replace(/@done/gi, "")
-            .trim();
+        const cleanText = item.text.replace(/@w(?:eek)?\s?\(?(\d+)\)?/gi, "").replace(/@date\(.*?\)/gi, "").replace(/@done/gi, "").trim();
         
         li.innerHTML = `
           <div class="task-info" onclick="window.toggleByIndex(${item.originalIndex})">
             <span class="task-text">${cleanText}</span>
-            ${completionDate ? `<span class="completion-date">COMPLETED: ${completionDate}</span>` : ""}
+            ${dateMatch ? `<span class="completion-date">COMPLETED: ${dateMatch[1]}</span>` : ""}
           </div>
           <button class="delete-btn" onclick="window.deleteByIndex(${item.originalIndex})">✕</button>
         `;
@@ -125,11 +120,15 @@ window.handleProjectChange = async (val) => {
 
 window.addRun = async () => {
   const input = document.getElementById('runInput');
-  if (!input.value) return;
-  const updatedRuns = [...localRuns, input.value];
+  const val = input.value.trim();
+  if (!val) return;
+  const updatedRuns = [...localRuns, val];
+  input.value = ""; // Clear immediately for better feel
   await setDoc(doc(db, "plans", currentProject), { runs: updatedRuns });
-  input.value = "";
 };
 
-syncDropdown();
-window.loadProject(currentProject);
+// Start Up
+(async () => {
+  await syncDropdown();
+  window.loadProject(currentProject);
+})();
