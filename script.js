@@ -31,9 +31,13 @@ window.syncDropdown = async () => {
   const showArchived = document.getElementById('showArchived').checked;
   
   let optionsHtml = "";
+  let firstAvailable = null;
+
   querySnapshot.forEach((doc) => {
     const data = doc.data();
     const isArchived = data.archived || false;
+    if (!firstAvailable && !isArchived) firstAvailable = doc.id;
+
     if (showArchived || !isArchived) {
         const display = doc.id.replace(/-/g, ' ').toUpperCase();
         optionsHtml += `<option value="${doc.id}">${isArchived ? '📁 ' : '🏃‍♂️ '}${display}</option>`;
@@ -41,6 +45,11 @@ window.syncDropdown = async () => {
   });
   
   select.innerHTML = optionsHtml + `<option value="ADD_NEW">+ Add New Plan...</option>`;
+  
+  // If current project was just archived and is now hidden, switch to a visible one
+  if (!showArchived && optionsHtml.indexOf(currentProject) === -1) {
+      currentProject = firstAvailable || "fast-5k";
+  }
   select.value = currentProject;
 };
 
@@ -49,13 +58,14 @@ window.loadProject = (projectId) => {
   updateFavicon(projectId);
   const docRef = doc(db, "plans", projectId);
   
-  unsubscribe = onSnapshot(docRef, (doc) => {
+  unsubscribe = onSnapshot(docRef, (docSnap) => {
     const listContainer = document.getElementById('runList');
     listContainer.innerHTML = "";
-    if (!doc.exists()) return;
+    if (!docSnap.exists()) return;
     
-    localRuns = doc.data().runs || [];
-    const isArchived = doc.data().archived || false;
+    const data = docSnap.data();
+    localRuns = data.runs || [];
+    const isArchived = data.archived || false;
     document.getElementById('archiveBtn').innerText = isArchived ? "Unarchive" : "Archive";
 
     const groups = {};
@@ -89,14 +99,14 @@ window.loadProject = (projectId) => {
 };
 
 window.archiveCurrentProject = async () => {
-    const docRef = doc(db, "plans", currentProject);
-    const btn = document.getElementById('archiveBtn');
-    const currentlyArchived = btn.innerText === "Unarchive";
-    await updateDoc(docRef, { archived: !currentlyArchived });
-    await window.syncDropdown();
-    if (!currentlyArchived && !document.getElementById('showArchived').checked) {
-        currentProject = "fast-5k";
+    try {
+        const docRef = doc(db, "plans", currentProject);
+        const isArchived = document.getElementById('archiveBtn').innerText === "Unarchive";
+        await updateDoc(docRef, { archived: !isArchived });
+        await window.syncDropdown();
         window.loadProject(currentProject);
+    } catch (err) {
+        console.error("Archive error:", err);
     }
 };
 
@@ -126,6 +136,8 @@ window.handleProjectChange = async (val) => {
       currentProject = id;
       await window.syncDropdown();
       window.loadProject(id);
+    } else {
+      document.getElementById('projectSelect').value = currentProject;
     }
   } else {
     currentProject = val;
