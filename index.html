@@ -28,7 +28,7 @@
         <!-- App Header -->
         <header class="top-bar">
             <div class="logo-container">
-                <img src="logo.png" alt="In Strides Logo" class="app-logo">
+                <img src="logo.png" alt="Logo" class="app-logo">
             </div>
             <h1>In Strides</h1>
         </header>
@@ -46,7 +46,7 @@
                 <option value="">Loading plans...</option>
             </select>
             
-            <!-- This section only displays if window.isAdmin() is true -->
+            <!-- Management UI (Hidden by default) -->
             <div id="admin-ui" style="display: none;">
                 <div class="action-bar">
                     <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
@@ -73,16 +73,14 @@
         <div id="runList"></div>
 
         <footer class="site-footer">
-            <p>© 2026 In Strides. Keep moving.</p>
+            <p>© 2026 In Strides.</p>
         </footer>
     </div>
 
     <!-- Floating Lock Toggle -->
-    <button class="lock-toggle" onclick="window.openLogin()" id="lockBtn" title="Admin Login">🔒</button>
+    <button class="lock-toggle" onclick="window.openLogin()" id="lockBtn">🔒</button>
 
-    <!-- App Logic -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
 
