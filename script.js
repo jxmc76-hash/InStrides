@@ -33,7 +33,6 @@ window.syncDropdown = async () => {
     const data = doc.data();
     const isArchived = data.archived || false;
     if (!firstAvailable && !isArchived) firstAvailable = doc.id;
-
     if (showArchived || !isArchived) {
         const display = toTitleCase(doc.id);
         optionsHtml += `<option value="${doc.id}">${isArchived ? '📁 ' : '🏃‍♂️ '}${display}</option>`;
@@ -41,7 +40,9 @@ window.syncDropdown = async () => {
   });
   
   select.innerHTML = optionsHtml + `<option value="ADD_NEW">+ Add new plan...</option>`;
-  if (!showArchived && optionsHtml.indexOf(currentProject) === -1) {
+  
+  const currentExists = querySnapshot.docs.some(d => d.id === currentProject);
+  if (!currentExists) {
       currentProject = firstAvailable || "fast-5k";
   }
   select.value = currentProject;
@@ -59,8 +60,7 @@ window.loadProject = (projectId) => {
     
     const data = docSnap.data();
     localRuns = data.runs || [];
-    const isArchived = data.archived || false;
-    document.getElementById('archiveBtn').innerText = isArchived ? "Unarchive" : "Archive";
+    document.getElementById('archiveBtn').innerText = data.archived ? "Unarchive" : "Archive";
 
     const groups = {};
     localRuns.forEach((run, index) => {
@@ -94,29 +94,42 @@ window.loadProject = (projectId) => {
 
 window.archiveCurrentProject = async () => {
     const docRef = doc(db, "plans", currentProject);
-    const isArchived = document.getElementById('archiveBtn').innerText === "Unarchive";
-    await updateDoc(docRef, { archived: !isArchived });
-    await window.syncDropdown();
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+        await updateDoc(docRef, { archived: !snap.data().archived });
+        await window.syncDropdown();
+    }
+};
+
+window.deleteCurrentProject = async () => {
+    const name = toTitleCase(currentProject);
+    const confirmed = confirm(`Are you sure you want to delete "${name}"?`);
+    if (confirmed) {
+        const doubleCheck = confirm(`Last chance! Truly delete all data for "${name}"?`);
+        if (doubleCheck) {
+            await deleteDoc(doc(db, "plans", currentProject));
+            await window.syncDropdown();
+            window.loadProject(currentProject);
+        }
+    }
 };
 
 window.restartProject = async () => {
-    if (!confirm("This will create a new copy of this plan with all runs unticked. Continue?")) return;
+    if (!confirm("Copy this plan and reset all runs?")) return;
     try {
-        const docRef = doc(db, "plans", currentProject);
-        const docSnap = await getDoc(docRef);
+        const docSnap = await getDoc(doc(db, "plans", currentProject));
         if (!docSnap.exists()) return;
         const newRuns = (docSnap.data().runs || []).map(run => run.replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim());
-        const newId = `${currentProject}-copy-${Math.floor(Math.random() * 999)}`;
+        const newId = `${currentProject}-copy-${Date.now().toString().slice(-4)}`;
         await setDoc(doc(db, "plans", newId), { runs: newRuns, archived: false });
         await window.syncDropdown();
         window.loadProject(newId);
-    } catch (e) { alert("Restart failed."); }
+    } catch (e) { alert("Error restarting."); }
 };
 
 window.renameProject = async () => {
-    const currentDisplay = toTitleCase(currentProject);
-    const newName = prompt("Enter new name for this plan:", currentDisplay);
-    if (!newName || newName === currentDisplay) return;
+    const newName = prompt("New plan name:", toTitleCase(currentProject));
+    if (!newName) return;
     try {
         const newId = newName.toLowerCase().replace(/\s+/g, '-');
         const oldRef = doc(db, "plans", currentProject);
@@ -127,7 +140,7 @@ window.renameProject = async () => {
             await window.syncDropdown();
             window.loadProject(newId);
         }
-    } catch (e) { alert("Rename failed."); }
+    } catch (e) { alert("Error renaming."); }
 };
 
 window.toggleByIndex = async (index) => {
@@ -168,4 +181,3 @@ window.addRun = async () => {
 };
 
 (async () => { await window.syncDropdown(); window.loadProject(currentProject); })();
-
