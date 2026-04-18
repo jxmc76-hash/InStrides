@@ -9,13 +9,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="In Strides">
     
-    <!-- Initial Favicon -->
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃‍♂️</text></svg>">
     
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
     <div class="app">
+        <!-- New App Title Section -->
+        <div class="top-bar">
+            <div class="app-icon-placeholder">
+                <!-- Icon will go here later -->
+                <span>🏃‍♂️</span>
+            </div>
+            <h1>IN STRIDES</h1>
+        </div>
+
         <div class="project-header">
             <div class="header-row">
                 <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
@@ -24,7 +32,10 @@
                 <button id="archiveBtn" onclick="window.archiveCurrentProject()">Archive</button>
             </div>
             <div class="archive-toggle">
-                <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show Archived Plans</label>
+                <label>
+                    <input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> 
+                    Show Archived Plans
+                </label>
             </div>
         </div>
 
