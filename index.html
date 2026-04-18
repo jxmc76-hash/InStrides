@@ -1,44 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=20">
-</head>
-<body>
-    <div class="app">
-        <div class="top-bar">
-            <div class="logo-container">
-                <img src="logo.png" alt="" class="app-logo">
-            </div>
-            <h1>In Strides</h1>
-        </div>
-
-        <div class="project-header">
-            <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
-                <option value="">Loading...</option>
-            </select>
-            
-            <div class="action-bar">
-                <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
-                <button class="action-btn" onclick="window.restartProject()">Restart</button>
-                <button class="action-btn" onclick="window.renameProject()">Rename</button>
-                <button class="action-btn delete-plan-btn" onclick="window.deleteCurrentProject()">Delete</button>
-            </div>
-
-            <div class="archive-toggle">
-                <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show archived plans</label>
-            </div>
-        </div>
-
-        <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
-            <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1" autocomplete="off">
-            <button type="submit" id="addBtn">Add</button>
-        </form>
-
-        <div id="runList"></div>
+<div class="top-bar">
+    <div class="logo-container">
+        <img src="logo.png" alt="" class="app-logo">
     </div>
-    <script type="module" src="script.js"></script>
-</body>
-</html>
+    <h1>In Strides</h1>
+</div>
+
+<!-- INSERT THIS HERE -->
+<div id="strava-feed" class="strava-card">
+    <div class="strava-header">
+        <span class="strava-title">LATEST ACTIVITY</span>
+    </div>
+    <div id="strava-content" class="strava-loading">
+        Loading Strava activity...
+    </div>
+</div>
+
+<div class="project-header">
+    <select id="projectSelect" ...>
