@@ -71,7 +71,7 @@ body {
     border: 1px solid rgba(211, 84, 0, 0.15);
     border-radius: 24px;
     padding: 24px;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     transition: all 0.2s ease;
 }
 
@@ -106,11 +106,32 @@ body {
   display: block;
 }
 
-/* Management UI Styling */
-#admin-ui {
-    margin-top: 20px;
+/* Project Selector (Full Width) */
+#projectSelect {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  appearance: none; /* Removes default browser arrow */
+  color: var(--text-main);
+  /* Custom Orange Arrow SVG */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23D35400' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px;
 }
 
+#projectSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Management UI Styling (Hidden until Admin Login) */
 .action-bar { 
   display: grid; 
   grid-template-columns: repeat(4, 1fr); 
@@ -128,11 +149,6 @@ body {
   font-weight: 700; 
   text-transform: uppercase; 
   cursor: pointer; 
-}
-
-.action-btn:hover {
-    border-color: var(--primary);
-    color: var(--primary);
 }
 
 .input-group { 
@@ -167,13 +183,13 @@ input[type="text"] {
 .archive-toggle {
     font-size: 13px;
     color: var(--text-dim);
-    margin-top: 10px;
+    margin: 10px 0 20px 0;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-/* Login/Lock Screens */
+/* Login Screen Overlay */
 .login-screen {
     position: fixed; 
     top: 0; left: 0; width: 100%; height: 100%;
@@ -223,8 +239,10 @@ input[type="text"] {
   background: transparent !important; 
   color: var(--text-dim) !important; 
   margin-top: 10px; 
+  border: none;
 }
 
+/* Floating Lock Toggle Button */
 .lock-toggle { 
   position: fixed; 
   bottom: 25px; 
@@ -240,9 +258,10 @@ input[type="text"] {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 100;
 }
 
-/* Training List & Strike-through */
+/* Training List & Strike-through Logic */
 .week-heading h3 { 
   font-size: 13px; 
   text-transform: uppercase; 
@@ -269,7 +288,6 @@ li.done {
   opacity: 0.7; 
 }
 
-/* STRIKE THROUGH LOGIC */
 li.done .task-text { 
   text-decoration: line-through; 
   color: var(--text-dim); 
@@ -308,3 +326,4 @@ li.done .task-text {
   font-size: 12px; 
   color: var(--text-dim); 
 }
+
