@@ -4,38 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <title>In Strides</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Passkey Overlay -->
+
+    <!-- Admin Passkey Overlay -->
     <div id="login-overlay" class="login-screen">
         <div class="login-box">
             <h2>Admin Access</h2>
-            <p>Enter PIN to manage plans</p>
-            <input type="password" id="pinInput" placeholder="••••">
+            <p>Enter PIN to manage training plans</p>
+            <input type="password" id="pinInput" placeholder="••••" maxlength="4">
             <button onclick="window.checkPin()">Unlock Editing</button>
             <button class="ghost-btn" onclick="window.closeLogin()">Cancel</button>
         </div>
     </div>
 
     <div class="app">
+        <!-- App Header -->
         <header class="top-bar">
             <div class="logo-container">
-                <img src="logo.png" alt="Logo" class="app-logo">
+                <img src="logo.png" alt="In Strides Logo" class="app-logo">
             </div>
             <h1>In Strides</h1>
         </header>
 
+        <!-- Strava Activity Card -->
         <div id="strava-feed" class="strava-card">
-            <div id="strava-content" class="strava-loading">Fetching Strava data...</div>
+            <div id="strava-content" class="strava-loading">
+                Fetching Strava data...
+            </div>
         </div>
 
+        <!-- Project & Admin Controls -->
         <div class="project-header">
             <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
                 <option value="">Loading plans...</option>
             </select>
             
-            <!-- Management UI (Hidden by default) -->
+            <!-- This section only displays if window.isAdmin() is true -->
             <div id="admin-ui" style="display: none;">
                 <div class="action-bar">
                     <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
@@ -45,7 +56,10 @@
                 </div>
 
                 <div class="archive-toggle">
-                    <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show archived plans</label>
+                    <label>
+                        <input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> 
+                        Show archived plans
+                    </label>
                 </div>
 
                 <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
@@ -55,17 +69,20 @@
             </div>
         </div>
 
+        <!-- Training Plan List -->
         <div id="runList"></div>
 
         <footer class="site-footer">
-            <p>© 2026 In Strides.</p>
+            <p>© 2026 In Strides. Keep moving.</p>
         </footer>
     </div>
 
     <!-- Floating Lock Toggle -->
-    <button class="lock-toggle" onclick="window.openLogin()" id="lockBtn">🔒</button>
+    <button class="lock-toggle" onclick="window.openLogin()" id="lockBtn" title="Admin Login">🔒</button>
 
+    <!-- App Logic -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
 
