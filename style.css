@@ -263,6 +263,12 @@ li.done {
   opacity: 0.8;
 }
 
+/* Strike-through logic */
+li.done .task-text { 
+  text-decoration: line-through; 
+  color: var(--text-dim);
+}
+
 .task-info { 
   flex: 1; 
   cursor: pointer; 
