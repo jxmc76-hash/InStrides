@@ -1,20 +1,20 @@
-/* style.css - Clean White & Leg-Orange Theme */
+/* style.css - Clean White & Dark Orange Theme */
 
 :root {
-  --bg: #FFFFFF; /* Pure White Background */
-  --card: #F9FAFB; /* Subtly grey card background for definition */
-  --primary: #FF6600; /* Vibrant Leg-Orange accent text */
-  --secondary: #E0E7FF; /* Light indigo/grey for interaction backgrounds */
-  --text-main: #1C1C1E; /* Deep Charcoal for readability */
-  --text-dim: #8E8E93; /* Subtle Grey for supplementary text */
-  --danger: #FF3B30; /* Red for destructive actions */
-  --border: rgba(224, 231, 255, 0.4); /* Very light, clean border */
-  --accent: #E0E7FF; /* Accent color for active interaction highlights */
+  --bg: #FFFFFF;
+  --card: #F9FAFB;
+  --primary: #D35400; /* Darker, Burnt Orange */
+  --primary-hover: #A04000; /* Even darker shade for button interactions */
+  --text-main: #1C1C1E;
+  --text-dim: #8E8E93;
+  --danger: #C0392B;
+  --accent: rgba(211, 84, 0, 0.1); /* Subtle orange tint for highlights */
+  --border: #E5E7EB;
 }
 
 * { 
   box-sizing: border-box; 
-  -webkit-tap-highlight-color: transparent; /* Clean mobile interaction */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body { 
@@ -24,117 +24,85 @@ body {
   margin: 0;
   display: flex;
   justify-content: center;
-  -webkit-text-size-adjust: 100%;
 }
 
-.app { width: 100%; max-width: 500px; padding: env(safe-area-inset-top) 16px 100px 16px; }
+.app { width: 100%; max-width: 500px; padding: 40px 16px 100px 16px; }
 
 /* Header & Logo */
-.top-bar { display: flex; align-items: center; gap: 14px; padding: 40px 0 20px 0; }
-.logo-container { width: 52px; height: 52px; position: relative; flex-shrink: 0; }
+.top-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 25px; }
 
 .app-logo { 
   width: 52px; height: 52px; 
   border-radius: 12px; 
+  background-color: var(--primary); /* Matches the new darker orange background of your logo */
   object-fit: cover;
-  display: block;
-}
-
-/* Fallback keeps orange theme if image is missing */
-.app-icon-fallback { 
-  width: 52px; height: 52px; background: var(--card); border-radius: 12px; 
-  display: flex; align-items: center; justify-content: center; font-size: 24px; 
-  border: 1px solid var(--primary); color: var(--primary);
 }
 
 .top-bar h1 { 
   font-size: 28px; font-weight: 800; letter-spacing: -0.04em; margin: 0; 
-  color: var(--text-main); /* Deep charcoal for the main title */
 }
 
-/* Dropdown & Project Buttons */
-.project-header { padding: 10px 0 15px 0; }
-#projectSelect {
-  width: 100%;
-  background: var(--card);
-  border: 1px solid #D1D5DB; /* Defined, subtle border for dropdown */
-  padding: 14px;
-  border-radius: 14px;
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text-main);
-  outline: none;
-  appearance: none; /* Modern, clean look on mobile */
-  margin-bottom: 12px;
-}
-
-#projectSelect:focus {
-  border-color: var(--primary); /* Glow with orange on interaction */
-  box-shadow: 0 0 8px rgba(255, 102, 0, 0.2);
-}
-
-.action-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+/* Action Buttons */
 .action-btn {
     background: transparent;
-    color: var(--primary); /* Keep interactive text orange */
-    border: 1px solid var(--primary); /* Defined border for buttons */
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
     padding: 10px 2px;
     border-radius: 10px;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
     cursor: pointer;
+    transition: all 0.2s ease;
 }
-.action-btn:active { background: var(--accent); } /* Subtle background change on press */
-.delete-plan-btn { color: var(--danger); border-color: rgba(255, 77, 77, 0.2); }
 
-.archive-toggle { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
-
-/* Input Group & Run Addition */
-.input-group { 
-  display: flex; gap: 10px; margin: 20px 0 30px 0; background: var(--card); 
-  padding: 8px; border-radius: 18px; border: 1px solid #D1D5DB; /* Subtle input border */
+.action-btn:hover {
+    background: var(--accent);
 }
-input[type="text"] { 
-  flex: 1; padding: 12px; border: none; font-size: 17px; outline: none; 
-  background: transparent; color: var(--text-main); 
-}
-input::placeholder { color: var(--text-dim); }
 
+/* Add Button */
 #addBtn { 
-  background: var(--primary); /* Vibrant Orange for the Add button */
-  color: #FFFFFF; /* White text on orange button */
+  background: var(--primary);
+  color: #FFFFFF;
   border: none; 
-  padding: 10px 22px; border-radius: 12px; font-weight: 800; 
+  padding: 12px 24px; border-radius: 12px; font-weight: 800; 
   cursor: pointer;
+  transition: background 0.2s;
 }
 
-/* Run List Items */
-/* Headings use orange accent text for focus */
-.week-heading h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--primary); opacity: 0.9; margin: 25px 0 10px 5px; }
+#addBtn:hover {
+  background: var(--primary-hover);
+}
 
-ul { list-style: none; padding: 0; }
+/* List Items */
+.week-heading h3 { 
+  font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; 
+  color: var(--primary); margin: 30px 0 10px 5px; 
+}
+
 li { 
   background: var(--card); padding: 20px; display: flex; align-items: center; 
-  border-bottom: 1px solid #D1D5DB; border-left: 3px solid transparent;
-  transition: all 0.2s;
+  border-bottom: 1px solid var(--border);
+  border-left: 4px solid transparent;
+  transition: border-color 0.3s;
 }
-li:first-child { border-top-left-radius: 18px; border-top-right-radius: 18px; }
-li:last-child { border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; border-bottom: none; }
 
-/* Interactive selected state - uses the leg orange color */
-li.done { border-left-color: var(--primary); opacity: 0.6; }
-li.done .task-text { text-decoration: line-through; color: var(--text-dim); }
+li.done { 
+  border-left-color: var(--primary); /* The darker orange marks completed runs */
+}
 
-.task-info { flex: 1; cursor: pointer; min-width: 0; }
-.task-text { font-size: 18px; font-weight: 500; display: block; overflow-wrap: break-word; }
+.completion-date { 
+  font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 4px; display: block; 
+}
 
-/* Dates now have that digital accent color */
-.completion-date { font-size: 11px; color: var(--primary); margin-top: 6px; display: block; font-family: monospace; }
+/* Inputs */
+#projectSelect, .input-group {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+}
 
-.delete-btn { 
-  background: rgba(255, 77, 77, 0.1); color: var(--danger); border: none; 
-  width: 34px; height: 34px; border-radius: 50%; font-weight: bold; cursor: pointer; margin-left: 10px;
+#projectSelect:focus, .input-group:focus-within {
+  border-color: var(--primary);
+  outline: none;
 }
 
