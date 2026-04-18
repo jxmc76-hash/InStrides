@@ -22,54 +22,37 @@ window.loadProject = (projectId) => {
   const docRef = doc(db, "plans", projectId);
   
   unsubscribe = onSnapshot(docRef, (doc) => {
-    const list = document.getElementById('runList');
-    list.innerHTML = "";
+    const listContainer = document.getElementById('runList');
+    listContainer.innerHTML = "";
     localRuns = doc.exists() ? doc.data().runs : [];
 
-    // Grouping Logic
     const groups = {};
     localRuns.forEach(run => {
       const weekMatch = run.match(/@w(?:eek)?\s?\(?(\d+)\)?/i);
-      const weekLabel = weekMatch ? `WEEK ${weekMatch[1]}` : "GENERAL";
-      if (!groups[weekLabel]) groups[weekLabel] = [];
-      groups[weekLabel].push(run);
+      const label = weekMatch ? `WEEK ${weekMatch[1]}` : "CURRENT";
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(run);
     });
 
-    // Sort and Display
-    const sortedWeeks = Object.keys(groups).sort((a, b) => {
-      if (a === "GENERAL") return -1;
-      return parseInt(a.replace("WEEK ", "")) - parseInt(b.replace("WEEK ", ""));
-    });
-
-    sortedWeeks.forEach(week => {
-      // Create Heading
-      const header = document.createElement('div');
-      header.className = "week-heading";
-      header.innerHTML = `<h3>${week}</h3>`;
-      list.appendChild(header);
+    Object.keys(groups).sort().forEach(week => {
+      const section = document.createElement('div');
+      section.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
+      const ul = document.createElement('ul');
 
       groups[week].forEach(task => {
         const li = document.createElement('li');
-        let isDone = task.includes("@done");
-        // Remove tags for a clean display
-        let cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace("@done", "").trim();
-
-        const textSpan = document.createElement('span');
-        textSpan.className = "task-text";
-        textSpan.innerText = cleanText;
-        textSpan.onclick = () => window.toggleByText(task);
+        if (task.includes("@done")) li.className = "done";
         
-        if (isDone) li.classList.add('done');
-
-        const delBtn = document.createElement('button');
-        delBtn.innerHTML = "✕";
-        delBtn.className = "delete-btn";
-        delBtn.onclick = (e) => { e.stopPropagation(); window.deleteByText(task); };
-
-        li.appendChild(textSpan);
-        li.appendChild(delBtn);
-        list.appendChild(li);
+        const cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace("@done", "").trim();
+        
+        li.innerHTML = `
+          <span class="task-text" onclick="window.toggleByText('${task.replace(/'/g, "\\'")}')">${cleanText}</span>
+          <button class="delete-btn" onclick="window.deleteByText('${task.replace(/'/g, "\\'")}')">✕</button>
+        `;
+        ul.appendChild(li);
       });
+      section.appendChild(ul);
+      listContainer.appendChild(section);
     });
   });
 };
@@ -79,29 +62,21 @@ window.switchProject = (val) => { currentProject = val; window.loadProject(val);
 window.addRun = async () => {
   const input = document.getElementById('runInput');
   if (!input.value) return;
-  const newEntries = input.value.split('\n').filter(line => line.trim() !== "");
-  const updatedRuns = [...localRuns, ...newEntries];
+  const updatedRuns = [...localRuns, input.value];
   await setDoc(doc(db, "plans", currentProject), { runs: updatedRuns });
   input.value = "";
 };
 
 window.toggleByText = async (originalText) => {
-  let runs = [...localRuns];
-  const idx = runs.indexOf(originalText);
-  if (idx > -1) {
-    runs[idx] = runs[idx].includes("@done") ? runs[idx].replace(" @done", "") : runs[idx] + " @done";
-    await setDoc(doc(db, "plans", currentProject), { runs: runs });
-  }
+  const runs = localRuns.map(r => r === originalText ? (r.includes("@done") ? r.replace(" @done", "") : r + " @done") : r);
+  await setDoc(doc(db, "plans", currentProject), { runs });
 };
 
 window.deleteByText = async (originalText) => {
-  let runs = [...localRuns];
-  const idx = runs.indexOf(originalText);
-  if (idx > -1) {
-    runs.splice(idx, 1);
-    await setDoc(doc(db, "plans", currentProject), { runs: runs });
-  }
+  const runs = localRuns.filter(r => r !== originalText);
+  await setDoc(doc(db, "plans", currentProject), { runs });
 };
 
 window.loadProject(currentProject);
+
 
