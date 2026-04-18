@@ -42,7 +42,6 @@ window.loadProject = (projectId) => {
       groups[week].forEach(task => {
         const li = document.createElement('li');
         if (task.includes("@done")) li.className = "done";
-        
         const cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace("@done", "").trim();
         
         li.innerHTML = `
@@ -57,7 +56,32 @@ window.loadProject = (projectId) => {
   });
 };
 
-window.switchProject = (val) => { currentProject = val; window.loadProject(val); };
+// NEW: Handles the "Add New" Logic
+window.handleProjectChange = async (val) => {
+  if (val === "ADD_NEW") {
+    const newName = prompt("Enter a name for your new training plan:");
+    if (newName) {
+      const newID = newName.toLowerCase().replace(/\s+/g, '-');
+      // Create a new option in the dropdown
+      const select = document.getElementById('projectSelect');
+      const opt = document.createElement('option');
+      opt.value = newID;
+      opt.innerHTML = `🏃‍♂️ ${newName}`;
+      select.insertBefore(opt, select.lastElementChild);
+      
+      // Select it and load it
+      select.value = newID;
+      currentProject = newID;
+      window.loadProject(newID);
+    } else {
+      // Reset dropdown if they hit cancel
+      document.getElementById('projectSelect').value = currentProject;
+    }
+  } else {
+    currentProject = val;
+    window.loadProject(val);
+  }
+};
 
 window.addRun = async () => {
   const input = document.getElementById('runInput');
@@ -78,5 +102,3 @@ window.deleteByText = async (originalText) => {
 };
 
 window.loadProject(currentProject);
-
-
