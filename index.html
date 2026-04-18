@@ -10,15 +10,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="In Strides">
     
-    <!-- App Icon -->
+    <!-- App Icon (Running Shoe) -->
     <link rel="apple-touch-icon" href="https://img.icons8.com/sf-black-filled/128/007AFF/running.png">
     
-    <!-- CSS Link -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app">
-        <!-- Header Section -->
         <div class="project-header">
             <select id="projectSelect" onchange="window.switchProject(this.value)">
                 <option value="fast-5k">⚡️ Fast 5K</option>
@@ -27,17 +25,14 @@
             </select>
         </div>
 
-        <!-- Input Section -->
         <div class="input-group">
             <input type="text" id="runInput" placeholder="Ex: 5k Intervals @w1" autocomplete="off">
             <button id="addBtn" onclick="window.addRun()">Add</button>
         </div>
 
-        <!-- The List (Grouped by JS) -->
         <div id="runList"></div>
     </div>
 
-    <!-- Firebase & Logic -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
