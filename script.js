@@ -46,7 +46,6 @@ window.loadProject = (projectId) => {
       const weekMatch = run.match(/@w(?:eek)?\s?\(?(\d+)\)?/i);
       const label = weekMatch ? `WEEK ${weekMatch[1]}` : "CURRENT";
       if (!groups[label]) groups[label] = [];
-      // We store the original index with the task data
       groups[label].push({ text: run, originalIndex: index });
     });
 
@@ -67,14 +66,13 @@ window.loadProject = (projectId) => {
         const dateMatch = item.text.match(/@date\((.*?)\)/);
         const completionDate = dateMatch ? dateMatch[1] : "";
 
-        let cleanText = item.text.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "")
-                                 .replace(/@date\(.*?\)/, "")
-                                 .replace("@done", "").trim();
+        // Strip everything to get the raw text
+        let cleanText = item.text.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace(/@date\(.*?\)/, "").replace("@done", "").trim();
         
         li.innerHTML = `
           <div class="task-info" onclick="window.toggleByIndex(${item.originalIndex})">
             <span class="task-text">${cleanText}</span>
-            ${completionDate ? `<span class="completion-date">Completed: ${completionDate}</span>` : ""}
+            ${completionDate ? `<span class="completion-date">COMPLETED: ${completionDate}</span>` : ""}
           </div>
           <button class="delete-btn" onclick="window.deleteByIndex(${item.originalIndex})">✕</button>
         `;
@@ -89,19 +87,23 @@ window.loadProject = (projectId) => {
 window.toggleByIndex = async (index) => {
   const runs = [...localRuns];
   let task = runs[index];
+  
   if (task.includes("@done")) {
-    runs[index] = task.replace(" @done", "").replace(/\s?@date\(.*?\)/, "");
+    // RESET: Remove done and date tags
+    runs[index] = task.replace("@done", "").replace(/@date\(.*?\)/, "").trim();
   } else {
-    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    runs[index] = `${task} @done @date(${today})`;
+    // APPLY: Add done and current date
+    const d = new Date();
+    const dateStr = d.getDate() + " " + d.toLocaleString('en-GB', { month: 'short' });
+    runs[index] = `${task} @done @date(${dateStr})`;
   }
-  await setDoc(doc(db, "plans", currentProject), { runs });
+  await setDoc(doc(db, "plans", currentProject), { runs: runs });
 };
 
 window.deleteByIndex = async (index) => {
   const runs = [...localRuns];
   runs.splice(index, 1);
-  await setDoc(doc(db, "plans", currentProject), { runs });
+  await setDoc(doc(db, "plans", currentProject), { runs: runs });
 };
 
 window.handleProjectChange = async (val) => {
@@ -132,3 +134,4 @@ window.addRun = async () => {
 
 syncDropdown();
 window.loadProject(currentProject);
+
