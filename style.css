@@ -1,55 +1,44 @@
-/* Update the body to center everything horizontally and vertically */
-body { 
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; 
-  background-color: var(--bg);
-  color: var(--text-main);
-  margin: 0;
-  display: flex;
-  justify-content: center; /* Centers horizontally */
-  align-items: flex-start; /* Keeps content near the top but with padding */
-  min-height: 100vh;
-  padding-top: 60px; /* Gives space from the top of the browser */
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    <title>In Strides</title>
+    <link rel="stylesheet" href="style.css?v=20">
+</head>
+<body>
+    <div class="app">
+        <div class="top-bar">
+            <div class="logo-container">
+                <img src="logo.png" alt="" class="app-logo">
+            </div>
+            <h1>In Strides</h1>
+        </div>
 
-/* Increase the max-width slightly for a more comfortable reading experience */
-.app { 
-  width: 100%; 
-  max-width: 600px; /* Slightly wider than before */
-  padding: 0 24px; 
-}
+        <div class="project-header">
+            <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
+                <option value="">Loading...</option>
+            </select>
+            
+            <div class="action-bar">
+                <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
+                <button class="action-btn" onclick="window.restartProject()">Restart</button>
+                <button class="action-btn" onclick="window.renameProject()">Rename</button>
+                <button class="action-btn delete-plan-btn" onclick="window.deleteCurrentProject()">Delete</button>
+            </div>
 
-/* Add more space between the logo/header and the controls */
-.top-bar { 
-  display: flex; 
-  align-items: center; 
-  gap: 20px; 
-  margin-bottom: 40px; /* More breathing room below the title */
-}
+            <div class="archive-toggle">
+                <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show archived plans</label>
+            </div>
+        </div>
 
-/* Space out the action buttons and the input area */
-.action-bar { 
-  display: grid; 
-  grid-template-columns: repeat(4, 1fr); 
-  gap: 12px; 
-  margin-bottom: 25px; 
-}
+        <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
+            <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1" autocomplete="off">
+            <button type="submit" id="addBtn">Add</button>
+        </form>
 
-.input-group { 
-  display: flex; 
-  gap: 12px; 
-  margin-top: 20px;
-  margin-bottom: 40px; /* Space before the list starts */
-  background: var(--card); 
-  padding: 10px; 
-  border-radius: 18px; 
-  border: 1px solid #D1D5DB; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* Soft shadow to lift it off the white */
-}
-
-/* Adjust the logo size for better balance with the text */
-.app-logo { 
-  width: 64px; 
-  height: 64px; 
-  border-radius: 14px; 
-}
-
+        <div id="runList"></div>
+    </div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
