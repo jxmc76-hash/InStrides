@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -18,6 +18,10 @@ let unsubscribe = null;
 let localRuns = [];
 
 const icons = ["🏃‍♂️", "⚡️", "👟", "🏔️", "🔥", "🏅", "💨", "🔋"];
+
+const toTitleCase = (str) => {
+    return str.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+};
 
 const updateFavicon = (projectId) => {
     const icon = icons[projectId.length % icons.length];
@@ -39,14 +43,12 @@ window.syncDropdown = async () => {
     if (!firstAvailable && !isArchived) firstAvailable = doc.id;
 
     if (showArchived || !isArchived) {
-        const display = doc.id.replace(/-/g, ' ').toUpperCase();
+        const display = toTitleCase(doc.id);
         optionsHtml += `<option value="${doc.id}">${isArchived ? '📁 ' : '🏃‍♂️ '}${display}</option>`;
     }
   });
   
-  select.innerHTML = optionsHtml + `<option value="ADD_NEW">+ Add New Plan...</option>`;
-  
-  // If current project was just archived and is now hidden, switch to a visible one
+  select.innerHTML = optionsHtml + `<option value="ADD_NEW">+ Add new plan...</option>`;
   if (!showArchived && optionsHtml.indexOf(currentProject) === -1) {
       currentProject = firstAvailable || "fast-5k";
   }
@@ -71,14 +73,14 @@ window.loadProject = (projectId) => {
     const groups = {};
     localRuns.forEach((run, index) => {
       const weekMatch = run.match(/@w(?:eek)?\s?\(?(\d+)\)?/i);
-      const label = weekMatch ? `WEEK ${weekMatch[1]}` : "CURRENT";
+      const label = weekMatch ? `Week ${weekMatch[1]}` : "Current";
       if (!groups[label]) groups[label] = [];
       groups[label].push({ text: run, originalIndex: index });
     });
 
     Object.keys(groups).sort((a,b) => {
-        if(a === "CURRENT") return -1;
-        if(b === "CURRENT") return 1;
+        if(a === "Current") return -1;
+        if(b === "Current") return 1;
         return parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,''));
     }).forEach(week => {
       const section = document.createElement('div');
@@ -89,7 +91,7 @@ window.loadProject = (projectId) => {
         if (item.text.includes("@done")) li.classList.add('done');
         const dateMatch = item.text.match(/@date\((.*?)\)/i);
         const cleanText = item.text.replace(/@w(?:eek)?\s?\(?(\d+)\)?/gi, "").replace(/@date\(.*?\)/gi, "").replace(/@done/gi, "").trim();
-        li.innerHTML = `<div class="task-info" onclick="window.toggleByIndex(${item.originalIndex})"><span class="task-text">${cleanText}</span>${dateMatch ? `<span class="completion-date">COMPLETED: ${dateMatch[1]}</span>` : ""}</div><button class="delete-btn" onclick="window.deleteByIndex(${item.originalIndex})">✕</button>`;
+        li.innerHTML = `<div class="task-info" onclick="window.toggleByIndex(${item.originalIndex})"><span class="task-text">${cleanText}</span>${dateMatch ? `<span class="completion-date">Completed: ${dateMatch[1]}</span>` : ""}</div><button class="delete-btn" onclick="window.deleteByIndex(${item.originalIndex})">✕</button>`;
         ul.appendChild(li);
       });
       section.appendChild(ul);
@@ -99,14 +101,57 @@ window.loadProject = (projectId) => {
 };
 
 window.archiveCurrentProject = async () => {
-    try {
-        const docRef = doc(db, "plans", currentProject);
-        const isArchived = document.getElementById('archiveBtn').innerText === "Unarchive";
-        await updateDoc(docRef, { archived: !isArchived });
+    const docRef = doc(db, "plans", currentProject);
+    const isArchived = document.getElementById('archiveBtn').innerText === "Unarchive";
+    await updateDoc(docRef, { archived: !isArchived });
+    await window.syncDropdown();
+    window.loadProject(currentProject);
+};
+
+window.restartProject = async () => {
+    if (!confirm("This will create a new copy of this plan with all runs unticked. Continue?")) return;
+    
+    const docRef = doc(db, "plans", currentProject);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return;
+
+    const oldRuns = docSnap.data().runs || [];
+    // Clean runs: remove @done and @date(...)
+    const newRuns = oldRuns.map(run => 
+        run.replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim()
+    );
+
+    const newId = `${currentProject}-restarted-${Date.now().toString().slice(-4)}`;
+    await setDoc(doc(db, "plans", newId), {
+        runs: newRuns,
+        archived: false
+    });
+
+    currentProject = newId;
+    await window.syncDropdown();
+    window.loadProject(newId);
+};
+
+window.renameProject = async () => {
+    const newName = prompt("Enter new name for this plan:", toTitleCase(currentProject));
+    if (!newName) return;
+
+    const newId = newName.toLowerCase().replace(/\s+/g, '-');
+    if (newId === currentProject) return;
+
+    const docRef = doc(db, "plans", currentProject);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Create new document
+        await setDoc(doc(db, "plans", newId), data);
+        // Delete old document
+        await deleteDoc(docRef);
+        
+        currentProject = newId;
         await window.syncDropdown();
-        window.loadProject(currentProject);
-    } catch (err) {
-        console.error("Archive error:", err);
+        window.loadProject(newId);
     }
 };
 
