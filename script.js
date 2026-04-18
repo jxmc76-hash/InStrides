@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, getDocs, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -21,7 +21,8 @@ let unsubscribe = null;
 async function fetchStravaRSS() {
     const rssUrl = "https://feedmyride.net/activities/5266316";
     const container = document.getElementById('strava-content');
-    
+    if (!container) return;
+
     try {
         const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
         const data = await response.json();
@@ -34,12 +35,11 @@ async function fetchStravaRSS() {
                     <div class="activity-title">${last.title}</div>
                     <div class="activity-meta">Tracked on ${date}</div>
                 </a>`;
-            container.classList.remove('strava-loading');
-        } else { container.innerHTML = "No recent data."; }
-    } catch (e) { container.innerHTML = "Feed offline."; }
+        } else { container.innerHTML = "Get out there!"; }
+    } catch (e) { container.innerHTML = "Feed currently unavailable."; }
 }
 
-// --- FIREBASE CORE ---
+// --- PROJECT MANAGEMENT ---
 window.syncDropdown = async () => {
     const querySnapshot = await getDocs(collection(db, "plans"));
     const select = document.getElementById('projectSelect');
@@ -62,8 +62,9 @@ window.loadProject = (id) => {
         const list = document.getElementById('runList');
         list.innerHTML = "";
         if (!snap.exists()) return;
-        localRuns = snap.data().runs || [];
-        document.getElementById('archiveBtn').innerText = snap.data().archived ? "Unarchive" : "Archive";
+        const data = snap.data();
+        localRuns = data.runs || [];
+        document.getElementById('archiveBtn').innerText = data.archived ? "Unarchive" : "Archive";
 
         const groups = {};
         localRuns.forEach((r, i) => {
@@ -73,7 +74,11 @@ window.loadProject = (id) => {
             groups[key].push({ text: r, idx: i });
         });
 
-        Object.keys(groups).sort().forEach(week => {
+        Object.keys(groups).sort((a, b) => {
+            const numA = parseInt(a.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.replace(/\D/g, '')) || 0;
+            return numA - numB;
+        }).forEach(week => {
             const div = document.createElement('div');
             div.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
             const ul = document.createElement('ul');
@@ -94,6 +99,21 @@ window.loadProject = (id) => {
     });
 };
 
+window.handleProjectChange = async (val) => {
+    if (val === "ADD_NEW") {
+        const name = prompt("New plan name:");
+        if (name) {
+            const id = name.toLowerCase().replace(/\s+/g, '-');
+            await setDoc(doc(db, "plans", id), { runs: [], archived: false });
+            await window.syncDropdown();
+            window.loadProject(id);
+        } else {
+            document.getElementById('projectSelect').value = currentProject;
+        }
+    } else { window.loadProject(val); }
+};
+
+// --- RUN ACTIONS ---
 window.toggleByIndex = async (i) => {
     const r = [...localRuns];
     if (r[i].includes("@done")) r[i] = r[i].replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -109,18 +129,51 @@ window.addRun = async () => {
 };
 
 window.deleteByIndex = async (i) => {
-    const r = [...localRuns];
-    r.splice(i, 1);
-    await updateDoc(doc(db, "plans", currentProject), { runs: r });
+    if(confirm("Delete this run?")) {
+        const r = [...localRuns];
+        r.splice(i, 1);
+        await updateDoc(doc(db, "plans", currentProject), { runs: r });
+    }
 };
 
+// --- TOOLBAR ACTIONS ---
 window.archiveCurrentProject = async () => {
-    const snap = await getDoc(doc(db, "plans", currentProject));
-    await updateDoc(doc(db, "plans", currentProject), { archived: !snap.data().archived });
-    window.syncDropdown();
+    const docRef = doc(db, "plans", currentProject);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+        await updateDoc(docRef, { archived: !snap.data().archived });
+        window.syncDropdown();
+    }
 };
 
-// Start everything
+window.restartProject = async () => {
+    if (confirm("Reset all runs in this plan?")) {
+        const r = localRuns.map(run => run.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
+        await updateDoc(doc(db, "plans", currentProject), { runs: r });
+    }
+};
+
+window.renameProject = async () => {
+    const newName = prompt("New name for this plan:", currentProject.replace(/-/g, ' '));
+    if (newName) {
+        const newId = newName.toLowerCase().replace(/\s+/g, '-');
+        const data = (await getDoc(doc(db, "plans", currentProject))).data();
+        await setDoc(doc(db, "plans", newId), data);
+        await deleteDoc(doc(db, "plans", currentProject));
+        currentProject = newId;
+        await window.syncDropdown();
+        window.loadProject(newId);
+    }
+};
+
+window.deleteCurrentProject = async () => {
+    if (confirm("Permanently delete this entire plan?")) {
+        await deleteDoc(doc(db, "plans", currentProject));
+        location.reload(); 
+    }
+};
+
+// Start
 fetchStravaRSS();
 window.syncDropdown();
 window.loadProject(currentProject);
