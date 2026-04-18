@@ -18,7 +18,7 @@ const db = getFirestore(app);
 let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
-const PIN = "1234"; // Your admin PIN
+const PIN = "1234"; // Admin PIN
 
 // --- ATTACH GLOBALS IMMEDIATELY ---
 window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
@@ -100,9 +100,14 @@ window.loadProject = (id) => {
         localRuns = data.runs || [];
         
         if (window.isAdmin()) {
-            document.getElementById('admin-ui').style.display = 'block';
-            document.getElementById('archiveBtn').innerText = data.archived ? "Unarchive" : "Archive";
-            document.getElementById('lockBtn').innerText = "🔓";
+            const adminUI = document.getElementById('admin-ui');
+            if(adminUI) adminUI.style.display = 'block';
+            
+            const archBtn = document.getElementById('archiveBtn');
+            if(archBtn) archBtn.innerText = data.archived ? "Unarchive" : "Archive";
+            
+            const lockBtn = document.getElementById('lockBtn');
+            if(lockBtn) lockBtn.innerText = "🔓";
         }
 
         const groups = {};
@@ -113,6 +118,7 @@ window.loadProject = (id) => {
             groups[key].push({ text: r, idx: i });
         });
 
+        // Sorting weeks numerically
         Object.keys(groups).sort((a,b) => (parseInt(a.replace(/\D/g,'')) || 0) - (parseInt(b.replace(/\D/g,'')) || 0)).forEach(week => {
             const div = document.createElement('div');
             div.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
@@ -154,7 +160,7 @@ window.toggleByIndex = async (i) => {
 
 window.addRun = async () => {
     const input = document.getElementById('runInput');
-    if (!input.value.trim()) return;
+    if (!input || !input.value.trim()) return;
     await updateDoc(doc(db, "plans", currentProject), { runs: [...localRuns, input.value.trim()] });
     input.value = "";
 };
