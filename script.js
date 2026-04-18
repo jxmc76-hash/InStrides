@@ -26,35 +26,33 @@ window.loadProject = (projectId) => {
     list.innerHTML = "";
     localRuns = doc.exists() ? doc.data().runs : [];
 
-    // 1. Group the runs
+    // Grouping Logic
     const groups = {};
     localRuns.forEach(run => {
-      // Look for @w1, @week1, or @week(1)
-      const weekMatch = run.match(/@w(?:eek)?\(?(\d+)\)?/i);
-      const weekLabel = weekMatch ? `WEEK ${weekMatch[1]}` : "CURRENT";
+      const weekMatch = run.match(/@w(?:eek)?\s?\(?(\d+)\)?/i);
+      const weekLabel = weekMatch ? `WEEK ${weekMatch[1]}` : "GENERAL";
       if (!groups[weekLabel]) groups[weekLabel] = [];
       groups[weekLabel].push(run);
     });
 
-    // 2. Sort the week headers
+    // Sort and Display
     const sortedWeeks = Object.keys(groups).sort((a, b) => {
-      if (a === "CURRENT") return -1;
+      if (a === "GENERAL") return -1;
       return parseInt(a.replace("WEEK ", "")) - parseInt(b.replace("WEEK ", ""));
     });
 
-    // 3. Render
     sortedWeeks.forEach(week => {
-      // Add Header
-      const header = document.createElement('li');
-      header.className = "week-header";
-      header.innerHTML = `<span>${week}</span>`;
+      // Create Heading
+      const header = document.createElement('div');
+      header.className = "week-heading";
+      header.innerHTML = `<h3>${week}</h3>`;
       list.appendChild(header);
 
       groups[week].forEach(task => {
         const li = document.createElement('li');
         let isDone = task.includes("@done");
-        // Remove tags for display
-        let cleanText = task.replace(/@w(?:eek)?\(?(\d+)\)?/i, "").replace("@done", "").trim();
+        // Remove tags for a clean display
+        let cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace("@done", "").trim();
 
         const textSpan = document.createElement('span');
         textSpan.className = "task-text";
@@ -106,3 +104,4 @@ window.deleteByText = async (originalText) => {
 };
 
 window.loadProject(currentProject);
+
