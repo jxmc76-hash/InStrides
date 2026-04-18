@@ -17,23 +17,18 @@ let currentProject = "fast-5k";
 let unsubscribe = null;
 let localRuns = [];
 
-// NEW: This function automatically populates your dropdown from Firebase
 const syncDropdown = async () => {
   const querySnapshot = await getDocs(collection(db, "plans"));
   const select = document.getElementById('projectSelect');
-  
-  // Clear existing options except the "Add New" one
   const addNewOpt = select.options[select.options.length - 1];
   select.innerHTML = "";
-  
   querySnapshot.forEach((doc) => {
     const opt = document.createElement('option');
     opt.value = doc.id;
     opt.innerHTML = `🏃‍♂️ ${doc.id.replace(/-/g, ' ').toUpperCase()}`;
     select.appendChild(opt);
   });
-  
-  select.appendChild(addNewOpt); // Put "Add New" back at the bottom
+  select.appendChild(addNewOpt);
   select.value = currentProject;
 };
 
@@ -58,12 +53,26 @@ window.loadProject = (projectId) => {
       const section = document.createElement('div');
       section.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
       const ul = document.createElement('ul');
+
       groups[week].forEach(task => {
         const li = document.createElement('li');
-        if (task.includes("@done")) li.className = "done";
-        const cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace("@done", "").trim();
+        const isDone = task.includes("@done");
+        if (isDone) li.className = "done";
+        
+        // Extract completion date if it exists
+        const dateMatch = task.match(/@date\((.*?)\)/);
+        const completionDate = dateMatch ? dateMatch[1] : "";
+
+        // Clean text for display
+        let cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "")
+                            .replace(/@date\(.*?\)/, "")
+                            .replace("@done", "").trim();
+        
         li.innerHTML = `
-          <span class="task-text" onclick="window.toggleByText('${task.replace(/'/g, "\\'")}')">${cleanText}</span>
+          <div class="task-info" onclick="window.toggleByText('${task.replace(/'/g, "\\'")}')">
+            <span class="task-text">${cleanText}</span>
+            ${completionDate ? `<span class="completion-date">Completed: ${completionDate}</span>` : ""}
+          </div>
           <button class="delete-btn" onclick="window.deleteByText('${task.replace(/'/g, "\\'")}')">✕</button>
         `;
         ul.appendChild(li);
@@ -74,12 +83,27 @@ window.loadProject = (projectId) => {
   });
 };
 
+window.toggleByText = async (originalText) => {
+  const runs = [...localRuns];
+  const idx = runs.indexOf(originalText);
+  if (idx > -1) {
+    if (runs[idx].includes("@done")) {
+      // Uncheck: Remove @done and @date
+      runs[idx] = runs[idx].replace(" @done", "").replace(/ @date\(.*?\)/, "");
+    } else {
+      // Check: Add @done and today's date
+      const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      runs[idx] = `${runs[idx]} @done @date(${today})`;
+    }
+    await setDoc(doc(db, "plans", currentProject), { runs });
+  }
+};
+
 window.handleProjectChange = async (val) => {
   if (val === "ADD_NEW") {
     const newName = prompt("Enter a name for your new training plan:");
     if (newName) {
       const newID = newName.toLowerCase().replace(/\s+/g, '-');
-      // Create it in Firebase first so syncDropdown finds it
       await setDoc(doc(db, "plans", newID), { runs: [] });
       currentProject = newID;
       await syncDropdown();
@@ -101,16 +125,11 @@ window.addRun = async () => {
   input.value = "";
 };
 
-window.toggleByText = async (originalText) => {
-  const runs = localRuns.map(r => r === originalText ? (r.includes("@done") ? r.replace(" @done", "") : r + " @done") : r);
-  await setDoc(doc(db, "plans", currentProject), { runs });
-};
-
 window.deleteByText = async (originalText) => {
   const runs = localRuns.filter(r => r !== originalText);
   await setDoc(doc(db, "plans", currentProject), { runs });
 };
 
-// Initial Load
 syncDropdown();
 window.loadProject(currentProject);
+
