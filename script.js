@@ -18,9 +18,9 @@ const db = getFirestore(app);
 let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
-const PIN = "1234"; // Update this to your preferred passcode
+const PIN = "1234"; // Your admin PIN
 
-// --- ATTACH GLOBALS IMMEDIATELY (Fixes "not a function" errors) ---
+// --- ATTACH GLOBALS IMMEDIATELY ---
 window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
 
 window.openLogin = () => {
@@ -37,24 +37,20 @@ window.checkPin = () => {
         sessionStorage.setItem('isAdmin', 'true');
         location.reload(); 
     } else {
-        alert("Incorrect PIN. Access denied.");
+        alert("Incorrect PIN.");
     }
 };
 
-// --- STRAVA RSS FETCHING ---
+// --- STRAVA RSS FETCHER ---
 window.fetchStravaRSS = async () => {
     const rssUrl = "https://feedmyride.net/activities/5266316";
     const container = document.getElementById('strava-content');
-    if (!container) return;
-
     try {
         const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${Date.now()}`);
         const data = await res.json();
-
         if (data.status === 'ok' && data.items?.length > 0) {
             const last = data.items[0];
             const date = new Date(last.pubDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-            
             container.innerHTML = `
                 <a href="${last.link}" target="_blank" class="activity-link">
                     <span class="stat-label">LATEST RUN</span>
@@ -64,48 +60,42 @@ window.fetchStravaRSS = async () => {
                         <span>View Strava →</span>
                     </div>
                 </a>`;
-        } else {
-            container.innerHTML = "No recent activity found.";
         }
     } catch (e) {
-        container.innerHTML = "Feed connection busy.";
+        container.innerHTML = "Strava feed currently unavailable.";
     }
 };
 
-// --- PROJECT MANAGEMENT ---
+// --- PLAN DROPDOWN SYNC ---
 window.syncDropdown = async () => {
     const select = document.getElementById('projectSelect');
-    if (!select) return;
-
     try {
         const snap = await getDocs(collection(db, "plans"));
         const showArchived = document.getElementById('showArchived')?.checked || false;
         let options = "";
-
         snap.forEach(d => {
             const data = d.data();
             if (showArchived || !data.archived) {
                 options += `<option value="${d.id}">${data.archived ? '📁 ' : '🏃‍♂️ '}${d.id.replace(/-/g, ' ')}</option>`;
             }
         });
-
         select.innerHTML = options + (window.isAdmin() ? `<option value="ADD_NEW">+ Add new plan...</option>` : "");
         select.value = currentProject;
     } catch (e) {
-        select.innerHTML = `<option>Error connecting to Firebase</option>`;
+        select.innerHTML = `<option>Error connecting to plans</option>`;
     }
 };
 
+// --- LOAD PROJECT DATA ---
 window.loadProject = (id) => {
     if (unsubscribe) unsubscribe();
     currentProject = id;
-
     unsubscribe = onSnapshot(doc(db, "plans", id), (snap) => {
         const list = document.getElementById('runList');
         if (!list) return;
         list.innerHTML = "";
-        
         if (!snap.exists()) return;
+
         const data = snap.data();
         localRuns = data.runs || [];
         
@@ -131,13 +121,12 @@ window.loadProject = (id) => {
             groups[week].forEach(item => {
                 const li = document.createElement('li');
                 if (item.text.includes("@done")) li.classList.add('done');
-                
                 const dateMatch = item.text.match(/@date\((.*?)\)/i);
-                const cleanText = item.text.replace(/@w\d+/gi, "").replace(/@date\(.*?\)/gi, "").replace(/@done/gi, "").trim();
-
+                const cleanTxt = item.text.replace(/@w\d+/gi, "").replace(/@date\(.*?\)/gi, "").replace(/@done/gi, "").trim();
+                
                 li.innerHTML = `
                     <div class="task-info" onclick="${window.isAdmin() ? `window.toggleByIndex(${item.idx})` : ''}" style="flex:1; cursor: pointer;">
-                        <div class="task-text">${cleanText}</div>
+                        <div class="task-text">${cleanTxt}</div>
                         ${dateMatch ? `<span class="completion-date">Done: ${dateMatch[1]}</span>` : ""}
                     </div>
                     ${window.isAdmin() ? `<button class="delete-btn" onclick="window.deleteByIndex(${item.idx})">✕</button>` : ""}
@@ -171,7 +160,7 @@ window.addRun = async () => {
 };
 
 window.deleteByIndex = async (i) => {
-    if (!confirm("Delete run?")) return;
+    if (!confirm("Delete this run?")) return;
     const r = [...localRuns];
     r.splice(i, 1);
     await updateDoc(doc(db, "plans", currentProject), { runs: r });
@@ -196,13 +185,13 @@ window.archiveCurrentProject = async () => {
 };
 
 window.restartProject = async () => {
-    if (!confirm("Reset plan?")) return;
+    if (!confirm("Reset all runs in this plan?")) return;
     const r = localRuns.map(run => run.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
     await updateDoc(doc(db, "plans", currentProject), { runs: r });
 };
 
 window.renameProject = async () => {
-    const n = prompt("New name:", currentProject);
+    const n = prompt("New name for plan:", currentProject);
     if (n) {
         const id = n.toLowerCase().replace(/\s+/g, '-');
         const snap = await getDoc(doc(db, "plans", currentProject));
@@ -214,7 +203,7 @@ window.renameProject = async () => {
 };
 
 window.deleteCurrentProject = async () => {
-    if (confirm("Delete entire plan?")) {
+    if (confirm("Delete this entire plan?")) {
         await deleteDoc(doc(db, "plans", currentProject));
         location.reload();
     }
