@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>In Strides</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="project-header">
+      <select id="projectSelect" onchange="window.switchProject(this.value)">
+        <option value="fast-5k">⚡ Fast 5K</option>
+        <option value="royal-parks-half">🌳 Royal Parks Half</option>
+        <option value="recovery">🧘 Recovery</option>
+      </select>
+    </div>
+    
+    <div class="input-group">
+      <input type="text" id="runInput" placeholder="Ex: 5k @planned(Mon)" autocomplete="off">
+      <button id="addBtn" onclick="window.addRun()">Add</button>
+    </div>
+    
+    <ul id="runList"></ul>
+  </div>
+
+  <!-- Load JS at the bottom -->
+  <script type="module" src="script.js"></script>
+</body>
+</html>
