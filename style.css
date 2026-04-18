@@ -1,46 +1,122 @@
-/* This ensures the text and date stack vertically with better spacing */
+:root {
+  --primary: #007aff;
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --text-main: #1c1c1e;
+  --text-dim: #8e8e93;
+}
+
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+  background-color: var(--bg); 
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.app { 
+  width: 100%; 
+  max-width: 500px; 
+  min-height: 100vh;
+  padding: env(safe-area-inset-top) 16px 60px 16px;
+}
+
+.project-header { padding: 20px 0; }
+
+#projectSelect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.05);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--primary);
+  outline: none;
+}
+
+.input-group { 
+  display: flex; 
+  gap: 8px; 
+  margin-bottom: 25px;
+  background: var(--card);
+  padding: 8px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+input { 
+  flex: 1; 
+  padding: 12px; 
+  border: none;
+  font-size: 17px; 
+  outline: none;
+  background: transparent;
+}
+
+#addBtn { 
+  background: var(--primary); 
+  color: white; 
+  border: none; 
+  padding: 12px 20px; 
+  border-radius: 14px; 
+  font-weight: 600; 
+}
+
+.week-heading { margin: 30px 0 10px 4px; }
+.week-heading h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+ul { list-style: none; padding: 0; margin: 0; }
+
+li { 
+  background: var(--card);
+  padding: 16px; 
+  display: flex; 
+  align-items: center; 
+  border-bottom: 1px solid #f2f2f7;
+}
+
+li:first-of-type { border-top-left-radius: 16px; border-top-right-radius: 16px; }
+li:last-of-type { border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-bottom: none; }
+
 .task-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding-right: 10px; /* Gap before the delete button */
-  min-height: 44px;    /* Minimum tap target height */
+  cursor: pointer;
 }
 
-.task-text { 
-  font-size: 17px; 
-  font-weight: 500; 
-  line-height: 1.2;
-  color: var(--text-main);
-}
+.task-text { font-size: 17px; font-weight: 500; }
 
 .completion-date {
-  font-size: 10px;       /* Slightly smaller for a cleaner look */
+  font-size: 10px;
   color: var(--primary);
   font-weight: 700;
-  margin-top: 4px;      /* Space between the run title and the date */
+  margin-top: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
 }
 
-/* When the item is done, we make the date even more subtle */
-li.done .completion-date {
-  color: var(--text-dim);
-  opacity: 0.6;
-}
-
-/* Adjusting the list item to ensure everything aligns to the top */
-li { 
-  background: var(--card);
-  padding: 14px 16px; 
-  display: flex; 
-  align-items: flex-start; /* Aligns delete button to the top of the text */
-  justify-content: space-between;
-  border-bottom: 1px solid #f2f2f7;
-}
+li.done { opacity: 0.45; }
+li.done .task-text { text-decoration: line-through; color: var(--text-dim); }
+li.done .completion-date { color: var(--text-dim); }
 
 .delete-btn {
-  margin-top: 2px; /* Pulls the X up to align with the first line of text */
+  background: #ff3b3012;
+  color: #ff3b30;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-weight: bold;
 }
