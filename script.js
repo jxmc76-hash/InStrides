@@ -26,28 +26,24 @@ const toTitleCase = (str) => {
 const updateFavicon = (projectId) => {
     const icon = icons[projectId.length % icons.length];
     const favicon = document.getElementById('favicon');
-    favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${icon}</text></svg>`;
+    if (favicon) favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${icon}</text></svg>`;
 };
 
 window.syncDropdown = async () => {
   const querySnapshot = await getDocs(collection(db, "plans"));
   const select = document.getElementById('projectSelect');
   const showArchived = document.getElementById('showArchived').checked;
-  
   let optionsHtml = "";
   let firstAvailable = null;
-
   querySnapshot.forEach((doc) => {
     const data = doc.data();
     const isArchived = data.archived || false;
     if (!firstAvailable && !isArchived) firstAvailable = doc.id;
-
     if (showArchived || !isArchived) {
         const display = toTitleCase(doc.id);
         optionsHtml += `<option value="${doc.id}">${isArchived ? '📁 ' : '🏃‍♂️ '}${display}</option>`;
     }
   });
-  
   select.innerHTML = optionsHtml + `<option value="ADD_NEW">+ Add new plan...</option>`;
   if (!showArchived && optionsHtml.indexOf(currentProject) === -1) {
       currentProject = firstAvailable || "fast-5k";
@@ -57,19 +53,17 @@ window.syncDropdown = async () => {
 
 window.loadProject = (projectId) => {
   if (unsubscribe) unsubscribe();
+  currentProject = projectId;
   updateFavicon(projectId);
   const docRef = doc(db, "plans", projectId);
-  
   unsubscribe = onSnapshot(docRef, (docSnap) => {
     const listContainer = document.getElementById('runList');
     listContainer.innerHTML = "";
     if (!docSnap.exists()) return;
-    
     const data = docSnap.data();
     localRuns = data.runs || [];
     const isArchived = data.archived || false;
     document.getElementById('archiveBtn').innerText = isArchived ? "Unarchive" : "Archive";
-
     const groups = {};
     localRuns.forEach((run, index) => {
       const weekMatch = run.match(/@w(?:eek)?\s?\(?(\d+)\)?/i);
@@ -77,7 +71,6 @@ window.loadProject = (projectId) => {
       if (!groups[label]) groups[label] = [];
       groups[label].push({ text: run, originalIndex: index });
     });
-
     Object.keys(groups).sort((a,b) => {
         if(a === "Current") return -1;
         if(b === "Current") return 1;
@@ -105,50 +98,35 @@ window.archiveCurrentProject = async () => {
     const isArchived = document.getElementById('archiveBtn').innerText === "Unarchive";
     await updateDoc(docRef, { archived: !isArchived });
     await window.syncDropdown();
-    window.loadProject(currentProject);
 };
 
 window.restartProject = async () => {
-    if (!confirm("This will create a new copy of this plan with all runs unticked. Continue?")) return;
-    
-    const docRef = doc(db, "plans", currentProject);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) return;
-
-    const oldRuns = docSnap.data().runs || [];
-    const newRuns = oldRuns.map(run => 
-        run.replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim()
-    );
-
-    const newId = `${currentProject}-restarted-${Math.floor(Math.random() * 1000)}`;
-    await setDoc(doc(db, "plans", newId), {
-        runs: newRuns,
-        archived: false
-    });
-
-    currentProject = newId;
-    await window.syncDropdown();
-    window.loadProject(newId);
+    if (!confirm("Create a clean copy of this plan?")) return;
+    try {
+        const docSnap = await getDoc(doc(db, "plans", currentProject));
+        if (!docSnap.exists()) return;
+        const newRuns = (docSnap.data().runs || []).map(run => run.replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim());
+        const newId = `${currentProject}-copy-${Math.floor(Math.random() * 999)}`;
+        await setDoc(doc(db, "plans", newId), { runs: newRuns, archived: false });
+        await window.syncDropdown();
+        window.loadProject(newId);
+    } catch (e) { alert("Restart failed: Check Safari Privacy settings."); console.error(e); }
 };
 
 window.renameProject = async () => {
-    const currentDisplay = toTitleCase(currentProject);
-    const newName = prompt("Enter new name for this plan:", currentDisplay);
-    if (!newName || newName === currentDisplay) return;
-
-    const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    const docRef = doc(db, "plans", currentProject);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-        const data = docSnap.data();
-        await setDoc(doc(db, "plans", newId), data);
-        await deleteDoc(docRef);
-        
-        currentProject = newId;
-        await window.syncDropdown();
-        window.loadProject(newId);
-    }
+    const newName = prompt("New name for this plan:", toTitleCase(currentProject));
+    if (!newName) return;
+    try {
+        const newId = newName.toLowerCase().replace(/\s+/g, '-');
+        const oldRef = doc(db, "plans", currentProject);
+        const docSnap = await getDoc(oldRef);
+        if (docSnap.exists()) {
+            await setDoc(doc(db, "plans", newId), docSnap.data());
+            await deleteDoc(oldRef);
+            await window.syncDropdown();
+            window.loadProject(newId);
+        }
+    } catch (e) { alert("Rename failed: Check Safari Privacy settings."); console.error(e); }
 };
 
 window.toggleByIndex = async (index) => {
@@ -174,16 +152,10 @@ window.handleProjectChange = async (val) => {
     if (name) {
       const id = name.toLowerCase().replace(/\s+/g, '-');
       await setDoc(doc(db, "plans", id), { runs: [], archived: false });
-      currentProject = id;
       await window.syncDropdown();
       window.loadProject(id);
-    } else {
-      document.getElementById('projectSelect').value = currentProject;
-    }
-  } else {
-    currentProject = val;
-    window.loadProject(val);
-  }
+    } else { document.getElementById('projectSelect').value = currentProject; }
+  } else { window.loadProject(val); }
 };
 
 window.addRun = async () => {
@@ -194,8 +166,4 @@ window.addRun = async () => {
   await updateDoc(doc(db, "plans", currentProject), { runs: updatedRuns });
 };
 
-(async () => {
-  await window.syncDropdown();
-  window.loadProject(currentProject);
-})();
-
+(async () => { await window.syncDropdown(); window.loadProject(currentProject); })();
