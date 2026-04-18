@@ -164,6 +164,15 @@ input[type="text"] {
   cursor: pointer; 
 }
 
+.archive-toggle {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 /* Login/Lock Screens */
 .login-screen {
     position: fixed; 
@@ -260,6 +269,7 @@ li.done {
   opacity: 0.7; 
 }
 
+/* STRIKE THROUGH LOGIC */
 li.done .task-text { 
   text-decoration: line-through; 
   color: var(--text-dim); 
@@ -298,5 +308,3 @@ li.done .task-text {
   font-size: 12px; 
   color: var(--text-dim); 
 }
-
-
