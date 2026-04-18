@@ -49,31 +49,32 @@ window.loadProject = (projectId) => {
       groups[label].push(run);
     });
 
-    Object.keys(groups).sort().forEach(week => {
+    Object.keys(groups).sort((a,b) => {
+        if(a === "CURRENT") return -1;
+        return parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,''));
+    }).forEach(week => {
       const section = document.createElement('div');
       section.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
       const ul = document.createElement('ul');
 
-      groups[week].forEach(task => {
+      groups[week].forEach((task, index) => {
         const li = document.createElement('li');
         const isDone = task.includes("@done");
         if (isDone) li.className = "done";
         
-        // Extract completion date if it exists
         const dateMatch = task.match(/@date\((.*?)\)/);
         const completionDate = dateMatch ? dateMatch[1] : "";
 
-        // Clean text for display
         let cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "")
                             .replace(/@date\(.*?\)/, "")
                             .replace("@done", "").trim();
         
         li.innerHTML = `
-          <div class="task-info" onclick="window.toggleByText('${task.replace(/'/g, "\\'")}')">
+          <div class="task-info" onclick="window.toggleByIndex(${localRuns.indexOf(task)})">
             <span class="task-text">${cleanText}</span>
             ${completionDate ? `<span class="completion-date">Completed: ${completionDate}</span>` : ""}
           </div>
-          <button class="delete-btn" onclick="window.deleteByText('${task.replace(/'/g, "\\'")}')">✕</button>
+          <button class="delete-btn" onclick="window.deleteByIndex(${localRuns.indexOf(task)})">✕</button>
         `;
         ul.appendChild(li);
       });
@@ -83,20 +84,23 @@ window.loadProject = (projectId) => {
   });
 };
 
-window.toggleByText = async (originalText) => {
+window.toggleByIndex = async (index) => {
   const runs = [...localRuns];
-  const idx = runs.indexOf(originalText);
-  if (idx > -1) {
-    if (runs[idx].includes("@done")) {
-      // Uncheck: Remove @done and @date
-      runs[idx] = runs[idx].replace(" @done", "").replace(/ @date\(.*?\)/, "");
-    } else {
-      // Check: Add @done and today's date
-      const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      runs[idx] = `${runs[idx]} @done @date(${today})`;
-    }
-    await setDoc(doc(db, "plans", currentProject), { runs });
+  let task = runs[index];
+  
+  if (task.includes("@done")) {
+    runs[index] = task.replace(" @done", "").replace(/ @date\(.*?\)/, "");
+  } else {
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    runs[index] = `${task} @done @date(${today})`;
   }
+  await setDoc(doc(db, "plans", currentProject), { runs });
+};
+
+window.deleteByIndex = async (index) => {
+  const runs = [...localRuns];
+  runs.splice(index, 1);
+  await setDoc(doc(db, "plans", currentProject), { runs });
 };
 
 window.handleProjectChange = async (val) => {
@@ -125,11 +129,5 @@ window.addRun = async () => {
   input.value = "";
 };
 
-window.deleteByText = async (originalText) => {
-  const runs = localRuns.filter(r => r !== originalText);
-  await setDoc(doc(db, "plans", currentProject), { runs });
-};
-
 syncDropdown();
 window.loadProject(currentProject);
-
