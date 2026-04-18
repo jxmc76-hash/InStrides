@@ -4,24 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>In Strides</title>
-    
-    <!-- Professional App Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="In Strides">
-    
-    <!-- App Icon (Running Shoe) -->
     <link rel="apple-touch-icon" href="https://img.icons8.com/sf-black-filled/128/007AFF/running.png">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app">
         <div class="project-header">
-            <select id="projectSelect" onchange="window.switchProject(this.value)">
+            <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
                 <option value="fast-5k">⚡️ Fast 5K</option>
                 <option value="royal-parks-half">🌳 Royal Parks Half</option>
                 <option value="recovery">🧘 Recovery</option>
+                <option value="ADD_NEW">+ Add New Plan...</option>
             </select>
         </div>
 
@@ -32,7 +27,6 @@
 
         <div id="runList"></div>
     </div>
-
     <script type="module" src="script.js"></script>
 </body>
 </html>
