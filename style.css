@@ -1,44 +1,112 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=20">
-</head>
-<body>
-    <div class="app">
-        <div class="top-bar">
-            <div class="logo-container">
-                <img src="logo.png" alt="" class="app-logo">
-            </div>
-            <h1>In Strides</h1>
-        </div>
+:root {
+  --bg: #FFFFFF;
+  --card: #F2F4F7; /* Soft light grey for sectioning */
+  --primary: #D35400; /* Your Dark Burnt Orange */
+  --text-main: #1A1A1E;
+  --text-dim: #636366;
+  --border: #E5E5EA;
+  --danger: #FF3B30;
+}
 
-        <div class="project-header">
-            <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
-                <option value="">Loading...</option>
-            </select>
-            
-            <div class="action-bar">
-                <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
-                <button class="action-btn" onclick="window.restartProject()">Restart</button>
-                <button class="action-btn" onclick="window.renameProject()">Rename</button>
-                <button class="action-btn delete-plan-btn" onclick="window.deleteCurrentProject()">Delete</button>
-            </div>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-            <div class="archive-toggle">
-                <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show archived plans</label>
-            </div>
-        </div>
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; 
+  background-color: var(--bg);
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
 
-        <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
-            <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1" autocomplete="off">
-            <button type="submit" id="addBtn">Add</button>
-        </form>
+.app { 
+  width: 100%; 
+  max-width: 500px; 
+  padding: 60px 20px 100px 20px; /* Increased top and side padding */
+}
 
-        <div id="runList"></div>
-    </div>
-    <script type="module" src="script.js"></script>
-</body>
-</html>
+.top-bar { 
+  display: flex; 
+  align-items: center; 
+  gap: 18px; 
+  margin-bottom: 40px; /* Massive space after title */
+}
+
+.logo-container { width: 64px; height: 64px; flex-shrink: 0; }
+.app-logo { 
+  width: 100%; height: 100%; border-radius: 16px; object-fit: cover;
+  box-shadow: 0 4px 12px rgba(211, 84, 0, 0.15);
+}
+
+.top-bar h1 { 
+  font-size: 32px; font-weight: 800; letter-spacing: -0.04em; margin: 0; 
+}
+
+/* Plan Select & Buttons */
+#projectSelect {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 17px;
+  margin-bottom: 16px;
+  appearance: none;
+}
+
+.action-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.action-btn {
+    background: white;
+    color: var(--primary);
+    border: 1px solid var(--border);
+    padding: 12px 2px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.delete-plan-btn { color: var(--danger); }
+
+.archive-toggle { font-size: 13px; color: var(--text-dim); margin-bottom: 30px; }
+
+/* Input Group */
+.input-group { 
+  display: flex; gap: 10px; margin-bottom: 40px; 
+  background: var(--card); padding: 8px; border-radius: 18px;
+}
+input[type="text"] { 
+  flex: 1; padding: 12px; border: none; font-size: 17px; background: transparent; outline: none;
+}
+#addBtn { 
+  background: var(--primary); color: white; border: none; 
+  padding: 10px 24px; border-radius: 12px; font-weight: 800; 
+}
+
+/* The List - Added more spacing here */
+.week-heading h3 { 
+  font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; 
+  color: var(--primary); margin: 40px 0 15px 5px; 
+}
+
+ul { list-style: none; padding: 0; margin-bottom: 30px; }
+li { 
+  background: var(--card); padding: 22px; display: flex; align-items: center; 
+  border-bottom: 2px solid white; /* Visual separation */
+}
+li:first-child { border-top-left-radius: 20px; border-top-right-radius: 20px; }
+li:last-child { border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; border-bottom: none; }
+
+li.done { border-left: 4px solid var(--primary); background: #fdfdfd; opacity: 0.7; }
+li.done .task-text { text-decoration: line-through; color: var(--text-dim); }
+
+.task-info { flex: 1; cursor: pointer; }
+.task-text { font-size: 18px; font-weight: 600; }
+.completion-date { font-size: 12px; color: var(--primary); margin-top: 6px; display: block; }
+
+.delete-btn { 
+  background: #FFE5E5; color: var(--danger); border: none; 
+  width: 36px; height: 36px; border-radius: 50%; font-weight: bold;
+}
