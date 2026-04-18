@@ -5,7 +5,6 @@
   --text-main: #1C1C1E;
   --text-dim: #8E8E93;
   --border: #E5E7EB;
-  --danger: #FF3B30;
 }
 
 /* Base Setup */
@@ -15,9 +14,8 @@
 }
 
 body { 
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", sans-serif; 
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; 
   background-color: var(--bg);
-  color: var(--text-main);
   margin: 0;
   display: flex;
   justify-content: center;
@@ -30,14 +28,13 @@ body {
   max-width: 460px; 
 }
 
-/* Header & Logo Section */
+/* Header */
 .top-bar { 
   display: flex; 
   flex-direction: column; 
   align-items: center; 
   gap: 16px; 
   margin-bottom: 50px; 
-  text-align: center;
 }
 
 .logo-container { 
@@ -47,15 +44,15 @@ body {
   border-radius: 22px; 
   display: flex; 
   align-items: center; 
-  justify-content: center;
-  box-shadow: 0 10px 25px rgba(211, 84, 0, 0.2); 
+  justify-content: center; 
   padding: 8px;
+  box-shadow: 0 10px 25px rgba(211, 84, 0, 0.2);
 }
 
 .app-logo { 
   width: 100%; 
   height: auto; 
-  border-radius: 12px;
+  border-radius: 12px; 
 }
 
 .top-bar h1 { 
@@ -65,14 +62,13 @@ body {
   margin: 0; 
 }
 
-/* Strava Dashboard Card */
-.strava-card {
-    background: #FFF5F0;
-    border: 1px solid rgba(211, 84, 0, 0.15);
-    border-radius: 24px;
-    padding: 24px;
-    margin-bottom: 30px;
-    transition: all 0.2s ease;
+/* Strava Card */
+.strava-card { 
+  background: #FFF5F0; 
+  border: 1px solid rgba(211, 84, 0, 0.15); 
+  border-radius: 24px; 
+  padding: 24px; 
+  margin-bottom: 30px; 
 }
 
 .stat-label { 
@@ -87,7 +83,6 @@ body {
   font-size: 20px; 
   font-weight: 800; 
   margin-top: 8px; 
-  letter-spacing: -0.02em;
 }
 
 .activity-footer { 
@@ -103,35 +98,42 @@ body {
 .activity-link { 
   text-decoration: none; 
   color: inherit; 
-  display: block;
 }
 
-/* Project Selector (Full Width) */
+/* Project Selector Fix (Specifically for macOS/Chrome/Safari) */
+.project-header { 
+  width: 100%; 
+  margin: 20px 0; 
+  display: flex; 
+  flex-direction: column; 
+}
+
 #projectSelect {
-  width: 100%;
-  background: var(--card);
+  display: block;
+  width: 100% !important; /* Force full width on Mac */
+  -webkit-appearance: none; /* Remove Safari default styling */
+  appearance: none;
+  background-color: var(--card);
   border: 1px solid var(--border);
-  padding: 16px;
-  border-radius: 14px;
-  font-weight: 600;
+  padding: 18px;
+  border-radius: 16px;
+  font-weight: 700;
   font-size: 16px;
-  margin-bottom: 20px;
-  cursor: pointer;
-  appearance: none; /* Removes default browser arrow */
   color: var(--text-main);
-  /* Custom Orange Arrow SVG */
+  cursor: pointer;
+  /* Custom Orange Arrow */
   background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23D35400' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 16px center;
+  background-position: right 20px center;
   background-size: 18px;
 }
 
-#projectSelect:focus {
-  outline: none;
-  border-color: var(--primary);
+#projectSelect:focus { 
+  outline: none; 
+  border-color: var(--primary); 
 }
 
-/* Management UI Styling (Hidden until Admin Login) */
+/* Admin UI Controls */
 .action-bar { 
   display: grid; 
   grid-template-columns: repeat(4, 1fr); 
@@ -180,19 +182,11 @@ input[type="text"] {
   cursor: pointer; 
 }
 
-.archive-toggle {
-    font-size: 13px;
-    color: var(--text-dim);
-    margin: 10px 0 20px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 /* Login Screen Overlay */
 .login-screen {
     position: fixed; 
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
     background: rgba(255, 255, 255, 0.95); 
     backdrop-filter: blur(12px);
     display: none; 
@@ -211,7 +205,10 @@ input[type="text"] {
   max-width: 340px; 
 }
 
-.login-box h2 { color: var(--primary); margin: 0 0 10px 0; }
+.login-box h2 { 
+  color: var(--primary); 
+  margin: 0 0 10px 0; 
+}
 
 .login-box input { 
   width: 100%; 
@@ -239,7 +236,7 @@ input[type="text"] {
   background: transparent !important; 
   color: var(--text-dim) !important; 
   margin-top: 10px; 
-  border: none;
+  border: none; 
 }
 
 /* Floating Lock Toggle Button */
@@ -255,13 +252,13 @@ input[type="text"] {
   box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
   cursor: pointer; 
   font-size: 20px; 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
+  z-index: 100; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
 }
 
-/* Training List & Strike-through Logic */
+/* Training List & Strike-through */
 .week-heading h3 { 
   font-size: 13px; 
   text-transform: uppercase; 
@@ -270,7 +267,11 @@ input[type="text"] {
   letter-spacing: 0.1em;
 }
 
-ul { list-style: none; padding: 0; margin: 0; }
+ul { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0; 
+}
 
 li { 
   background: var(--card); 
@@ -279,7 +280,7 @@ li {
   align-items: center; 
   margin-bottom: 10px; 
   border-radius: 18px; 
-  border: 1px solid transparent;
+  border: 1px solid transparent; 
 }
 
 li.done { 
@@ -293,12 +294,15 @@ li.done .task-text {
   color: var(--text-dim); 
 }
 
-.task-info { flex: 1; cursor: pointer; }
+.task-info { 
+  flex: 1; 
+  cursor: pointer; 
+}
 
 .task-text { 
   font-size: 17px; 
   font-weight: 600; 
-  line-height: 1.4;
+  line-height: 1.4; 
 }
 
 .completion-date { 
@@ -321,7 +325,7 @@ li.done .task-text {
 /* Footer */
 .site-footer { 
   margin-top: 80px; 
-  padding-bottom: 40px;
+  padding-bottom: 40px; 
   text-align: center; 
   font-size: 12px; 
   color: var(--text-dim); 
