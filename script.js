@@ -20,8 +20,8 @@ let localRuns = [];
 let unsubscribe = null;
 const PIN = "1234"; // Update this to your preferred passcode
 
-// --- PASSKEY & ADMIN LOGIC ---
-const isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
+// --- ATTACH GLOBALS IMMEDIATELY (Fixes "not a function" errors) ---
+window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
 
 window.openLogin = () => {
     document.getElementById('login-overlay').style.display = 'flex';
@@ -35,7 +35,7 @@ window.checkPin = () => {
     const input = document.getElementById('pinInput').value;
     if (input === PIN) {
         sessionStorage.setItem('isAdmin', 'true');
-        location.reload(); // Refresh to inject admin UI and buttons
+        location.reload(); 
     } else {
         alert("Incorrect PIN. Access denied.");
     }
@@ -68,27 +68,32 @@ window.fetchStravaRSS = async () => {
             container.innerHTML = "No recent activity found.";
         }
     } catch (e) {
-        console.error("Strava Fetch Error:", e);
-        container.innerHTML = "Feed connection busy. Try again later.";
+        container.innerHTML = "Feed connection busy.";
     }
 };
 
 // --- PROJECT MANAGEMENT ---
 window.syncDropdown = async () => {
-    const snap = await getDocs(collection(db, "plans"));
     const select = document.getElementById('projectSelect');
-    const showArchived = document.getElementById('showArchived')?.checked || false;
-    let options = "";
+    if (!select) return;
 
-    snap.forEach(d => {
-        const data = d.data();
-        if (showArchived || !data.archived) {
-            options += `<option value="${d.id}">${data.archived ? '📁 ' : '🏃‍♂️ '}${d.id.replace(/-/g, ' ')}</option>`;
-        }
-    });
+    try {
+        const snap = await getDocs(collection(db, "plans"));
+        const showArchived = document.getElementById('showArchived')?.checked || false;
+        let options = "";
 
-    select.innerHTML = options + (isAdmin() ? `<option value="ADD_NEW">+ Add new plan...</option>` : "");
-    select.value = currentProject;
+        snap.forEach(d => {
+            const data = d.data();
+            if (showArchived || !data.archived) {
+                options += `<option value="${d.id}">${data.archived ? '📁 ' : '🏃‍♂️ '}${d.id.replace(/-/g, ' ')}</option>`;
+            }
+        });
+
+        select.innerHTML = options + (window.isAdmin() ? `<option value="ADD_NEW">+ Add new plan...</option>` : "");
+        select.value = currentProject;
+    } catch (e) {
+        select.innerHTML = `<option>Error connecting to Firebase</option>`;
+    }
 };
 
 window.loadProject = (id) => {
@@ -97,21 +102,17 @@ window.loadProject = (id) => {
 
     unsubscribe = onSnapshot(doc(db, "plans", id), (snap) => {
         const list = document.getElementById('runList');
+        if (!list) return;
         list.innerHTML = "";
+        
         if (!snap.exists()) return;
-
         const data = snap.data();
         localRuns = data.runs || [];
         
-        // Show/Hide Admin UI elements
-        if (isAdmin()) {
-            const adminUI = document.getElementById('admin-ui');
-            const archiveBtn = document.getElementById('archiveBtn');
-            const lockBtn = document.getElementById('lockBtn');
-            
-            if (adminUI) adminUI.style.display = 'block';
-            if (archiveBtn) archiveBtn.innerText = data.archived ? "Unarchive" : "Archive";
-            if (lockBtn) lockBtn.innerText = "🔓";
+        if (window.isAdmin()) {
+            document.getElementById('admin-ui').style.display = 'block';
+            document.getElementById('archiveBtn').innerText = data.archived ? "Unarchive" : "Archive";
+            document.getElementById('lockBtn').innerText = "🔓";
         }
 
         const groups = {};
@@ -135,11 +136,11 @@ window.loadProject = (id) => {
                 const cleanText = item.text.replace(/@w\d+/gi, "").replace(/@date\(.*?\)/gi, "").replace(/@done/gi, "").trim();
 
                 li.innerHTML = `
-                    <div class="task-info" onclick="${isAdmin() ? `window.toggleByIndex(${item.idx})` : ''}">
+                    <div class="task-info" onclick="${window.isAdmin() ? `window.toggleByIndex(${item.idx})` : ''}" style="flex:1; cursor: pointer;">
                         <div class="task-text">${cleanText}</div>
                         ${dateMatch ? `<span class="completion-date">Done: ${dateMatch[1]}</span>` : ""}
                     </div>
-                    ${isAdmin() ? `<button class="delete-btn" onclick="window.deleteByIndex(${item.idx})">✕</button>` : ""}
+                    ${window.isAdmin() ? `<button class="delete-btn" onclick="window.deleteByIndex(${item.idx})">✕</button>` : ""}
                 `;
                 ul.appendChild(li);
             });
@@ -149,9 +150,8 @@ window.loadProject = (id) => {
     });
 };
 
-// --- DATA ACTIONS (Admin Only) ---
+// --- DATA ACTIONS ---
 window.toggleByIndex = async (i) => {
-    if (!isAdmin()) return;
     const r = [...localRuns];
     if (r[i].includes("@done")) {
         r[i] = r[i].replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -164,7 +164,6 @@ window.toggleByIndex = async (i) => {
 };
 
 window.addRun = async () => {
-    if (!isAdmin()) return;
     const input = document.getElementById('runInput');
     if (!input.value.trim()) return;
     await updateDoc(doc(db, "plans", currentProject), { runs: [...localRuns, input.value.trim()] });
@@ -172,7 +171,7 @@ window.addRun = async () => {
 };
 
 window.deleteByIndex = async (i) => {
-    if (!isAdmin() || !confirm("Delete this specific run?")) return;
+    if (!confirm("Delete run?")) return;
     const r = [...localRuns];
     r.splice(i, 1);
     await updateDoc(doc(db, "plans", currentProject), { runs: r });
@@ -180,61 +179,49 @@ window.deleteByIndex = async (i) => {
 
 window.handleProjectChange = (v) => {
     if (v === "ADD_NEW") {
-        const n = prompt("Enter a name for the new plan:");
+        const n = prompt("Plan name:");
         if (n) {
             const id = n.toLowerCase().replace(/\s+/g, '-');
             setDoc(doc(db, "plans", id), { runs: [], archived: false }).then(() => {
-                window.syncDropdown(); 
-                window.loadProject(id);
+                window.syncDropdown(); window.loadProject(id);
             });
         }
-    } else {
-        window.loadProject(v);
-    }
+    } else window.loadProject(v);
 };
 
 window.archiveCurrentProject = async () => {
-    if (!isAdmin()) return;
-    const docRef = doc(db, "plans", currentProject);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-        await updateDoc(docRef, { archived: !snap.data().archived });
-        window.syncDropdown();
-    }
+    const snap = await getDoc(doc(db, "plans", currentProject));
+    await updateDoc(doc(db, "plans", currentProject), { archived: !snap.data().archived });
+    window.syncDropdown();
 };
 
 window.restartProject = async () => {
-    if (!isAdmin() || !confirm("Clear all 'Done' status from this plan?")) return;
+    if (!confirm("Reset plan?")) return;
     const r = localRuns.map(run => run.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
     await updateDoc(doc(db, "plans", currentProject), { runs: r });
 };
 
 window.renameProject = async () => {
-    if (!isAdmin()) return;
-    const n = prompt("New name for this plan:", currentProject.replace(/-/g, ' '));
+    const n = prompt("New name:", currentProject);
     if (n) {
         const id = n.toLowerCase().replace(/\s+/g, '-');
         const snap = await getDoc(doc(db, "plans", currentProject));
-        if (snap.exists()) {
-            await setDoc(doc(db, "plans", id), snap.data());
-            await deleteDoc(doc(db, "plans", currentProject));
-            currentProject = id;
-            window.syncDropdown(); 
-            window.loadProject(id);
-        }
+        await setDoc(doc(db, "plans", id), snap.data());
+        await deleteDoc(doc(db, "plans", currentProject));
+        currentProject = id;
+        window.syncDropdown(); window.loadProject(id);
     }
 };
 
 window.deleteCurrentProject = async () => {
-    if (!isAdmin() || !confirm("Permanently delete this entire plan?")) return;
-    await deleteDoc(doc(db, "plans", currentProject));
-    location.reload();
+    if (confirm("Delete entire plan?")) {
+        await deleteDoc(doc(db, "plans", currentProject));
+        location.reload();
+    }
 };
 
-// --- STARTUP ---
-document.addEventListener('DOMContentLoaded', () => {
-    window.fetchStravaRSS();
-    window.syncDropdown();
-    window.loadProject(currentProject);
-});
+// --- INITIALIZE ---
+window.fetchStravaRSS();
+window.syncDropdown();
+window.loadProject(currentProject);
 
