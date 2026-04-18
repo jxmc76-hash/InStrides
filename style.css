@@ -1,52 +1,28 @@
-body { 
-  font-family: 'Inter', -apple-system, system-ui, sans-serif; 
-  background: #f8fafc; 
-  display: flex; justify-content: center; padding: 20px; margin: 0;
-  -webkit-tap-highlight-color: transparent;
+.week-heading {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #f1f5f9;
 }
-.app { 
-  background: white; padding: 1.5rem; border-radius: 24px; 
-  box-shadow: 0 15px 35px rgba(0,0,0,0.05); width: 100%; 
-  max-width: 400px; border: 1px solid #e2e8f0; margin-top: 10px;
-}
-.project-header { margin-bottom: 25px; display: flex; justify-content: center; }
-#projectSelect {
-  appearance: none; background: #f1f5f9; border: none; padding: 10px 24px;
-  border-radius: 50px; font-weight: 700; color: #475569; font-size: 0.9rem;
-}
-.input-group { display: flex; gap: 10px; margin-bottom: 25px; }
-input { 
-  flex: 1; padding: 14px; border: 2px solid #f1f5f9; border-radius: 12px; 
-  font-size: 16px; outline: none;
-}
-#addBtn { 
-  background: #007aff; color: white; border: none; padding: 0 20px; 
-  border-radius: 12px; font-weight: 700; cursor: pointer; 
-}
-ul { list-style: none; padding: 0; margin: 0; }
-li { 
-  padding: 16px 0; border-bottom: 1px solid #f1f5f9; 
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-.task-text { 
-  flex: 1; font-size: 1.05rem; font-weight: 500; display: flex; 
-  align-items: center; flex-wrap: wrap; gap: 6px; line-height: 1.4;
-}
-.date-tag {
-  background: #007aff; color: #ffffff; padding: 2px 8px;
-  border-radius: 6px; font-size: 0.7rem; font-weight: 800;
+
+.week-heading h3 {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.1em;
+  margin: 0;
   text-transform: uppercase;
 }
-.delete-btn {
-  display: flex !important; background-color: #fee2e2 !important; 
-  color: #ef4444 !important; border: none !important;
-  width: 34px !important; height: 34px !important; border-radius: 50% !important;
-  font-size: 16px !important; font-weight: bold; align-items: center;
-  justify-content: center; flex-shrink: 0; cursor: pointer;
+
+li {
+  padding: 14px 0;
+  border-bottom: 1px solid #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-li.done .task-text { color: #94a3b8; text-decoration: line-through; }
-li.done .date-tag { background: #f1f5f9; color: #94a3b8; }
-li.done::after {
-  content: "@done"; font-family: monospace; font-size: 0.7rem;
-  color: #cbd5e0; margin-left: 4px;
+
+li:last-child {
+  border-bottom: none;
 }
+
