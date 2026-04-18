@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -16,6 +16,26 @@ const db = getFirestore(app);
 let currentProject = "fast-5k";
 let unsubscribe = null;
 let localRuns = [];
+
+// NEW: This function automatically populates your dropdown from Firebase
+const syncDropdown = async () => {
+  const querySnapshot = await getDocs(collection(db, "plans"));
+  const select = document.getElementById('projectSelect');
+  
+  // Clear existing options except the "Add New" one
+  const addNewOpt = select.options[select.options.length - 1];
+  select.innerHTML = "";
+  
+  querySnapshot.forEach((doc) => {
+    const opt = document.createElement('option');
+    opt.value = doc.id;
+    opt.innerHTML = `🏃‍♂️ ${doc.id.replace(/-/g, ' ').toUpperCase()}`;
+    select.appendChild(opt);
+  });
+  
+  select.appendChild(addNewOpt); // Put "Add New" back at the bottom
+  select.value = currentProject;
+};
 
 window.loadProject = (projectId) => {
   if (unsubscribe) unsubscribe();
@@ -38,12 +58,10 @@ window.loadProject = (projectId) => {
       const section = document.createElement('div');
       section.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
       const ul = document.createElement('ul');
-
       groups[week].forEach(task => {
         const li = document.createElement('li');
         if (task.includes("@done")) li.className = "done";
         const cleanText = task.replace(/@w(?:eek)?\s?\(?(\d+)\)?/i, "").replace("@done", "").trim();
-        
         li.innerHTML = `
           <span class="task-text" onclick="window.toggleByText('${task.replace(/'/g, "\\'")}')">${cleanText}</span>
           <button class="delete-btn" onclick="window.deleteByText('${task.replace(/'/g, "\\'")}')">✕</button>
@@ -56,25 +74,17 @@ window.loadProject = (projectId) => {
   });
 };
 
-// NEW: Handles the "Add New" Logic
 window.handleProjectChange = async (val) => {
   if (val === "ADD_NEW") {
     const newName = prompt("Enter a name for your new training plan:");
     if (newName) {
       const newID = newName.toLowerCase().replace(/\s+/g, '-');
-      // Create a new option in the dropdown
-      const select = document.getElementById('projectSelect');
-      const opt = document.createElement('option');
-      opt.value = newID;
-      opt.innerHTML = `🏃‍♂️ ${newName}`;
-      select.insertBefore(opt, select.lastElementChild);
-      
-      // Select it and load it
-      select.value = newID;
+      // Create it in Firebase first so syncDropdown finds it
+      await setDoc(doc(db, "plans", newID), { runs: [] });
       currentProject = newID;
+      await syncDropdown();
       window.loadProject(newID);
     } else {
-      // Reset dropdown if they hit cancel
       document.getElementById('projectSelect').value = currentProject;
     }
   } else {
@@ -101,4 +111,6 @@ window.deleteByText = async (originalText) => {
   await setDoc(doc(db, "plans", currentProject), { runs });
 };
 
+// Initial Load
+syncDropdown();
 window.loadProject(currentProject);
