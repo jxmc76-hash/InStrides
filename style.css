@@ -1,105 +1,18 @@
-:root {
-  --primary: #007aff;
-  --bg: #f2f2f7;
-  --card: #ffffff;
-  --text-main: #1c1c1e;
-  --text-dim: #8e8e93;
-}
-
-body { 
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-  background-color: var(--bg); 
-  margin: 0;
+.task-info {
+  flex: 1;
   display: flex;
-  justify-content: center;
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
+  flex-direction: column;
+  cursor: pointer;
 }
 
-.app { 
-  width: 100%; 
-  max-width: 450px; 
-  min-height: 100vh;
-  padding: env(safe-area-inset-top) 16px 40px 16px;
-}
-
-.project-header { padding: 20px 0; }
-
-#projectSelect {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0,0,0,0.05);
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 1rem;
+.completion-date {
+  font-size: 11px;
   color: var(--primary);
-  outline: none;
-}
-
-.input-group { 
-  display: flex; 
-  gap: 8px; 
-  margin-bottom: 20px;
-  background: var(--card);
-  padding: 8px;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-input { 
-  flex: 1; 
-  padding: 12px; 
-  border: none;
-  font-size: 17px; 
-  outline: none;
-  background: transparent;
-}
-
-#addBtn { 
-  background: var(--primary); 
-  color: white; 
-  border: none; 
-  padding: 12px 20px; 
-  border-radius: 14px; 
-  font-weight: 600; 
-}
-
-/* Week Headings */
-.week-heading { margin: 32px 0 10px 4px; }
-.week-heading h3 {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-dim);
+  font-weight: 600;
+  margin-top: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-ul { list-style: none; padding: 0; margin: 0; }
-
-li { 
-  background: var(--card);
-  padding: 18px 16px; 
-  display: flex; 
-  align-items: center; 
-  border-bottom: 1px solid #f2f2f7;
-  transition: opacity 0.2s;
+li.done .completion-date {
+  color: var(--text-dim);
 }
-
-li:first-of-type { border-top-left-radius: 16px; border-top-right-radius: 16px; }
-li:last-of-type { border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-bottom: none; }
-
-.task-text { flex: 1; font-size: 17px; font-weight: 500; }
-li.done { opacity: 0.4; }
-li.done .task-text { text-decoration: line-through; }
-
-.delete-btn {
-  background: #ff3b3015;
-  color: #ff3b30;
-  border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-weight: bold;
-}
-
