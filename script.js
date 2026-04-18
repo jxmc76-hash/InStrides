@@ -17,17 +17,24 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-// --- STRAVA RSS FETCHING ---
+// --- STRAVA RSS FETCHING (With Fail-Safe) ---
 window.fetchStravaRSS = async () => {
     const rssUrl = "https://feedmyride.net/activities/5266316";
     const container = document.getElementById('strava-content');
     if (!container) return;
 
+    // Set a timeout: if it takes more than 5 seconds, show a fallback
+    const timeoutId = setTimeout(() => {
+        if (container.innerText.includes("Fetching")) {
+            container.innerHTML = `<a href="${rssUrl}" target="_blank" class="activity-link">View latest activities directly on Strava →</a>`;
+        }
+    }, 5000);
+
     try {
-        // Cache-buster added to URL to prevent 'stuck' loading states
-        const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${Date.now()}`;
-        const response = await fetch(proxyUrl);
+        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${Date.now()}`);
         const data = await response.json();
+
+        clearTimeout(timeoutId);
 
         if (data.status === 'ok' && data.items?.length > 0) {
             const last = data.items[0];
@@ -37,25 +44,25 @@ window.fetchStravaRSS = async () => {
                 <a href="${last.link}" target="_blank" class="activity-link">
                     <div class="activity-stats-row">
                         <div class="stat-item">
-                            <span class="stat-label">ACTIVITY</span>
+                            <span class="stat-label">LATEST RUN</span>
                             <div class="activity-title">${last.title}</div>
                         </div>
                     </div>
                     <div class="activity-footer">
-                        <span class="activity-meta">Tracked on ${date}</span>
-                        <span class="strava-badge">View on Strava →</span>
+                        <span class="activity-meta">Completed ${date}</span>
+                        <span class="strava-badge">Open Strava</span>
                     </div>
                 </a>`;
         } else {
-            container.innerHTML = "No recent data found.";
+            container.innerHTML = "No recent activities found.";
         }
     } catch (e) {
-        console.error("Strava Error:", e);
-        container.innerHTML = "Feed currently unavailable.";
+        clearTimeout(timeoutId);
+        container.innerHTML = `<a href="${rssUrl}" target="_blank" class="activity-link">Connection busy. Click to view on Strava →</a>`;
     }
 };
 
-// --- PROJECT & PLAN MANAGEMENT ---
+// --- FIREBASE CORE ---
 window.syncDropdown = async () => {
     const querySnapshot = await getDocs(collection(db, "plans"));
     const select = document.getElementById('projectSelect');
@@ -115,24 +122,7 @@ window.loadProject = (id) => {
     });
 };
 
-window.handleProjectChange = (val) => {
-    if (val === "ADD_NEW") {
-        const name = prompt("New plan name:");
-        if (name) {
-            const id = name.toLowerCase().replace(/\s+/g, '-');
-            setDoc(doc(db, "plans", id), { runs: [], archived: false }).then(() => {
-                window.syncDropdown();
-                window.loadProject(id);
-            });
-        } else {
-            document.getElementById('projectSelect').value = currentProject;
-        }
-    } else {
-        window.loadProject(val);
-    }
-};
-
-// --- RUN ACTIONS ---
+// --- INTERACTIVE ACTIONS ---
 window.toggleByIndex = async (i) => {
     const r = [...localRuns];
     if (r[i].includes("@done")) {
@@ -143,6 +133,19 @@ window.toggleByIndex = async (i) => {
         r[i] = `${r[i]} @done @date(${dateStr})`;
     }
     await updateDoc(doc(db, "plans", currentProject), { runs: r });
+};
+
+window.handleProjectChange = (val) => {
+    if (val === "ADD_NEW") {
+        const name = prompt("New plan name:");
+        if (name) {
+            const id = name.toLowerCase().replace(/\s+/g, '-');
+            setDoc(doc(db, "plans", id), { runs: [], archived: false }).then(() => {
+                window.syncDropdown();
+                window.loadProject(id);
+            });
+        }
+    } else { window.loadProject(val); }
 };
 
 window.addRun = async () => {
@@ -160,7 +163,6 @@ window.deleteByIndex = async (i) => {
     }
 };
 
-// --- TOOLBAR ACTIONS ---
 window.archiveCurrentProject = async () => {
     const docRef = doc(db, "plans", currentProject);
     const snap = await getDoc(docRef);
@@ -178,7 +180,7 @@ window.restartProject = async () => {
 };
 
 window.renameProject = async () => {
-    const newName = prompt("New name for this plan:", currentProject.replace(/-/g, ' '));
+    const newName = prompt("New name:", currentProject.replace(/-/g, ' '));
     if (newName) {
         const newId = newName.toLowerCase().replace(/\s+/g, '-');
         const snap = await getDoc(doc(db, "plans", currentProject));
@@ -193,14 +195,14 @@ window.renameProject = async () => {
 };
 
 window.deleteCurrentProject = async () => {
-    if (confirm("Permanently delete this entire plan?")) {
+    if (confirm("Delete entire plan?")) {
         await deleteDoc(doc(db, "plans", currentProject));
         location.reload();
     }
 };
 
 // --- INITIALIZE ---
-window.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     window.fetchStravaRSS();
     window.syncDropdown();
     window.loadProject(currentProject);
