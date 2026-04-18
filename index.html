@@ -1,32 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>In Strides</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/sf-black-filled/128/007AFF/running.png">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="app">
-        <div class="project-header">
-            <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
-                <option value="fast-5k">⚡️ Fast 5K</option>
-                <option value="royal-parks-half">🌳 Royal Parks Half</option>
-                <option value="recovery">🧘 Recovery</option>
-                <option value="ADD_NEW">+ Add New Plan...</option>
-            </select>
-        </div>
+window.loadProject = (projectId) => {
+  if (unsubscribe) unsubscribe();
+  const docRef = doc(db, "plans", projectId);
+  
+  unsubscribe = onSnapshot(docRef, (doc) => {
+    const listContainer = document.getElementById('runList');
+    listContainer.innerHTML = "";
+    localRuns = doc.exists() ? doc.data().runs : [];
 
-        <div class="input-group">
-            <input type="text" id="runInput" placeholder="Ex: 5k Intervals @w1" autocomplete="off">
-            <button id="addBtn" onclick="window.addRun()">Add</button>
-        </div>
+    const groups = {};
+    localRuns.forEach((run, index) => {
+      const weekMatch = run.match(/@w(?:eek)?\s?\(?(\d+)\)?/i);
+      const label = weekMatch ? `WEEK ${weekMatch[1]}` : "CURRENT";
+      if (!groups[label]) groups[label] = [];
+      groups[label].push({ text: run, originalIndex: index });
+    });
 
-        <div id="runList"></div>
-    </div>
-    <script type="module" src="script.js"></script>
-</body>
-</html>
+    Object.keys(groups).sort((a,b) => {
+        if(a === "CURRENT") return -1;
+        if(b === "CURRENT") return 1;
+        return parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,''));
+    }).forEach(week => {
+      const section = document.createElement('div');
+      section.innerHTML = `<div class="week-heading"><h3>${week}</h3></div>`;
+      const ul = document.createElement('ul');
+
+      groups[week].forEach((item) => {
+        const li = document.createElement('li');
+        const isDone = item.text.includes("@done");
+        if (isDone) li.classList.add('done');
+        
+        // Extract the date correctly
+        const dateMatch = item.text.match(/@date\((.*?)\)/);
+        const completionDate = dateMatch ? dateMatch[1] : "";
+
+        // CLEANING LOGIC: This removes @done, @w1, and @date(...) from the visible text
+        let cleanText = item.text
+            .replace(/@w(?:eek)?\s?\(?(\d+)\)?/gi, "")
+            .replace(/@date\(.*?\)/gi, "")
+            .replace(/@done/gi, "")
+            .trim();
+        
+        li.innerHTML = `
+          <div class="task-info" onclick="window.toggleByIndex(${item.originalIndex})">
+            <span class="task-text">${cleanText}</span>
+            ${completionDate ? `<span class="completion-date">COMPLETED: ${completionDate}</span>` : ""}
+          </div>
+          <button class="delete-btn" onclick="window.deleteByIndex(${item.originalIndex})">✕</button>
+        `;
+        ul.appendChild(li);
+      });
+      section.appendChild(ul);
+      listContainer.appendChild(section);
+    });
+  });
+};
+
