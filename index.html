@@ -7,22 +7,27 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Passkey Overlay -->
+    <div id="login-overlay" class="login-screen">
+        <div class="login-box">
+            <h2>Admin Access</h2>
+            <p>Enter PIN to manage plans</p>
+            <input type="password" id="pinInput" placeholder="••••">
+            <button onclick="window.checkPin()">Unlock Editing</button>
+            <button class="ghost-btn" onclick="window.closeLogin()">Cancel</button>
+        </div>
+    </div>
+
     <div class="app">
         <header class="top-bar">
             <div class="logo-container">
-                <img src="logo.png" alt="In Strides Logo" class="app-logo">
+                <img src="logo.png" alt="Logo" class="app-logo">
             </div>
             <h1>In Strides</h1>
         </header>
 
-        <!-- Strava Activity Card -->
         <div id="strava-feed" class="strava-card">
-            <div class="strava-header">
-                <span class="strava-title">LATEST ACTIVITY</span>
-            </div>
-            <div id="strava-content" class="strava-loading">
-                Fetching Strava data...
-            </div>
+            <div id="strava-content" class="strava-loading">Fetching Strava data...</div>
         </div>
 
         <div class="project-header">
@@ -30,22 +35,25 @@
                 <option value="">Loading plans...</option>
             </select>
             
-            <div class="action-bar">
-                <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
-                <button class="action-btn" onclick="window.restartProject()">Restart</button>
-                <button class="action-btn" onclick="window.renameProject()">Rename</button>
-                <button class="action-btn delete-plan-btn" onclick="window.deleteCurrentProject()">Delete</button>
-            </div>
+            <!-- Management UI (Hidden by default) -->
+            <div id="admin-ui" style="display: none;">
+                <div class="action-bar">
+                    <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
+                    <button class="action-btn" onclick="window.restartProject()">Restart</button>
+                    <button class="action-btn" onclick="window.renameProject()">Rename</button>
+                    <button class="action-btn delete-plan-btn" onclick="window.deleteCurrentProject()">Delete</button>
+                </div>
 
-            <div class="archive-toggle">
-                <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show archived plans</label>
+                <div class="archive-toggle">
+                    <label><input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> Show archived plans</label>
+                </div>
+
+                <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
+                    <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1" autocomplete="off">
+                    <button type="submit" id="addBtn">Add</button>
+                </form>
             </div>
         </div>
-
-        <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
-            <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1" autocomplete="off">
-            <button type="submit" id="addBtn">Add</button>
-        </form>
 
         <div id="runList"></div>
 
@@ -53,7 +61,10 @@
             <p>© 2026 In Strides.</p>
         </footer>
     </div>
+
+    <!-- Floating Lock Toggle -->
+    <button class="lock-toggle" onclick="window.openLogin()" id="lockBtn">🔒</button>
+
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
