@@ -1,3 +1,133 @@
+:root {
+  --primary: #007aff;
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --text-main: #1c1c1e;
+  --text-dim: #8e8e93;
+  --danger: #ff3b30;
+}
+
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background-color: var(--bg); 
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  color: var(--text-main);
+  /* Prevents accidental text selection while tapping items */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { 
+  width: 100%; 
+  max-width: 500px; 
+  min-height: 100vh;
+  padding: env(safe-area-inset-top) 16px 60px 16px;
+}
+
+/* --- Header & Select --- */
+.project-header { 
+  padding: 20px 0 10px 0;
+}
+
+#projectSelect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.05);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--primary);
+  outline: none;
+  width: auto;
+  appearance: none; /* Modern look */
+}
+
+/* --- Input Group --- */
+.input-group { 
+  display: flex; 
+  gap: 8px; 
+  margin: 15px 0 25px 0;
+  background: var(--card);
+  padding: 8px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+input { 
+  flex: 1; 
+  padding: 12px 14px; 
+  border: none;
+  font-size: 17px; 
+  outline: none;
+  background: transparent;
+  color: var(--text-main);
+}
+
+#addBtn { 
+  background: var(--primary); 
+  color: white; 
+  border: none; 
+  padding: 12px 22px; 
+  border-radius: 14px; 
+  font-weight: 600; 
+  font-size: 16px;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+#addBtn:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+/* --- Week Headings --- */
+.week-heading { 
+  margin: 30px 0 10px 4px; 
+}
+
+.week-heading h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+/* --- The List & Cards --- */
+ul { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0; 
+}
+
+li { 
+  background: var(--card);
+  padding: 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  border-bottom: 1px solid #f2f2f7;
+  transition: opacity 0.3s ease;
+}
+
+/* Rounding the corners of the "Card" blocks */
+li:first-of-type { 
+  border-top-left-radius: 16px; 
+  border-top-right-radius: 16px; 
+}
+
+li:last-of-type { 
+  border-bottom-left-radius: 16px; 
+  border-bottom-right-radius: 16px; 
+  border-bottom: none; 
+}
+
+/* Task Container Logic */
 .task-info {
   flex: 1;
   display: flex;
@@ -5,14 +135,53 @@
   cursor: pointer;
 }
 
+.task-text { 
+  font-size: 17px; 
+  font-weight: 500; 
+  line-height: 1.3;
+}
+
+/* Completion Date styling */
 .completion-date {
   font-size: 11px;
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 4px;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Done State */
+li.done { 
+  opacity: 0.45; 
+}
+
+li.done .task-text { 
+  text-decoration: line-through; 
+  color: var(--text-dim);
 }
 
 li.done .completion-date {
   color: var(--text-dim);
+}
+
+/* Delete Button */
+.delete-btn {
+  background: #ff3b3012; /* Subtle red tint */
+  color: var(--danger);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.delete-btn:active {
+  background: #ff3b3025;
 }
