@@ -116,12 +116,11 @@ window.restartProject = async () => {
     if (!docSnap.exists()) return;
 
     const oldRuns = docSnap.data().runs || [];
-    // Clean runs: remove @done and @date(...)
     const newRuns = oldRuns.map(run => 
         run.replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim()
     );
 
-    const newId = `${currentProject}-restarted-${Date.now().toString().slice(-4)}`;
+    const newId = `${currentProject}-restarted-${Math.floor(Math.random() * 1000)}`;
     await setDoc(doc(db, "plans", newId), {
         runs: newRuns,
         archived: false
@@ -133,20 +132,17 @@ window.restartProject = async () => {
 };
 
 window.renameProject = async () => {
-    const newName = prompt("Enter new name for this plan:", toTitleCase(currentProject));
-    if (!newName) return;
+    const currentDisplay = toTitleCase(currentProject);
+    const newName = prompt("Enter new name for this plan:", currentDisplay);
+    if (!newName || newName === currentDisplay) return;
 
     const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    if (newId === currentProject) return;
-
     const docRef = doc(db, "plans", currentProject);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
         const data = docSnap.data();
-        // Create new document
         await setDoc(doc(db, "plans", newId), data);
-        // Delete old document
         await deleteDoc(docRef);
         
         currentProject = newId;
@@ -202,3 +198,4 @@ window.addRun = async () => {
   await window.syncDropdown();
   window.loadProject(currentProject);
 })();
+
