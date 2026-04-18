@@ -1,9 +1,9 @@
-/* style.css - Clean White & Orange Theme */
+/* style.css - Clean White & Leg-Orange Theme */
 
 :root {
   --bg: #FFFFFF; /* Pure White Background */
   --card: #F9FAFB; /* Subtly grey card background for definition */
-  --primary: #FF6600; /* Vibrant Helix Orange for accent text */
+  --primary: #FF6600; /* Vibrant Leg-Orange accent text */
   --secondary: #E0E7FF; /* Light indigo/grey for interaction backgrounds */
   --text-main: #1C1C1E; /* Deep Charcoal for readability */
   --text-dim: #8E8E93; /* Subtle Grey for supplementary text */
@@ -62,7 +62,7 @@ body {
   border-radius: 14px;
   font-weight: 600;
   font-size: 16px;
-  color: var(--text-main); /* Keep selected project text main color */
+  color: var(--text-main);
   outline: none;
   appearance: none; /* Modern, clean look on mobile */
   margin-bottom: 12px;
@@ -117,13 +117,13 @@ input::placeholder { color: var(--text-dim); }
 ul { list-style: none; padding: 0; }
 li { 
   background: var(--card); padding: 20px; display: flex; align-items: center; 
-  border-bottom: 1px solid #D1D5DB; border-left: 3px solid transparent; /* Defined border on bottom, reserved for orange selection */
+  border-bottom: 1px solid #D1D5DB; border-left: 3px solid transparent;
   transition: all 0.2s;
 }
 li:first-child { border-top-left-radius: 18px; border-top-right-radius: 18px; }
 li:last-child { border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; border-bottom: none; }
 
-/* Interactive selected state - uses the orange helix color */
+/* Interactive selected state - uses the leg orange color */
 li.done { border-left-color: var(--primary); opacity: 0.6; }
 li.done .task-text { text-decoration: line-through; color: var(--text-dim); }
 
