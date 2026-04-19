@@ -18,17 +18,54 @@ let localRuns = [];
 let unsubscribe = null;
 let isCurrentArchived = false;
 
-// --- DYNAMIC ARCHIVE TOGGLE ---
+// --- PLAN MANAGEMENT ---
+window.addNewPlan = async () => {
+    const name = prompt("Enter the name for your new training plan:");
+    if (!name) return;
+    const id = name.toLowerCase().trim().replace(/\s+/g, '-');
+    const docRef = doc(db, "plans", id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        alert("A plan with this name already exists.");
+        return;
+    }
+    await setDoc(docRef, { runs: [], archived: false });
+    window.handleProjectChange(id);
+};
+
 window.toggleArchive = async () => {
     const newStatus = !isCurrentArchived;
     const actionText = newStatus ? "Archive" : "Unarchive";
-    
     if (!confirm(`${actionText} this plan?`)) return;
-    
     await updateDoc(doc(db, "plans", currentProject), { archived: newStatus });
     window.syncDropdown();
 };
 
+window.restartProject = async () => {
+    if (!confirm("Reset all progress?")) return;
+    const cleaned = localRuns.map(r => r.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
+    await updateDoc(doc(db, "plans", currentProject), { runs: cleaned });
+};
+
+window.renameProject = async () => {
+    const newName = prompt("Enter new plan name:");
+    if (!newName) return;
+    const newId = newName.toLowerCase().replace(/\s+/g, '-');
+    const oldDoc = await getDoc(doc(db, "plans", currentProject));
+    if (oldDoc.exists()) {
+        await setDoc(doc(db, "plans", newId), { ...oldDoc.data() });
+        await deleteDoc(doc(db, "plans", currentProject));
+        window.handleProjectChange(newId);
+    }
+};
+
+window.deleteProject = async () => {
+    if (!confirm("PERMANENTLY delete this plan?")) return;
+    await deleteDoc(doc(db, "plans", currentProject));
+    location.reload();
+};
+
+// --- RUN MANAGEMENT ---
 window.renameRun = async (index) => {
     const raw = localRuns[index];
     const currentText = raw.replace(/@w\d+/gi, "").replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -59,30 +96,6 @@ window.deleteRun = async (i) => {
     let runs = [...localRuns];
     runs.splice(i, 1);
     await updateDoc(doc(db, "plans", currentProject), { runs });
-};
-
-window.restartProject = async () => {
-    if (!confirm("Reset all progress?")) return;
-    const cleaned = localRuns.map(r => r.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
-    await updateDoc(doc(db, "plans", currentProject), { runs: cleaned });
-};
-
-window.renameProject = async () => {
-    const newName = prompt("Enter new plan name:");
-    if (!newName) return;
-    const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    const oldDoc = await getDoc(doc(db, "plans", currentProject));
-    if (oldDoc.exists()) {
-        await setDoc(doc(db, "plans", newId), { ...oldDoc.data() });
-        await deleteDoc(doc(db, "plans", currentProject));
-        window.handleProjectChange(newId);
-    }
-};
-
-window.deleteProject = async () => {
-    if (!confirm("PERMANENTLY delete this plan?")) return;
-    await deleteDoc(doc(db, "plans", currentProject));
-    location.reload();
 };
 
 const renderApp = () => {
@@ -178,11 +191,8 @@ window.handleProjectChange = (id) => {
             const data = snap.data();
             localRuns = data.runs || []; 
             isCurrentArchived = data.archived || false;
-            
-            // Update button text
             const btn = document.getElementById('archiveBtn');
             if (btn) btn.innerText = isCurrentArchived ? "UNARCHIVE" : "ARCHIVE";
-            
             renderApp(); 
         }
     });
