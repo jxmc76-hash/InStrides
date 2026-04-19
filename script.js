@@ -40,7 +40,7 @@ const renderApp = () => {
         document.getElementById('admin-lock').innerText = "🔓";
     }
 
-    // Latest Run (Hero) Logic
+    // Latest Run Hero
     const completed = localRuns.filter(r => r.includes("@done"));
     if (completed.length > 0) {
         const latest = completed[completed.length - 1];
@@ -55,33 +55,57 @@ const renderApp = () => {
                     <a href="#" class="view-strava">View Strava →</a>
                 </div>
             </div>`;
-    } else {
-        heroContainer.innerHTML = "";
-    }
+    } else { heroContainer.innerHTML = ""; }
 
-    // Main List
+    // Grouping by Week
+    const groups = {};
     localRuns.forEach((runStr, index) => {
-        const isDone = runStr.includes("@done");
-        const dateMatch = runStr.match(/@date\((.*?)\)/i);
-        const cleanText = runStr.replace(/@w\d+/gi, "").replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim();
-        const week = (runStr.match(/@w(\d+)/i) || ["", "1"])[1];
-
-        const li = document.createElement('li');
-        li.setAttribute('data-week', week);
-        if (isDone) li.classList.add('done');
-        li.innerHTML = `
-            <div class="task-info" onclick="window.toggleDone(${index})">
-                <span class="task-text">${cleanText}</span>
-                ${dateMatch ? `<span class="completion-date">Done: ${dateMatch[1]}</span>` : ""}
-            </div>
-            ${window.isAdmin() ? `<button onclick="window.deleteRun(${index})" style="border:none; background:none; color:#ccc; cursor:pointer;">✕</button>` : ""}
-        `;
-        listContainer.appendChild(li);
+        const weekMatch = runStr.match(/@w(\d+)/i);
+        const weekNum = weekMatch ? weekMatch[1] : "1";
+        if (!groups[weekNum]) groups[weekNum] = [];
+        groups[weekNum].push({ raw: runStr, index });
     });
 
-    if (window.isAdmin()) {
-        new Sortable(listContainer, { animation: 150, ghostClass: 'sortable-ghost', onEnd: window.saveNewOrder });
-    }
+    // Render Sections
+    Object.keys(groups).sort((a,b) => a - b).forEach(weekNum => {
+        const title = document.createElement('h3');
+        title.className = "section-title";
+        title.innerText = weekNum === "0" ? "BACKLOG" : `WEEK ${weekNum}`;
+        listContainer.appendChild(title);
+
+        const ul = document.createElement('ul');
+        ul.className = "current-list";
+        ul.setAttribute('data-week', weekNum);
+
+        groups[weekNum].forEach(item => {
+            const isDone = item.raw.includes("@done");
+            const dateMatch = item.raw.match(/@date\((.*?)\)/i);
+            const cleanText = item.raw.replace(/@w\d+/gi, "").replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim();
+
+            const li = document.createElement('li');
+            if (isDone) li.classList.add('done');
+            li.innerHTML = `
+                <div class="task-info" onclick="window.toggleDone(${item.index})">
+                    <span class="task-text">${cleanText}</span>
+                    ${dateMatch ? `<span class="completion-date">Done: ${dateMatch[1]}</span>` : ""}
+                </div>
+                ${window.isAdmin() ? `<button class="delete-btn" onclick="window.deleteRun(${item.index})">✕</button>` : ""}
+            `;
+            ul.appendChild(li);
+        });
+
+        listContainer.appendChild(ul);
+
+        if (window.isAdmin()) {
+            new Sortable(ul, {
+                group: 'shared',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: window.saveNewOrder
+            });
+        }
+    });
+
     window.syncDropdown();
 };
 
@@ -100,12 +124,16 @@ window.toggleDone = async (i) => {
 };
 
 window.saveNewOrder = async () => {
-    const updated = Array.from(document.querySelectorAll('#runList li')).map(li => {
-        const text = li.querySelector('.task-text').innerText;
-        const week = li.getAttribute('data-week');
-        const done = li.classList.contains('done') ? " @done" : "";
-        const date = li.querySelector('.completion-date') ? ` @date(${li.querySelector('.completion-date').innerText.replace('Done: ', '')})` : "";
-        return `${text} @w${week}${done}${date}`;
+    const updated = [];
+    document.querySelectorAll('.current-list').forEach(ul => {
+        const week = ul.getAttribute('data-week');
+        ul.querySelectorAll('li').forEach(li => {
+            const text = li.querySelector('.task-text').innerText;
+            const done = li.classList.contains('done') ? " @done" : "";
+            const dateSpan = li.querySelector('.completion-date');
+            const date = dateSpan ? ` @date(${dateSpan.innerText.replace('Done: ', '')})` : "";
+            updated.push(`${text} @w${week}${done}${date}`);
+        });
     });
     await updateDoc(doc(db, "plans", currentProject), { runs: updated });
 };
@@ -148,5 +176,12 @@ window.loadProject = (id) => {
     });
 };
 
+window.restartProject = async () => {
+    if (!confirm("Reset progress?")) return;
+    const cleaned = localRuns.map(r => r.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
+    await updateDoc(doc(db, "plans", currentProject), { runs: cleaned });
+};
+
 window.loadProject(currentProject);
+
 
