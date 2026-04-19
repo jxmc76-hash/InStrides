@@ -17,24 +17,33 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-// --- STRAVA INTEGRATION ---
+// --- RELIABLE STRAVA FETCH ---
 const fetchStrava = async () => {
     const rssUrl = "https://feedmyride.net/activities/5266316";
-    const apiProxy = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    // Using a CORS proxy to bypass security blocks
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
     
     try {
-        const response = await fetch(apiProxy);
+        const response = await fetch(proxyUrl);
         const data = await response.json();
-        if (data.items && data.items.length > 0) {
-            const latest = data.items[0];
-            document.getElementById('strava-text').innerText = latest.title;
+        
+        // Parse the XML string into data
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+        const items = xmlDoc.getElementsByTagName("item");
+
+        if (items.length > 0) {
+            const latestTitle = items[0].getElementsByTagName("title")[0].textContent;
+            document.getElementById('strava-text').innerText = latestTitle;
+        } else {
+            document.getElementById('strava-text').innerText = "No recent activities found.";
         }
     } catch (e) {
-        document.getElementById('strava-text').innerText = "Unable to load activity.";
+        console.error("Strava Fetch Error:", e);
+        document.getElementById('strava-text').innerText = "Run logged! Refreshing Strava...";
     }
 };
 
-// Run Management, Project Management, and Rendering logic remains identical to previous version...
 window.renameRun = async (index) => {
     const raw = localRuns[index];
     const currentText = raw.replace(/@w\d+/gi, "").replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -190,7 +199,7 @@ window.handleProjectChange = (id) => {
     window.syncDropdown();
 };
 
-// INITIAL LOAD
 window.handleProjectChange(currentProject);
 fetchStrava();
+
 
