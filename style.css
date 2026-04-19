@@ -1,212 +1,299 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, updateDoc, onSnapshot, collection, getDocs, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-// --- CONFIG ---
-const firebaseConfig = {
-  apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
-  authDomain: "in-strides.firebaseapp.com",
-  projectId: "in-strides",
-  storageBucket: "in-strides.firebasestorage.app",
-  messagingSenderId: "974987405170",
-  appId: "1:974987405170:web:c1f100b44bb85efed7dfeb"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const PIN = "1234";
-
-let currentProject = "fast-5k";
-let localRuns = [];
-let unsubscribe = null;
-
-// --- AUTH HELPERS ---
-window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
-window.openLogin = () => document.getElementById('login-overlay').style.display = 'flex';
-window.closeLogin = () => document.getElementById('login-overlay').style.display = 'none';
-window.checkPin = () => {
-    if (document.getElementById('pinInput').value === PIN) {
-        sessionStorage.setItem('isAdmin', 'true');
-        location.reload();
-    } else {
-        alert("Incorrect PIN");
-    }
-};
-
-// --- DATA HANDLING ---
-
-window.loadProject = (id) => {
-    if (unsubscribe) unsubscribe();
-    currentProject = id;
+/* --- NEW DESIGN SYSTEM --- */
+:root {
+    /* Background gradient for behind the modal */
+    --bg-dark: #000000;
+    --bg-gradient: radial-gradient(circle, #2a2a2a 0%, #121212 100%);
     
-    unsubscribe = onSnapshot(doc(db, "plans", id), (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
-        localRuns = data.runs || [];
-        renderApp();
-    });
-};
-
-const renderApp = () => {
-    const listContainer = document.getElementById('runList');
-    listContainer.innerHTML = "";
-
-    if (window.isAdmin()) {
-        document.getElementById('admin-ui').style.display = 'block';
-        document.getElementById('admin-lock').innerText = "🔓";
-    }
-
-    // Grouping logic
-    const groups = {};
-    localRuns.forEach((runStr, index) => {
-        const weekMatch = runStr.match(/@w(\d+)/i);
-        const weekNum = weekMatch ? weekMatch[1] : "1";
-        if (!groups[weekNum]) groups[weekNum] = [];
-        groups[weekNum].push({ raw: runStr, index });
-    });
-
-    // Sort weeks numerically
-    const sortedWeeks = Object.keys(groups).sort((a, b) => a - b);
-
-    sortedWeeks.forEach(weekNum => {
-        const section = document.createElement('div');
-        section.className = "week-section";
-        section.innerHTML = `
-            <h3 class="week-heading">Week ${weekNum}</h3>
-            <ul class="drag-list" data-week="${weekNum}"></ul>
-        `;
-        
-        const ul = section.querySelector('ul');
-
-        groups[weekNum].forEach(item => {
-            const isDone = item.raw.includes("@done");
-            const dateMatch = item.raw.match(/@date\((.*?)\)/i);
-            const cleanText = item.raw
-                .replace(/@w\d+/gi, "")
-                .replace(/@done/gi, "")
-                .replace(/@date\(.*?\)/gi, "")
-                .trim();
-
-            const li = document.createElement('li');
-            if (isDone) li.classList.add('done');
-            
-            li.innerHTML = `
-                <div class="task-info" onclick="handleTaskClick(${item.index})">
-                    <span class="task-text">${cleanText}</span>
-                    ${dateMatch ? `<span class="completion-date">Done: ${dateMatch[1]}</span>` : ""}
-                </div>
-                ${window.isAdmin() ? `<button onclick="window.deleteRun(${item.index})">✕</button>` : ""}
-            `;
-            ul.appendChild(li);
-        });
-
-        listContainer.appendChild(section);
-
-        // Initialize Sortable for each week list
-        if (window.isAdmin()) {
-            new Sortable(ul, {
-                group: 'shared-weeks', // Allows dragging between weeks
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                onEnd: () => window.saveNewOrder()
-            });
-        }
-    });
+    /* Modal Theme */
+    --modal-bg: #FFFFFF;
+    --text-primary: #121212;
+    --text-dim: #666666;
     
-    window.syncDropdown();
-};
-
-// --- ACTION FUNCTIONS ---
-
-window.handleTaskClick = (index) => {
-    if (window.isAdmin()) {
-        window.toggleDone(index);
-    }
-};
-
-window.saveNewOrder = async () => {
-    const updatedRuns = [];
-    // We scrape the DOM to see which run ended up in which week
-    document.querySelectorAll('.drag-list').forEach(ul => {
-        const weekNum = ul.getAttribute('data-week');
-        ul.querySelectorAll('li').forEach(li => {
-            const text = li.querySelector('.task-text').innerText;
-            const isDone = li.classList.contains('done');
-            const dateSpan = li.querySelector('.completion-date');
-            
-            let runStr = `${text} @w${weekNum}`;
-            if (isDone) runStr += " @done";
-            if (dateSpan) runStr += ` @date(${dateSpan.innerText.replace('Done: ', '')})`;
-            
-            updatedRuns.push(runStr);
-        });
-    });
-
-    try {
-        await updateDoc(doc(db, "plans", currentProject), { runs: updatedRuns });
-    } catch (e) {
-        console.error("Error saving order: ", e);
-    }
-};
-
-window.toggleDone = async (index) => {
-    const runs = [...localRuns];
-    let run = runs[index];
-
-    if (run.includes("@done")) {
-        run = run.replace(/@done/g, "").replace(/@date\(.*?\)/g, "").trim();
-    } else {
-        const d = new Date();
-        const dateStr = `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })}`;
-        run = `${run} @done @date(${dateStr})`;
-    }
-
-    runs[index] = run;
-    await updateDoc(doc(db, "plans", currentProject), { runs });
-};
-
-window.addRun = async () => {
-    const input = document.getElementById('runInput');
-    if (!input.value) return;
-    const newRuns = [...localRuns, input.value];
-    await updateDoc(doc(db, "plans", currentProject), { runs: newRuns });
-    input.value = "";
-};
-
-window.deleteRun = async (index) => {
-    if (!confirm("Delete this run?")) return;
-    const runs = [...localRuns];
-    runs.splice(index, 1);
-    await updateDoc(doc(db, "plans", currentProject), { runs });
-};
-
-// --- PROJECT MANAGEMENT ---
-
-window.syncDropdown = async () => {
-    const select = document.getElementById('projectSelect');
-    const querySnapshot = await getDocs(collection(db, "plans"));
+    /* Premium Orange Theme */
+    --orange-primary: #ff5500;
+    --orange-pale: #fff5ee; /* Pale, translucent orange for latest run */
+    --orange-border: rgba(255, 85, 0, 0.3);
     
-    // Only update if count changed to avoid loop
-    if (select.options.length !== querySnapshot.size) {
-        select.innerHTML = "";
-        querySnapshot.forEach((doc) => {
-            const opt = document.createElement('option');
-            opt.value = doc.id;
-            opt.innerText = doc.id.replace(/-/g, ' ').toUpperCase();
-            opt.selected = (doc.id === currentProject);
-            select.appendChild(opt);
-        });
-    }
-};
+    /* UI States */
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --done-border: 2px solid #ff5500;
+}
 
-window.handleProjectChange = (id) => {
-    window.loadProject(id);
-};
+/* --- BASE STYLES --- */
+* { box-sizing: border-box; }
 
-window.restartProject = async () => {
-    if (!confirm("Reset all progress for this plan?")) return;
-    const cleaned = localRuns.map(r => r.replace(/@done/g, "").replace(/@date\(.*?\)/g, "").trim());
-    await updateDoc(doc(db, "plans", currentProject), { runs: cleaned });
-};
+body {
+    background-color: var(--bg-dark);
+    background-image: var(--bg-gradient);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
 
-// --- INIT ---
-window.loadProject(currentProject);
+/* --- THE MODAL CONTAINER --- */
+.app-modal {
+    width: 90%;
+    max-width: 480px;
+    background: var(--modal-bg);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.modal-content {
+    padding: 30px;
+}
+
+/* --- BRANDING HEADER --- */
+.app-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.app-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+.app-title {
+    color: var(--text-primary);
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+/* --- LATEST RUN (PREMIUM CARD) --- */
+.latest-run-hero {
+    margin-bottom: 25px;
+}
+
+.strava-card.premium {
+    background: var(--orange-pale);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid var(--orange-border);
+    box-shadow: var(--card-shadow);
+}
+
+.strava-card h4 {
+    margin: 0 0 5px 0;
+    color: var(--orange-primary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.strava-card h2 {
+    margin: 0 0 15px 0;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+.view-strava {
+    color: var(--orange-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* --- PLAN NAVIGATOR --- */
+.plan-navigator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f8f8;
+    padding: 8px 15px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    border: 1px solid #eee;
+}
+
+.plan-dropdown {
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    width: auto;
+}
+
+.admin-button {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0.5;
+}
+
+/* --- CURRENT LIST --- */
+.current-section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    color: var(--orange-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+.current-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* The card style for John/John2 */
+.current-list li {
+    background: var(--modal-bg);
+    margin-bottom: 10px;
+    padding: 16px 20px;
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab;
+}
+
+/* The completed state seen in the image */
+.current-list li.done {
+    border: var(--done-border);
+}
+
+.current-list li.done .task-text {
+    color: var(--orange-primary);
+}
+
+.task-info {
+    flex-grow: 1;
+}
+
+.task-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: block;
+}
+
+.completion-date {
+    font-size: 0.8rem;
+    color: var(--orange-primary);
+    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+}
+
+.current-list li button {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+/* Drag and Drop styles for the white modal */
+.sortable-ghost {
+    opacity: 0.4;
+    border: 2px dashed var(--orange-primary) !important;
+}
+
+/* --- Rest of the UI (re-styled, only visible to Admin) --- */
+.admin-panel {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px dashed #eee;
+}
+
+.admin-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+.admin-controls input {
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    padding: 12px;
+    border-radius: 8px;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.admin-actions button {
+    background: #f0f0f0;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+/* --- ADMIN LOGIN --- */
+.overlay {
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.login-modal {
+    background: var(--modal-bg);
+    padding: 30px;
+    border-radius: 20px;
+    width: 80%;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.login-modal input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    color: var(--text-primary);
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.btn-primary {
+    background: var(--orange-primary);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
