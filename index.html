@@ -11,7 +11,6 @@
 
     <div class="app-modal">
         <div class="modal-content">
-            
             <header class="app-header">
                 <img src="logo.png" alt="Logo" class="app-logo">
                 <h1 class="app-title">In Strides</h1>
@@ -21,7 +20,6 @@
                 <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
             </nav>
 
-            <!-- Dynamic groups (Week 1, Week 2, etc.) injected here -->
             <div id="runList"></div>
 
             <div id="admin-ui" style="display:none;" class="admin-panel">
@@ -31,14 +29,12 @@
                 </div>
                 <button onclick="window.restartProject()" class="btn-reset">Reset All Progress</button>
             </div>
-
         </div>
     </div>
 
-    <!-- Floating Admin Lock -->
+    <!-- FLOATING LOCK BUTTON -->
     <button onclick="window.openLogin()" id="admin-lock" class="floating-lock">🔒</button>
 
-    <!-- Login Overlay -->
     <div id="login-overlay" class="overlay">
         <div class="login-modal">
             <h3>Admin Access</h3>
