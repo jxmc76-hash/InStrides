@@ -19,7 +19,6 @@
 
             <nav class="plan-navigator">
                 <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
-                <button onclick="window.openLogin()" id="admin-lock" class="admin-button">🔒</button>
             </nav>
 
             <!-- Dynamic groups (Week 1, Week 2, etc.) injected here -->
@@ -36,6 +35,9 @@
         </div>
     </div>
 
+    <!-- Floating Admin Lock -->
+    <button onclick="window.openLogin()" id="admin-lock" class="floating-lock">🔒</button>
+
     <!-- Login Overlay -->
     <div id="login-overlay" class="overlay">
         <div class="login-modal">
@@ -49,3 +51,4 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
