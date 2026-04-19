@@ -1,4 +1,4 @@
-/* --- IN STRIDES: FULL STYLE.CSS --- */
+/* --- IN STRIDES: FULL REVISED STYLE.CSS --- */
 
 :root {
     --bg-main: #ffffff;
@@ -23,7 +23,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     padding: 20px;
     display: flex;
-    justify-content: center; /* This centers the modal */
+    justify-content: center; /* Centers the app-modal */
     color: var(--text);
     min-height: 100vh;
     position: relative;
@@ -64,10 +64,11 @@ body {
     margin: 0; 
 }
 
-/* Dropdown Navigation */
+/* Centered Dropdown Navigation */
 .plan-navigator {
     display: flex;
     justify-content: center;
+    align-items: center;
     background: #f9f9f9;
     padding: 12px 18px;
     border-radius: 16px;
@@ -80,15 +81,18 @@ body {
     font-size: 1rem; 
     font-weight: 700; 
     outline: none; 
-    cursor: pointer; 
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    text-align-last: center; /* Centers the text inside the dropdown */
 }
 
-/* FIXED FLOATING LOCK BUTTON - CORNER FIX */
+/* FIXED FLOATING LOCK BUTTON */
 .floating-lock {
-    position: fixed;      /* Lock to screen */
-    bottom: 30px;         /* 30px from bottom edge */
-    right: 30px;          /* 30px from right edge */
-    left: auto;           /* Break free from flexbox centering */
+    position: fixed;      /* Pinned to viewport */
+    bottom: 30px;         
+    right: 30px;          
+    left: auto;           /* Forces it out of flexbox centering */
     width: 60px;          
     height: 60px;
     min-width: 60px;      
@@ -102,7 +106,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;        /* Always on top */
+    z-index: 9999;        
     transition: transform 0.2s ease;
 }
 
@@ -138,7 +142,7 @@ body {
     align-items: center;
 }
 
-/* Strike-through Logic */
+/* Completion Styles */
 .current-list li.done {
     border-color: var(--orange);
     background-color: #fff9f6;
@@ -154,7 +158,15 @@ body {
     font-weight: 700; 
 }
 
-/* Admin UI */
+.completion-date { 
+    font-size: 0.8rem; 
+    color: var(--orange); 
+    font-weight: 700; 
+    display: block; 
+    margin-top: 4px; 
+}
+
+/* Admin Panel */
 .admin-panel { 
     margin-top: 40px; 
     border-top: 1px dashed var(--border); 
@@ -167,6 +179,14 @@ body {
     margin-bottom: 15px; 
 }
 
+.admin-controls input { 
+    flex: 1; 
+    padding: 12px; 
+    border-radius: 12px; 
+    border: 1px solid var(--border); 
+    outline: none; 
+}
+
 .btn-primary { 
     background: var(--orange); 
     color: white; 
@@ -175,6 +195,16 @@ body {
     border-radius: 12px; 
     font-weight: 700; 
     cursor: pointer; 
+}
+
+.btn-reset { 
+    background: none; 
+    border: none; 
+    color: var(--text-dim); 
+    width: 100%; 
+    cursor: pointer; 
+    font-size: 0.85rem; 
+    margin-top: 10px;
 }
 
 /* PIN Modal */
@@ -199,6 +229,25 @@ body {
     text-align: center; 
     width: 320px; 
     box-shadow: 0 20px 50px rgba(0,0,0,0.1); 
+    border: 1px solid var(--border); 
+}
+
+.login-modal input { 
+    width: 100%; 
+    padding: 12px; 
+    border-radius: 10px; 
+    border: 1px solid var(--border); 
+    margin-bottom: 15px; 
+    text-align: center; 
+    font-size: 1.2rem; 
+}
+
+.btn-secondary {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    margin-top: 10px;
+    cursor: pointer;
 }
 
 .delete-btn { 
@@ -209,3 +258,4 @@ body {
     font-size: 1.2rem; 
     margin-left: 10px;
 }
+
