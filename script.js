@@ -18,7 +18,6 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-// --- AUTH ---
 window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
 window.openLogin = () => document.getElementById('login-overlay').style.display = 'flex';
 window.closeLogin = () => document.getElementById('login-overlay').style.display = 'none';
@@ -29,7 +28,6 @@ window.checkPin = () => {
     } else alert("Wrong PIN");
 };
 
-// --- RENDER ---
 const renderApp = () => {
     const listContainer = document.getElementById('runList');
     const heroContainer = document.querySelector('.latest-run-hero');
@@ -40,7 +38,7 @@ const renderApp = () => {
         document.getElementById('admin-lock').innerText = "🔓";
     }
 
-    // Latest Run Hero
+    // Latest Hero
     const completed = localRuns.filter(r => r.includes("@done"));
     if (completed.length > 0) {
         const latest = completed[completed.length - 1];
@@ -51,13 +49,13 @@ const renderApp = () => {
                 <h4>Latest Run</h4>
                 <h2>${task}</h2>
                 <div class="card-footer">
-                    <span class="run-date">Completed ${dateMatch ? dateMatch[1] : ''}</span>
+                    <span>Completed ${dateMatch ? dateMatch[1] : ''}</span>
                     <a href="#" class="view-strava">View Strava →</a>
                 </div>
             </div>`;
     } else { heroContainer.innerHTML = ""; }
 
-    // Grouping by Week
+    // Grouping by Week Logic
     const groups = {};
     localRuns.forEach((runStr, index) => {
         const weekMatch = runStr.match(/@w(\d+)/i);
@@ -66,11 +64,11 @@ const renderApp = () => {
         groups[weekNum].push({ raw: runStr, index });
     });
 
-    // Render Sections
+    // Render grouped weeks
     Object.keys(groups).sort((a,b) => a - b).forEach(weekNum => {
         const title = document.createElement('h3');
         title.className = "section-title";
-        title.innerText = weekNum === "0" ? "BACKLOG" : `WEEK ${weekNum}`;
+        title.innerText = weekNum === "0" ? "CURRENT" : `WEEK ${weekNum}`;
         listContainer.appendChild(title);
 
         const ul = document.createElement('ul');
@@ -109,20 +107,6 @@ const renderApp = () => {
     window.syncDropdown();
 };
 
-// --- ACTIONS ---
-window.toggleDone = async (i) => {
-    if (!window.isAdmin()) return;
-    let runs = [...localRuns];
-    if (runs[i].includes("@done")) {
-        runs[i] = runs[i].replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
-    } else {
-        const d = new Date();
-        const dateStr = `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })}`;
-        runs[i] = `${runs[i]} @done @date(${dateStr})`;
-    }
-    await updateDoc(doc(db, "plans", currentProject), { runs });
-};
-
 window.saveNewOrder = async () => {
     const updated = [];
     document.querySelectorAll('.current-list').forEach(ul => {
@@ -136,6 +120,19 @@ window.saveNewOrder = async () => {
         });
     });
     await updateDoc(doc(db, "plans", currentProject), { runs: updated });
+};
+
+window.toggleDone = async (i) => {
+    if (!window.isAdmin()) return;
+    let runs = [...localRuns];
+    if (runs[i].includes("@done")) {
+        runs[i] = runs[i].replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
+    } else {
+        const d = new Date();
+        const dateStr = `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })}`;
+        runs[i] = `${runs[i]} @done @date(${dateStr})`;
+    }
+    await updateDoc(doc(db, "plans", currentProject), { runs });
 };
 
 window.addRun = async () => {
@@ -183,5 +180,4 @@ window.restartProject = async () => {
 };
 
 window.loadProject(currentProject);
-
 
