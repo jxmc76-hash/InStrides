@@ -26,7 +26,7 @@ window.checkPin = () => {
     if (document.getElementById('pinInput').value === PIN) {
         sessionStorage.setItem('isAdmin', 'true');
         location.reload();
-    } else alert("Incorrect PIN");
+    } else alert("Nope.");
 };
 
 // --- RENDER ---
@@ -34,9 +34,12 @@ const renderApp = () => {
     const listContainer = document.getElementById('runList');
     listContainer.innerHTML = "";
 
-    if (window.isAdmin()) document.getElementById('admin-ui').style.display = 'block';
+    if (window.isAdmin()) {
+        document.getElementById('admin-ui').style.display = 'block';
+        document.querySelector('.lock-btn').innerText = "🔓";
+    }
 
-    // Group runs by Week
+    // Grouping by Week
     const groups = {};
     localRuns.forEach((runStr, index) => {
         const weekMatch = runStr.match(/@w(\d+)/i);
@@ -45,30 +48,30 @@ const renderApp = () => {
         groups[weekNum].push({ raw: runStr, index });
     });
 
-    // Render grouped weeks
-    Object.keys(groups).sort((a,b) => a - b).forEach(weekNum => {
-        const h3 = document.createElement('h3');
-        h3.className = "week-heading";
-        h3.innerText = `Week ${weekNum}`;
-        listContainer.appendChild(h3);
+    // Loop through groups and create lists
+    Object.keys(groups).sort((a,b) => a - b).forEach(week => {
+        const title = document.createElement('h3');
+        title.className = "week-title";
+        title.innerText = `Week ${week}`;
+        listContainer.appendChild(title);
 
         const ul = document.createElement('ul');
-        ul.setAttribute('data-week', weekNum);
+        ul.setAttribute('data-week', week);
 
-        groups[weekNum].forEach(item => {
+        groups[week].forEach(item => {
             const isDone = item.raw.includes("@done");
             const dateMatch = item.raw.match(/@date\((.*?)\)/i);
             const cleanText = item.raw.replace(/@w\d+/gi, "").replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim();
 
             const li = document.createElement('li');
             if (isDone) li.classList.add('done');
-            
+
             li.innerHTML = `
                 <div style="flex:1; cursor:pointer;" onclick="window.toggleDone(${item.index})">
                     <span class="task-text">${cleanText}</span>
-                    ${dateMatch ? `<span class="completion-date">Completed: ${dateMatch[1]}</span>` : ""}
+                    ${dateMatch ? `<span class="date-badge">DONE: ${dateMatch[1]}</span>` : ""}
                 </div>
-                ${window.isAdmin() ? `<button class="delete-btn" onclick="window.deleteRun(${item.index})">✕</button>` : ""}
+                ${window.isAdmin() ? `<button class="del-x" onclick="window.deleteRun(${item.index})">✕</button>` : ""}
             `;
             ul.appendChild(li);
         });
@@ -77,7 +80,7 @@ const renderApp = () => {
 
         if (window.isAdmin()) {
             new Sortable(ul, {
-                group: 'shared',
+                group: 'running-tasks',
                 animation: 150,
                 onEnd: window.saveNewOrder
             });
@@ -108,8 +111,8 @@ window.saveNewOrder = async () => {
         ul.querySelectorAll('li').forEach(li => {
             const text = li.querySelector('.task-text').innerText;
             const done = li.classList.contains('done') ? " @done" : "";
-            const dateSpan = li.querySelector('.completion-date');
-            const date = dateSpan ? ` @date(${dateSpan.innerText.replace('Completed: ', '')})` : "";
+            const dateSpan = li.querySelector('.date-badge');
+            const date = dateSpan ? ` @date(${dateSpan.innerText.replace('DONE: ', '')})` : "";
             updated.push(`${text} @w${week}${done}${date}`);
         });
     });
@@ -156,9 +159,10 @@ window.loadProject = (id) => {
 };
 
 window.restartProject = async () => {
-    if (!confirm("Reset progress?")) return;
+    if (!confirm("Clear all progress?")) return;
     const cleaned = localRuns.map(r => r.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
     await updateDoc(doc(db, "plans", currentProject), { runs: cleaned });
 };
 
 window.loadProject(currentProject);
+
