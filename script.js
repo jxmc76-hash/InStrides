@@ -17,6 +17,24 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
+// --- STRAVA INTEGRATION ---
+const fetchStrava = async () => {
+    const rssUrl = "https://feedmyride.net/activities/5266316";
+    const apiProxy = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    
+    try {
+        const response = await fetch(apiProxy);
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            const latest = data.items[0];
+            document.getElementById('strava-text').innerText = latest.title;
+        }
+    } catch (e) {
+        document.getElementById('strava-text').innerText = "Unable to load activity.";
+    }
+};
+
+// Run Management, Project Management, and Rendering logic remains identical to previous version...
 window.renameRun = async (index) => {
     const raw = localRuns[index];
     const currentText = raw.replace(/@w\d+/gi, "").replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -65,10 +83,12 @@ window.renameProject = async () => {
     if (!newName) return;
     const newId = newName.toLowerCase().replace(/\s+/g, '-');
     const oldSnap = await getDocs(collection(db, "plans"));
-    const oldData = oldSnap.docs.find(d => d.id === currentProject).data();
-    await setDoc(doc(db, "plans", newId), { ...oldData });
-    await deleteDoc(doc(db, "plans", currentProject));
-    window.handleProjectChange(newId);
+    const oldDoc = oldSnap.docs.find(d => d.id === currentProject);
+    if (oldDoc) {
+        await setDoc(doc(db, "plans", newId), { ...oldDoc.data() });
+        await deleteDoc(doc(db, "plans", currentProject));
+        window.handleProjectChange(newId);
+    }
 };
 
 window.deleteProject = async () => {
@@ -99,14 +119,16 @@ const renderApp = () => {
         groups[week].forEach(item => {
             const isDone = item.raw.includes("@done");
             const dateMatch = item.raw.match(/@date\((.*?)\)/i);
-            const cleanText = item.raw.replace(/@w\d+/gi, "").replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim();
+            const cleanText = item.raw.replace(/@w\d+/gi, "").replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
             const li = document.createElement('li');
             if (isDone) li.classList.add('done');
             li.innerHTML = `
-                <span class="task-text" onclick="window.toggleDone(${item.index})" ondblclick="window.renameRun(${item.index})">
-                    ${cleanText}
-                    ${dateMatch ? `<span class="completion-date">DONE: ${dateMatch[1]}</span>` : ""}
-                </span>
+                <div style="flex:1;">
+                    <span class="task-text" onclick="window.toggleDone(${item.index})" ondblclick="window.renameRun(${item.index})">
+                        ${cleanText}
+                        ${dateMatch ? `<span class="completion-date">DONE: ${dateMatch[1]}</span>` : ""}
+                    </span>
+                </div>
                 <button class="delete-btn" onclick="window.deleteRun(${item.index})">✕</button>
             `;
             ul.appendChild(li);
@@ -121,10 +143,14 @@ window.saveNewOrder = async () => {
     document.querySelectorAll('.current-list').forEach(ul => {
         const week = ul.getAttribute('data-week');
         ul.querySelectorAll('li').forEach(li => {
-            const text = li.querySelector('.task-text').firstChild.textContent.trim();
+            const taskSpan = li.querySelector('.task-text');
+            const clone = taskSpan.cloneNode(true);
+            const dateSpan = clone.querySelector('.completion-date');
+            if (dateSpan) dateSpan.remove();
+            const text = clone.innerText.trim();
             const done = li.classList.contains('done') ? " @done" : "";
-            const dateSpan = li.querySelector('.completion-date');
-            const date = dateSpan ? ` @date(${dateSpan.innerText.replace('DONE: ', '')})` : "";
+            const originalDateSpan = taskSpan.querySelector('.completion-date');
+            const date = originalDateSpan ? ` @date(${originalDateSpan.innerText.replace('DONE: ', '')})` : "";
             updated.push(`${text} @w${week}${done}${date}`);
         });
     });
@@ -164,5 +190,7 @@ window.handleProjectChange = (id) => {
     window.syncDropdown();
 };
 
+// INITIAL LOAD
 window.handleProjectChange(currentProject);
+fetchStrava();
 
