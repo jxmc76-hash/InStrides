@@ -2,84 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>In Strides</title>
-    
-    <!-- Favicon & App Icons -->
-    <link rel="icon" type="image/png" href="logo.png">
-    <link rel="apple-touch-icon" href="logo.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TempoTrack</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Drag and Drop Library -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
-    <!-- Admin Passkey Overlay -->
-    <div id="login-overlay" class="login-screen">
-        <div class="login-box">
-            <h2>Admin Access</h2>
-            <p>Enter PIN to manage training plans</p>
-            <input type="password" id="pinInput" placeholder="••••" maxlength="4">
-            <button onclick="window.checkPin()">Unlock Editing</button>
-            <button class="ghost-btn" onclick="window.closeLogin()">Cancel</button>
-        </div>
-    </div>
-
-    <div class="app">
-        <!-- App Header -->
-        <header class="top-bar">
-            <div class="logo-container">
-                <img src="logo.png" alt="Logo" class="app-logo">
+    <div class="app-container">
+        <header>
+            <div class="header-top">
+                <select id="projectSelect" onchange="window.handleProjectChange(this.value)"></select>
+                <button onclick="window.openLogin()" id="admin-lock">🔒</button>
             </div>
-            <h1>In Strides</h1>
+            
+            <!-- Strava Feed Widget -->
+            <div id="strava-content" class="strava-card"></div>
         </header>
 
-        <!-- Strava Activity Card -->
-        <div id="strava-feed" class="strava-card">
-            <div id="strava-content" class="strava-loading">
-                Fetching Strava data...
+        <main id="runList">
+            <!-- Weeks and Runs injected here -->
+        </main>
+
+        <div id="admin-ui" style="display:none;">
+            <div class="admin-controls">
+                <input type="text" id="runInput" placeholder="Interval... @w1">
+                <button onclick="window.addRun()">Add</button>
+            </div>
+            <div class="admin-actions">
+                <button onclick="window.renameProject()">Rename</button>
+                <button onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
+                <button onclick="window.restartProject()">Reset Progress</button>
+                <button onclick="window.deleteCurrentProject()" style="color:red;">Delete Plan</button>
             </div>
         </div>
-
-        <!-- Project Selector & Admin Controls -->
-        <div class="project-header">
-            <select id="projectSelect" onchange="window.handleProjectChange(this.value)">
-                <option value="">Loading plans...</option>
-            </select>
-            
-            <!-- Management UI (Hidden until Admin Login) -->
-            <div id="admin-ui" style="display: none;">
-                <div class="action-bar">
-                    <button class="action-btn" onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
-                    <button class="action-btn" onclick="window.restartProject()">Restart</button>
-                    <button class="action-btn" onclick="window.renameProject()">Rename</button>
-                    <button class="action-btn delete-plan-btn" onclick="window.deleteCurrentProject()">Delete</button>
-                </div>
-
-                <div class="archive-toggle">
-                    <label>
-                        <input type="checkbox" id="showArchived" onchange="window.syncDropdown()"> 
-                        Show archived plans
-                    </label>
-                </div>
-
-                <form class="input-group" onsubmit="event.preventDefault(); window.addRun();">
-                    <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1" autocomplete="off">
-                    <button type="submit" id="addBtn">Add</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Training Plan List -->
-        <div id="runList"></div>
-
-        <footer class="site-footer">
-            <p>© 2026 In Strides.</p>
-        </footer>
     </div>
 
-    <!-- Floating Lock Toggle -->
-    <button class="lock-toggle" onclick="window.openLogin()" id="lockBtn">🔒</button>
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="overlay">
+        <div class="modal">
+            <h3>Admin Access</h3>
+            <input type="password" id="pinInput" placeholder="Enter PIN">
+            <button onclick="window.checkPin()">Unlock</button>
+            <button onclick="window.closeLogin()">Cancel</button>
+        </div>
+    </div>
 
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
