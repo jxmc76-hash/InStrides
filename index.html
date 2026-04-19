@@ -4,10 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
-    <!-- Linking the CSS file -->
-    <link rel="stylesheet" href="style.css">
-    <!-- Drag and Drop Library -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        /* --- INLINE CSS TO ENSURE IT LOADS --- */
+        :root {
+            --bg-dark: #121212;
+            --modal-bg: #FFFFFF;
+            --orange-primary: #ff5500;
+            --orange-pale: #fff5ee;
+            --text-primary: #121212;
+            --text-dim: #666666;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .app-modal {
+            width: 100%;
+            max-width: 480px;
+            background: var(--modal-bg);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .modal-content { padding: 30px; }
+
+        .app-header { text-align: center; margin-bottom: 30px; }
+
+        .app-logo {
+            width: 80px !important; /* Force the size */
+            height: auto;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .app-title {
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .strava-card.premium {
+            background: var(--orange-pale);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 85, 0, 0.1);
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .strava-card h4 {
+            margin: 0 0 5px 0;
+            color: var(--orange-primary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .strava-card h2 { margin: 0 0 15px 0; font-size: 1.3rem; color: var(--text-primary); }
+
+        .card-footer { display: flex; justify-content: space-between; font-size: 0.85rem; }
+
+        .view-strava { color: var(--orange-primary); text-decoration: none; font-weight: 700; }
+
+        .plan-navigator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f8f8;
+            padding: 10px 15px;
+            border-radius: 14px;
+            margin-bottom: 30px;
+        }
+
+        .plan-dropdown {
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            font-weight: 700;
+            outline: none;
+        }
+
+        .admin-button { background: none; border: none; cursor: pointer; opacity: 0.4; }
+
+        .section-title { color: var(--orange-primary); font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 15px; text-align: left;}
+
+        .current-list { list-style: none; padding: 0; margin: 0; }
+
+        .current-list li {
+            background: #fff;
+            margin-bottom: 12px;
+            padding: 18px 20px;
+            border-radius: 16px;
+            border: 1px solid #eee;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+
+        .current-list li.done { border: 2px solid var(--orange-primary); }
+        .current-list li.done .task-text { color: var(--orange-primary); font-weight: 700; }
+
+        .task-text { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+        .completion-date { font-size: 0.8rem; color: var(--orange-primary); display: block; margin-top: 4px; }
+
+        .admin-panel { margin-top: 20px; border-top: 1px dashed #eee; padding-top: 20px; }
+        .admin-controls { display: flex; gap: 10px; margin-bottom: 10px; }
+        .admin-controls input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd; }
+        .btn-primary { background: var(--orange-primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+        .login-modal { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 300px; }
+        
+        .sortable-ghost { opacity: 0.3; background: var(--orange-pale); border: 2px dashed var(--orange-primary); }
+    </style>
 </head>
 <body>
 
@@ -15,13 +143,11 @@
         <div class="modal-content">
             
             <header class="app-header">
-                <img src="logo.png" alt="In Strides Logo" class="app-logo">
+                <img src="logo.png" alt="Logo" class="app-logo">
                 <h1 class="app-title">In Strides</h1>
             </header>
 
-            <section class="latest-run-hero">
-                <!-- Injected via JS -->
-            </section>
+            <section class="latest-run-hero"></section>
 
             <nav class="plan-navigator">
                 <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
@@ -30,9 +156,7 @@
 
             <section class="current-section">
                 <h3 class="section-title">CURRENT</h3>
-                <ul id="runList" class="current-list">
-                    <!-- Injected via JS -->
-                </ul>
+                <ul id="runList" class="current-list"></ul>
             </section>
 
             <div id="admin-ui" style="display:none;" class="admin-panel">
@@ -42,18 +166,16 @@
                 </div>
                 <div class="admin-actions">
                     <button onclick="window.restartProject()">Reset Progress</button>
-                    <button onclick="window.deleteCurrentProject()" style="color:red;">Delete Plan</button>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <!-- Login Overlay -->
     <div id="login-overlay" class="overlay">
         <div class="login-modal">
             <h3>Admin Access</h3>
-            <input type="password" id="pinInput" placeholder="Enter PIN">
+            <input type="password" id="pinInput" placeholder="PIN">
             <button onclick="window.checkPin()" class="btn-primary">Unlock</button>
             <button onclick="window.closeLogin()" class="btn-secondary">Cancel</button>
         </div>
