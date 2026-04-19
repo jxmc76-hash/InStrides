@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -17,12 +17,14 @@
             </header>
 
             <div class="project-management-zone">
-                <nav class="plan-navigator">
-                    <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
-                </nav>
+                <div class="plan-selector-row">
+                    <nav class="plan-navigator">
+                        <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
+                    </nav>
+                    <button onclick="window.addNewPlan()" class="btn-add-plan" title="Add New Plan">+</button>
+                </div>
 
                 <div class="plan-actions">
-                    <!-- Added ID here -->
                     <button id="archiveBtn" onclick="window.toggleArchive()" class="btn-action">ARCHIVE</button>
                     <button onclick="window.restartProject()" class="btn-action">RESTART</button>
                     <button onclick="window.renameProject()" class="btn-action">RENAME</button>
@@ -44,7 +46,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=10"></script>
+    <script type="module" src="script.js?v=11"></script>
 </body>
 </html>
 
