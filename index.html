@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
+    <!-- Linking the CSS file -->
     <link rel="stylesheet" href="style.css">
+    <!-- Drag and Drop Library -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -13,18 +15,12 @@
         <div class="modal-content">
             
             <header class="app-header">
-                <img src="logo.png" alt="In Strides Logo" class="app-logo"> <h1 class="app-title">In Strides</h1>
+                <img src="logo.png" alt="In Strides Logo" class="app-logo">
+                <h1 class="app-title">In Strides</h1>
             </header>
 
             <section class="latest-run-hero">
-                <div class="strava-card premium">
-                    <h4>Latest Run</h4>
-                    <h2>WWS Park Run (83/173)</h2>
-                    <div class="card-footer">
-                        <span class="run-date">Completed 18 Apr</span>
-                        <a href="#" class="view-strava">View Strava →</a>
-                    </div>
-                </div>
+                <!-- Injected via JS -->
             </section>
 
             <nav class="plan-navigator">
@@ -34,9 +30,9 @@
 
             <section class="current-section">
                 <h3 class="section-title">CURRENT</h3>
-                
                 <ul id="runList" class="current-list">
-                    </ul>
+                    <!-- Injected via JS -->
+                </ul>
             </section>
 
             <div id="admin-ui" style="display:none;" class="admin-panel">
@@ -45,14 +41,16 @@
                     <button onclick="window.addRun()" class="btn-primary">Add</button>
                 </div>
                 <div class="admin-actions">
-                    <button onclick="window.renameProject()">Rename</button>
-                    <button onclick="window.archiveCurrentProject()" id="archiveBtn">Archive</button>
                     <button onclick="window.restartProject()">Reset Progress</button>
                     <button onclick="window.deleteCurrentProject()" style="color:red;">Delete Plan</button>
                 </div>
             </div>
 
-        </div> </div> <div id="login-overlay" class="overlay">
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="overlay">
         <div class="login-modal">
             <h3>Admin Access</h3>
             <input type="password" id="pinInput" placeholder="Enter PIN">
