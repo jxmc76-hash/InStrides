@@ -1,5 +1,3 @@
-/* --- IN STRIDES: FULL REVISED STYLE.CSS --- */
-
 :root {
     --bg-main: #ffffff;
     --modal-bg: #ffffff;
@@ -8,28 +6,20 @@
     --text-dim: #999999;
     --border: #eeeeee;
     --shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-    --btn-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-/* Base Reset */
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     background-color: var(--bg-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     padding: 20px;
     display: flex;
-    justify-content: center; /* Centers the app-modal */
+    justify-content: center;
     color: var(--text);
     min-height: 100vh;
-    position: relative;
 }
 
-/* The Central Modal Card */
 .app-modal {
     width: 100%;
     max-width: 480px;
@@ -41,40 +31,21 @@ body {
     height: fit-content;
 }
 
-.modal-content { 
-    padding: 40px 30px; 
-}
+.modal-content { padding: 40px 30px; }
 
-/* Header & Branding */
-.app-header { 
-    text-align: center; 
-    margin-bottom: 30px; 
-}
+.app-header { text-align: center; margin-bottom: 30px; }
+.app-logo { width: 70px; height: auto; border-radius: 16px; margin-bottom: 10px; }
+.app-title { font-size: 1.8rem; font-weight: 800; margin: 0; }
 
-.app-logo { 
-    width: 70px; 
-    height: auto; 
-    border-radius: 16px; 
-    margin-bottom: 10px; 
-}
-
-.app-title { 
-    font-size: 1.8rem; 
-    font-weight: 800; 
-    margin: 0; 
-}
-
-/* Centered Dropdown Navigation */
+/* Centered Dropdown */
 .plan-navigator {
     display: flex;
     justify-content: center;
     align-items: center;
     background: #f9f9f9;
-    padding: 0; /* Changed to 0 so the select handles the space */
     border-radius: 16px;
     margin-bottom: 10px;
     height: 48px;
-    overflow: hidden;
 }
 
 .plan-dropdown { 
@@ -85,40 +56,10 @@ body {
     outline: none; 
     cursor: pointer;
     width: 100%;
-    height: 100%;
     text-align: center;
-    text-align-last: center; /* Centers text in Chrome/Firefox */
-    padding-left: 20px; /* Offset for the arrow to keep text centered */
+    text-align-last: center;
 }
 
-/* FIXED FLOATING LOCK BUTTON */
-.floating-lock {
-    position: fixed;      
-    bottom: 30px;         
-    right: 30px;          
-    left: auto;           
-    width: 60px;          
-    height: 60px;
-    min-width: 60px;      
-    min-height: 60px;
-    background-color: #ffffff;
-    border-radius: 50%;   
-    border: 1px solid var(--border);
-    box-shadow: var(--btn-shadow);
-    cursor: pointer;
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;        
-    transition: transform 0.2s ease;
-}
-
-.floating-lock:active { 
-    transform: scale(0.9); 
-}
-
-/* Week Titles */
 .section-title {
     color: var(--orange);
     font-size: 0.8rem;
@@ -128,13 +69,7 @@ body {
     font-weight: 800;
 }
 
-/* Run Cards */
-.current-list { 
-    list-style: none; 
-    padding: 0; 
-    margin: 0; 
-}
-
+.current-list { list-style: none; padding: 0; margin: 0; }
 .current-list li {
     background: #fff;
     margin-bottom: 12px;
@@ -146,7 +81,6 @@ body {
     align-items: center;
 }
 
-/* Completion Styles */
 .current-list li.done {
     border-color: var(--orange);
     background-color: #fff9f6;
@@ -157,20 +91,9 @@ body {
     color: var(--text-dim);
 }
 
-.task-text { 
-    font-size: 1.1rem; 
-    font-weight: 700; 
-}
+.task-text { font-size: 1.1rem; font-weight: 700; }
+.completion-date { font-size: 0.8rem; color: var(--orange); font-weight: 700; display: block; margin-top: 4px; }
 
-.completion-date { 
-    font-size: 0.8rem; 
-    color: var(--orange); 
-    font-weight: 700; 
-    display: block; 
-    margin-top: 4px; 
-}
-
-/* Admin Panel */
 .admin-panel { 
     margin-top: 40px; 
     border-top: 1px dashed var(--border); 
@@ -178,90 +101,9 @@ body {
     text-align: center;
 }
 
-.admin-controls { 
-    display: flex; 
-    gap: 10px; 
-    margin-bottom: 15px; 
-}
+.admin-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+.admin-controls input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none; }
+.btn-primary { background: var(--orange); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+.btn-reset { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.85rem; margin-top: 10px; }
 
-.admin-controls input { 
-    flex: 1; 
-    padding: 12px; 
-    border-radius: 12px; 
-    border: 1px solid var(--border); 
-    outline: none; 
-}
-
-.btn-primary { 
-    background: var(--orange); 
-    color: white; 
-    border: none; 
-    padding: 12px 20px; 
-    border-radius: 12px; 
-    font-weight: 700; 
-    cursor: pointer; 
-}
-
-.btn-reset { 
-    background: none; 
-    border: none; 
-    color: var(--text-dim); 
-    cursor: pointer; 
-    font-size: 0.85rem; 
-    margin-top: 10px;
-    padding: 5px;
-}
-
-/* PIN Modal */
-.overlay { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(255,255,255,0.9); 
-    display: none; 
-    align-items: center; 
-    justify-content: center; 
-    z-index: 10000; 
-    backdrop-filter: blur(5px); 
-}
-
-.login-modal { 
-    background: white; 
-    padding: 40px; 
-    border-radius: 24px; 
-    text-align: center; 
-    width: 320px; 
-    box-shadow: 0 20px 50px rgba(0,0,0,0.1); 
-    border: 1px solid var(--border); 
-}
-
-.login-modal input { 
-    width: 100%; 
-    padding: 12px; 
-    border-radius: 10px; 
-    border: 1px solid var(--border); 
-    margin-bottom: 15px; 
-    text-align: center; 
-    font-size: 1.2rem; 
-}
-
-.btn-secondary {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    margin-top: 10px;
-    cursor: pointer;
-}
-
-.delete-btn { 
-    background: none; 
-    border: none; 
-    color: #ddd; 
-    cursor: pointer; 
-    font-size: 1.2rem; 
-    margin-left: 10px;
-}
-
-
+.delete-btn { background: none; border: none; color: #ddd; cursor: pointer; font-size: 1.2rem; margin-left: 10px; }
