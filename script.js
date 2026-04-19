@@ -12,33 +12,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const PIN = "1234";
 
 let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
-window.openLogin = () => document.getElementById('login-overlay').style.display = 'flex';
-window.closeLogin = () => document.getElementById('login-overlay').style.display = 'none';
-
-window.checkPin = () => {
-    if (document.getElementById('pinInput').value === PIN) {
-        sessionStorage.setItem('isAdmin', 'true');
-        location.reload();
-    } else alert("Wrong PIN");
-};
-
 const renderApp = () => {
     const listContainer = document.getElementById('runList');
     listContainer.innerHTML = "";
-
-    if (window.isAdmin()) {
-        const adminPanel = document.getElementById('admin-ui');
-        if (adminPanel) adminPanel.style.display = 'block';
-        const lockBtn = document.getElementById('admin-lock');
-        if (lockBtn) lockBtn.innerText = "🔓";
-    }
 
     const groups = {};
     localRuns.forEach((runStr, index) => {
@@ -70,26 +51,23 @@ const renderApp = () => {
                     <span class="task-text">${cleanText}</span>
                     ${dateMatch ? `<span class="completion-date">DONE: ${dateMatch[1]}</span>` : ""}
                 </div>
-                ${window.isAdmin() ? `<button class="delete-btn" onclick="window.deleteRun(${item.index})">✕</button>` : ""}
+                <button class="delete-btn" onclick="window.deleteRun(${item.index})">✕</button>
             `;
             ul.appendChild(li);
         });
 
         listContainer.appendChild(ul);
 
-        if (window.isAdmin()) {
-            new Sortable(ul, {
-                group: 'shared',
-                animation: 150,
-                onEnd: window.saveNewOrder
-            });
-        }
+        new Sortable(ul, {
+            group: 'shared',
+            animation: 150,
+            onEnd: window.saveNewOrder
+        });
     });
     window.syncDropdown();
 };
 
 window.toggleDone = async (i) => {
-    if (!window.isAdmin()) return;
     let runs = [...localRuns];
     if (runs[i].includes("@done")) {
         runs[i] = runs[i].replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -161,3 +139,4 @@ window.restartProject = async () => {
 };
 
 window.loadProject(currentProject);
+
