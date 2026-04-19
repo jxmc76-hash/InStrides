@@ -34,7 +34,8 @@ const renderApp = () => {
     listContainer.innerHTML = "";
 
     if (window.isAdmin()) {
-        document.getElementById('admin-ui').style.display = 'block';
+        const adminPanel = document.getElementById('admin-ui');
+        if (adminPanel) adminPanel.style.display = 'block';
         const lockBtn = document.getElementById('admin-lock');
         if (lockBtn) lockBtn.innerText = "🔓";
     }
