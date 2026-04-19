@@ -16,25 +16,39 @@
                 <h1 class="app-title">In Strides</h1>
             </header>
 
+            <!-- Latest Activity Placeholder -->
+            <div class="activity-card">
+                <span class="activity-label">LATEST ACTIVITY</span>
+                <p>Loading Strava activity...</p>
+            </div>
+
             <nav class="plan-navigator">
                 <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
             </nav>
 
-            <div id="runList"></div>
-
-            <!-- Admin UI is now always visible -->
-            <div id="admin-ui" class="admin-panel">
-                <div class="admin-controls">
-                    <input type="text" id="runInput" placeholder="New interval... @w1">
-                    <button onclick="window.addRun()" class="btn-primary">Add</button>
-                </div>
-                <button onclick="window.restartProject()" class="btn-reset">Reset All Progress</button>
+            <!-- Management Buttons -->
+            <div class="plan-actions">
+                <button onclick="window.archiveProject()" class="btn-action">ARCHIVE</button>
+                <button onclick="window.restartProject()" class="btn-action">RESTART</button>
+                <button onclick="window.renameProject()" class="btn-action">RENAME</button>
+                <button onclick="window.deleteProject()" class="btn-action">DELETE</button>
             </div>
+
+            <!-- Archive Toggle -->
+            <div class="archive-toggle">
+                <input type="checkbox" id="showArchived" onchange="window.syncDropdown()">
+                <label for="showArchived">Show archived plans</label>
+            </div>
+
+            <div class="admin-controls-inline">
+                <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1">
+                <button onclick="window.addRun()" class="btn-add">Add</button>
+            </div>
+
+            <div id="runList"></div>
         </div>
     </div>
 
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
-
