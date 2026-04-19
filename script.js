@@ -17,7 +17,6 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-// Run Rename
 window.renameRun = async (index) => {
     const raw = localRuns[index];
     const currentText = raw.replace(/@w\d+/gi, "").replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
@@ -104,12 +103,10 @@ const renderApp = () => {
             const li = document.createElement('li');
             if (isDone) li.classList.add('done');
             li.innerHTML = `
-                <div style="flex:1;">
-                    <span class="task-text" onclick="window.toggleDone(${item.index})" ondblclick="window.renameRun(${item.index})">
-                        ${cleanText}
-                    </span>
+                <span class="task-text" onclick="window.toggleDone(${item.index})" ondblclick="window.renameRun(${item.index})">
+                    ${cleanText}
                     ${dateMatch ? `<span class="completion-date">DONE: ${dateMatch[1]}</span>` : ""}
-                </div>
+                </span>
                 <button class="delete-btn" onclick="window.deleteRun(${item.index})">✕</button>
             `;
             ul.appendChild(li);
@@ -124,7 +121,7 @@ window.saveNewOrder = async () => {
     document.querySelectorAll('.current-list').forEach(ul => {
         const week = ul.getAttribute('data-week');
         ul.querySelectorAll('li').forEach(li => {
-            const text = li.querySelector('.task-text').innerText;
+            const text = li.querySelector('.task-text').firstChild.textContent.trim();
             const done = li.classList.contains('done') ? " @done" : "";
             const dateSpan = li.querySelector('.completion-date');
             const date = dateSpan ? ` @date(${dateSpan.innerText.replace('DONE: ', '')})` : "";
