@@ -35,16 +35,6 @@ body {
 .app-logo { width: 65px; margin-bottom: 8px; border-radius: 12px; }
 .app-title { font-size: 1.8rem; font-weight: 800; }
 
-.activity-card {
-    background: #fff5f0;
-    padding: 20px;
-    border-radius: 20px;
-    margin-bottom: 30px;
-    border: 1px solid #ffe0d0;
-}
-.activity-label { color: var(--orange); font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; display: block; margin-bottom: 8px; }
-#strava-text { font-size: 1rem; font-weight: 700; color: #333; line-height: 1.3; }
-
 .project-management-zone { margin-bottom: 35px; }
 
 .plan-navigator {
@@ -80,9 +70,10 @@ body {
     color: var(--text-dim);
     cursor: pointer;
     text-transform: uppercase;
+    transition: all 0.2s ease;
 }
 
-.btn-action:hover { border-color: var(--orange); color: var(--orange); }
+.btn-action:hover { border-color: var(--orange); color: var(--orange); background: #fffaf8; }
 
 .archive-toggle {
     display: flex;
@@ -127,4 +118,3 @@ body {
 .task-text { font-weight: 700; cursor: pointer; user-select: none; font-size: 1.1rem; flex: 1; }
 .completion-date { font-size: 0.75rem; color: var(--orange); font-weight: 800; display: block; margin-top: 4px; }
 .delete-btn { background: none; border: none; color: #ddd; cursor: pointer; font-size: 1.4rem; margin-left: 15px; }
-
