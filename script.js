@@ -17,13 +17,11 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-// --- RUN MANAGEMENT ---
-
+// Run Rename
 window.renameRun = async (index) => {
     const raw = localRuns[index];
     const currentText = raw.replace(/@w\d+/gi, "").replace("@done", "").replace(/@date\(.*?\)/gi, "").trim();
     const newName = prompt("Rename run:", currentText);
-    
     if (newName && newName !== currentText) {
         let runs = [...localRuns];
         const metadata = raw.match(/@\w+(\(.*?\))?/g);
@@ -52,8 +50,6 @@ window.deleteRun = async (i) => {
     await updateDoc(doc(db, "plans", currentProject), { runs });
 };
 
-// --- PROJECT MANAGEMENT ---
-
 window.archiveProject = async () => {
     if (!confirm("Archive this plan?")) return;
     await updateDoc(doc(db, "plans", currentProject), { archived: true });
@@ -69,7 +65,8 @@ window.renameProject = async () => {
     const newName = prompt("Enter new plan name:");
     if (!newName) return;
     const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    const oldData = (await getDocs(collection(db, "plans"))).docs.find(d => d.id === currentProject).data();
+    const oldSnap = await getDocs(collection(db, "plans"));
+    const oldData = oldSnap.docs.find(d => d.id === currentProject).data();
     await setDoc(doc(db, "plans", newId), { ...oldData });
     await deleteDoc(doc(db, "plans", currentProject));
     window.handleProjectChange(newId);
@@ -81,12 +78,9 @@ window.deleteProject = async () => {
     location.reload();
 };
 
-// --- RENDERING ---
-
 const renderApp = () => {
     const listContainer = document.getElementById('runList');
     listContainer.innerHTML = "";
-
     const groups = {};
     localRuns.forEach((runStr, index) => {
         const weekMatch = runStr.match(/@w(\d+)/i);
@@ -100,16 +94,13 @@ const renderApp = () => {
         title.className = "section-title";
         title.innerText = `WEEK ${week}`;
         listContainer.appendChild(title);
-
         const ul = document.createElement('ul');
         ul.className = "current-list";
         ul.setAttribute('data-week', week);
-
         groups[week].forEach(item => {
             const isDone = item.raw.includes("@done");
             const dateMatch = item.raw.match(/@date\((.*?)\)/i);
             const cleanText = item.raw.replace(/@w\d+/gi, "").replace(/@done/gi, "").replace(/@date\(.*?\)/gi, "").trim();
-
             const li = document.createElement('li');
             if (isDone) li.classList.add('done');
             li.innerHTML = `
@@ -124,7 +115,6 @@ const renderApp = () => {
             ul.appendChild(li);
         });
         listContainer.appendChild(ul);
-
         new Sortable(ul, { group: 'shared', animation: 150, onEnd: window.saveNewOrder });
     });
 };
