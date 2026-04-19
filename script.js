@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, updateDoc, onSnapshot, collection, getDocs, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, updateDoc, onSnapshot, collection, getDocs, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -16,8 +16,18 @@ const db = getFirestore(app);
 let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
+let isCurrentArchived = false;
 
-// --- RUN MANAGEMENT ---
+// --- DYNAMIC ARCHIVE TOGGLE ---
+window.toggleArchive = async () => {
+    const newStatus = !isCurrentArchived;
+    const actionText = newStatus ? "Archive" : "Unarchive";
+    
+    if (!confirm(`${actionText} this plan?`)) return;
+    
+    await updateDoc(doc(db, "plans", currentProject), { archived: newStatus });
+    window.syncDropdown();
+};
 
 window.renameRun = async (index) => {
     const raw = localRuns[index];
@@ -51,13 +61,6 @@ window.deleteRun = async (i) => {
     await updateDoc(doc(db, "plans", currentProject), { runs });
 };
 
-// --- PROJECT MANAGEMENT ---
-
-window.archiveProject = async () => {
-    if (!confirm("Archive this plan?")) return;
-    await updateDoc(doc(db, "plans", currentProject), { archived: true });
-};
-
 window.restartProject = async () => {
     if (!confirm("Reset all progress?")) return;
     const cleaned = localRuns.map(r => r.replace("@done", "").replace(/@date\(.*?\)/gi, "").trim());
@@ -68,9 +71,8 @@ window.renameProject = async () => {
     const newName = prompt("Enter new plan name:");
     if (!newName) return;
     const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    const oldSnap = await getDocs(collection(db, "plans"));
-    const oldDoc = oldSnap.docs.find(d => d.id === currentProject);
-    if (oldDoc) {
+    const oldDoc = await getDoc(doc(db, "plans", currentProject));
+    if (oldDoc.exists()) {
         await setDoc(doc(db, "plans", newId), { ...oldDoc.data() });
         await deleteDoc(doc(db, "plans", currentProject));
         window.handleProjectChange(newId);
@@ -82,8 +84,6 @@ window.deleteProject = async () => {
     await deleteDoc(doc(db, "plans", currentProject));
     location.reload();
 };
-
-// --- RENDERING ---
 
 const renderApp = () => {
     const listContainer = document.getElementById('runList');
@@ -174,11 +174,20 @@ window.handleProjectChange = (id) => {
     if (unsubscribe) unsubscribe();
     currentProject = id;
     unsubscribe = onSnapshot(doc(db, "plans", id), (snap) => {
-        if (snap.exists()) { localRuns = snap.data().runs || []; renderApp(); }
+        if (snap.exists()) { 
+            const data = snap.data();
+            localRuns = data.runs || []; 
+            isCurrentArchived = data.archived || false;
+            
+            // Update button text
+            const btn = document.getElementById('archiveBtn');
+            if (btn) btn.innerText = isCurrentArchived ? "UNARCHIVE" : "ARCHIVE";
+            
+            renderApp(); 
+        }
     });
     window.syncDropdown();
 };
 
 window.handleProjectChange(currentProject);
-
 
