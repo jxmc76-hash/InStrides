@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=5">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -16,9 +16,10 @@
                 <h1 class="app-title">In Strides</h1>
             </header>
 
-            <div class="activity-card">
+            <!-- Strava Activity Card -->
+            <div id="strava-card" class="activity-card">
                 <span class="activity-label">LATEST ACTIVITY</span>
-                <p>Loading Strava activity...</p>
+                <p id="strava-text">Fetching latest run...</p>
             </div>
 
             <div class="project-management-zone">
@@ -48,6 +49,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=3"></script>
+    <script type="module" src="script.js?v=5"></script>
 </body>
 </html>
+
