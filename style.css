@@ -1,22 +1,15 @@
-/* --- IN STRIDES: FULL STYLE.CSS --- */
-
 :root {
-    --bg-main: #ffffff;      /* Pure white background */
+    --bg-main: #ffffff;
     --modal-bg: #ffffff;
-    --orange: #ff5500;       /* Burnt Orange */
+    --orange: #ff5500;
     --text: #121212;
     --text-dim: #999999;
     --border: #eeeeee;
     --shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-    --btn-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --btn-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-/* Base Reset */
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     background-color: var(--bg-main);
@@ -28,7 +21,6 @@ body {
     min-height: 100vh;
 }
 
-/* The Central Modal Container */
 .app-modal {
     width: 100%;
     max-width: 480px;
@@ -38,33 +30,14 @@ body {
     margin-top: 20px;
     border: 1px solid var(--border);
     height: fit-content;
-    z-index: 1;
 }
 
-.modal-content { 
-    padding: 40px 30px; 
-}
+.modal-content { padding: 40px 30px; }
 
-/* Header & Branding */
-.app-header { 
-    text-align: center; 
-    margin-bottom: 30px; 
-}
+.app-header { text-align: center; margin-bottom: 30px; }
+.app-logo { width: 70px; height: auto; border-radius: 16px; margin-bottom: 10px; }
+.app-title { font-size: 1.8rem; font-weight: 800; margin: 0; }
 
-.app-logo { 
-    width: 70px; 
-    height: auto; 
-    border-radius: 16px; 
-    margin-bottom: 10px; 
-}
-
-.app-title { 
-    font-size: 1.8rem; 
-    font-weight: 800; 
-    margin: 0; 
-}
-
-/* Dropdown Navigation */
 .plan-navigator {
     display: flex;
     justify-content: center;
@@ -74,40 +47,32 @@ body {
     margin-bottom: 10px;
 }
 
-.plan-dropdown { 
-    border: none; 
-    background: transparent; 
-    font-size: 1rem; 
-    font-weight: 700; 
-    outline: none; 
-    cursor: pointer; 
-}
+.plan-dropdown { border: none; background: transparent; font-size: 1rem; font-weight: 700; outline: none; cursor: pointer; }
 
-/* Floating Admin Button */
+/* FIXED FLOATING LOCK BUTTON */
 .floating-lock {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 56px;
-    height: 56px;
+    width: 60px;          /* Explicit width */
+    height: 60px;         /* Explicit height */
+    min-width: 60px;      /* Prevent squeezing */
+    min-height: 60px;
     background-color: #ffffff;
-    border-radius: 50%;
+    border-radius: 50%;   /* Force circle */
     border: 1px solid var(--border);
     box-shadow: var(--btn-shadow);
     cursor: pointer;
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 99;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 9999;        /* Ensure it is on top of everything */
+    transition: transform 0.2s ease;
 }
 
-.floating-lock:active { 
-    transform: scale(0.9); 
-}
+.floating-lock:active { transform: scale(0.9); }
 
-/* Week Titles */
 .section-title {
     color: var(--orange);
     font-size: 0.8rem;
@@ -117,13 +82,7 @@ body {
     font-weight: 800;
 }
 
-/* Run Cards */
-.current-list { 
-    list-style: none; 
-    padding: 0; 
-    margin: 0; 
-}
-
+.current-list { list-style: none; padding: 0; margin: 0; }
 .current-list li {
     background: #fff;
     margin-bottom: 12px;
@@ -133,134 +92,29 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    cursor: grab;
 }
 
-/* Strike-through Logic for Done State */
 .current-list li.done {
     border-color: var(--orange);
     background-color: #fff9f6;
-    opacity: 0.7;
 }
-
 .current-list li.done .task-text {
     text-decoration: line-through;
     color: var(--text-dim);
 }
 
-.task-text { 
-    font-size: 1.1rem; 
-    font-weight: 700; 
-}
+.task-text { font-size: 1.1rem; font-weight: 700; }
+.completion-date { font-size: 0.8rem; color: var(--orange); font-weight: 700; display: block; margin-top: 4px; }
 
-.completion-date { 
-    font-size: 0.8rem; 
-    color: var(--orange); 
-    font-weight: 700; 
-    display: block; 
-    margin-top: 4px; 
-}
+.admin-panel { margin-top: 40px; border-top: 1px dashed var(--border); padding-top: 20px; }
+.admin-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+.admin-controls input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none; }
+.btn-primary { background: var(--orange); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+.btn-reset { background: none; border: none; color: var(--text-dim); width: 100%; cursor: pointer; font-size: 0.85rem; margin-top: 10px; }
 
-/* Admin Panel & Buttons */
-.admin-panel { 
-    margin-top: 40px; 
-    border-top: 1px dashed var(--border); 
-    padding-top: 20px; 
-}
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(5px); }
+.login-modal { background: white; padding: 40px; border-radius: 24px; text-align: center; width: 320px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+.login-modal input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 15px; text-align: center; font-size: 1.2rem; }
 
-.admin-controls { 
-    display: flex; 
-    gap: 10px; 
-    margin-bottom: 15px; 
-}
-
-.admin-controls input { 
-    flex: 1; 
-    padding: 12px; 
-    border-radius: 12px; 
-    border: 1px solid var(--border); 
-    outline: none; 
-}
-
-.btn-primary { 
-    background: var(--orange); 
-    color: white; 
-    border: none; 
-    padding: 12px 20px; 
-    border-radius: 12px; 
-    font-weight: 700; 
-    cursor: pointer; 
-}
-
-.btn-reset { 
-    background: none; 
-    border: none; 
-    color: var(--text-dim); 
-    width: 100%; 
-    cursor: pointer; 
-    font-size: 0.85rem; 
-    margin-top: 10px;
-}
-
-/* PIN Modal Overlay */
-.overlay { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(255,255,255,0.9); 
-    display: none; 
-    align-items: center; 
-    justify-content: center; 
-    z-index: 100; 
-    backdrop-filter: blur(5px); 
-}
-
-.login-modal { 
-    background: white; 
-    padding: 40px; 
-    border-radius: 24px; 
-    text-align: center; 
-    width: 320px; 
-    box-shadow: 0 20px 50px rgba(0,0,0,0.1); 
-    border: 1px solid var(--border); 
-}
-
-.login-modal h3 {
-    margin-bottom: 15px;
-}
-
-.login-modal input { 
-    width: 100%; 
-    padding: 12px; 
-    border-radius: 10px; 
-    border: 1px solid var(--border); 
-    margin-bottom: 15px; 
-    text-align: center; 
-    font-size: 1.2rem; 
-}
-
-.btn-secondary {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    margin-top: 10px;
-    cursor: pointer;
-}
-
-/* Dragging Animations */
-.sortable-ghost { 
-    opacity: 0.2; 
-    transform: scale(0.98); 
-}
-
-.delete-btn { 
-    background: none; 
-    border: none; 
-    color: #ddd; 
-    cursor: pointer; 
-    font-size: 1.2rem; 
-    margin-left: 10px;
-}
+.sortable-ghost { opacity: 0.2; }
+.delete-btn { background: none; border: none; color: #ddd; cursor: pointer; font-size: 1.2rem; margin-left: 10px; }
