@@ -4,121 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <style>
-        :root {
-            --bg: #121212;
-            --card: #1e1e1e;
-            --primary: #ff5500;
-            --text: #f0f0f0;
-            --text-dim: #777;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container { width: 100%; max-width: 500px; }
-
-        header { text-align: center; margin-bottom: 20px; }
-        .logo { width: 70px; border-radius: 14px; margin-bottom: 10px; }
-
-        /* NAV */
-        .plan-nav {
-            background: var(--card);
-            padding: 12px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            border: 1px solid #333;
-        }
-        select { background: transparent; color: white; border: none; font-size: 1rem; font-weight: bold; outline: none; cursor: pointer; }
-        .lock-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; }
-
-        /* WEEK GROUPING */
-        .week-title {
-            color: var(--primary);
-            font-size: 0.8rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin: 30px 0 10px 0;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #333;
-        }
-
-        /* RUN CARDS */
-        ul { list-style: none; padding: 0; margin: 0; min-height: 20px; }
-        li {
-            background: var(--card);
-            margin-bottom: 10px;
-            padding: 18px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: transform 0.1s;
-        }
-
-        /* THE "DONE" STATE */
-        li.done { border-left: 4px solid var(--primary); opacity: 0.5; }
-        li.done .task-text { text-decoration: line-through; color: var(--text-dim); }
-
-        .task-text { font-size: 1.1rem; font-weight: 600; }
-        .date-badge { font-size: 0.8rem; color: var(--primary); display: block; margin-top: 4px; font-weight: bold; }
-
-        /* ADMIN */
-        #admin-ui { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #444; }
-        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        input { flex: 1; background: #2a2a2a; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 100; }
-        .modal { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; }
-        .del-x { color: #444; background: none; border: none; font-size: 1.2rem; cursor: pointer; }
-    </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <img src="logo.png" alt="Logo" class="logo">
-            <h1>In Strides</h1>
-        </header>
+    <div class="app-modal">
+        <div class="modal-content">
+            
+            <header class="app-header">
+                <img src="logo.png" alt="Logo" class="app-logo">
+                <h1 class="app-title">In Strides</h1>
+            </header>
 
-        <nav class="plan-nav">
-            <select id="projectSelect" onchange="window.handleProjectChange(this.value)"></select>
-            <button onclick="window.openLogin()" class="lock-btn">🔒</button>
-        </nav>
+            <nav class="plan-navigator">
+                <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
+                <button onclick="window.openLogin()" id="admin-lock" class="admin-button">🔒</button>
+            </nav>
 
-        <div id="runList"></div>
+            <!-- Dynamic groups (Week 1, Week 2, etc.) injected here -->
+            <div id="runList"></div>
 
-        <div id="admin-ui" style="display:none;">
-            <div class="input-row">
-                <input type="text" id="runInput" placeholder="Interval... @w1">
-                <button onclick="window.addRun()" class="btn">Add</button>
+            <div id="admin-ui" style="display:none;" class="admin-panel">
+                <div class="admin-controls">
+                    <input type="text" id="runInput" placeholder="New interval... @w1">
+                    <button onclick="window.addRun()" class="btn-primary">Add</button>
+                </div>
+                <button onclick="window.restartProject()" class="btn-reset">Reset All Progress</button>
             </div>
-            <button onclick="window.restartProject()" style="background:none; border:none; color:#555; cursor:pointer; width:100%;">Reset All Progress</button>
+
         </div>
     </div>
 
+    <!-- Login Overlay -->
     <div id="login-overlay" class="overlay">
-        <div class="modal">
-            <h3>Admin PIN</h3>
-            <input type="password" id="pinInput" style="text-align:center; font-size:2rem; width:150px; margin-bottom:20px;">
-            <br>
-            <button onclick="window.checkPin()" class="btn">Unlock</button>
-            <button onclick="window.closeLogin()" style="background:none; border:none; color:white; margin-left:10px;">Close</button>
+        <div class="login-modal">
+            <h3>Admin Access</h3>
+            <input type="password" id="pinInput" placeholder="PIN">
+            <button onclick="window.checkPin()" class="btn-primary">Unlock</button>
+            <button onclick="window.closeLogin()" class="btn-secondary">Cancel</button>
         </div>
     </div>
 
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
