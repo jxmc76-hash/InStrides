@@ -1,306 +1,212 @@
-/* --- THEME VARIABLES --- */
-:root {
-    --bg: #121212;
-    --card: #1e1e1e;
-    --primary: #ff5500; /* Burnt Orange */
-    --primary-dim: #cc4400;
-    --text: #f0f0f0;
-    --text-dim: #a0a0a0;
-    --danger: #ff3333;
-    --shadow: rgba(0, 0, 0, 0.4);
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, updateDoc, onSnapshot, collection, getDocs, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-/* --- BASE STYLES --- */
-* {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
+// --- CONFIG ---
+const firebaseConfig = {
+  apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
+  authDomain: "in-strides.firebaseapp.com",
+  projectId: "in-strides",
+  storageBucket: "in-strides.firebasestorage.app",
+  messagingSenderId: "974987405170",
+  appId: "1:974987405170:web:c1f100b44bb85efed7dfeb"
+};
 
-body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    line-height: 1.5;
-}
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const PIN = "1234";
 
-.app-container {
-    width: 100%;
-    max-width: 500px;
-    padding: 20px;
-    min-height: 100vh;
-}
+let currentProject = "fast-5k";
+let localRuns = [];
+let unsubscribe = null;
 
-/* --- HEADER & NAVIGATION --- */
-header {
-    margin-bottom: 30px;
-}
+// --- AUTH HELPERS ---
+window.isAdmin = () => sessionStorage.getItem('isAdmin') === 'true';
+window.openLogin = () => document.getElementById('login-overlay').style.display = 'flex';
+window.closeLogin = () => document.getElementById('login-overlay').style.display = 'none';
+window.checkPin = () => {
+    if (document.getElementById('pinInput').value === PIN) {
+        sessionStorage.setItem('isAdmin', 'true');
+        location.reload();
+    } else {
+        alert("Incorrect PIN");
+    }
+};
 
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
+// --- DATA HANDLING ---
 
-select {
-    background: var(--card);
-    color: var(--text);
-    border: 1px solid #333;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    outline: none;
-    cursor: pointer;
-}
+window.loadProject = (id) => {
+    if (unsubscribe) unsubscribe();
+    currentProject = id;
+    
+    unsubscribe = onSnapshot(doc(db, "plans", id), (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        localRuns = data.runs || [];
+        renderApp();
+    });
+};
 
-#admin-lock {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 5px;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-}
+const renderApp = () => {
+    const listContainer = document.getElementById('runList');
+    listContainer.innerHTML = "";
 
-#admin-lock:hover {
-    opacity: 1;
-}
+    if (window.isAdmin()) {
+        document.getElementById('admin-ui').style.display = 'block';
+        document.getElementById('admin-lock').innerText = "🔓";
+    }
 
-/* --- STRAVA WIDGET --- */
-.strava-card {
-    background: linear-gradient(145deg, #242424, #1a1a1a);
-    padding: 16px;
-    border-radius: 12px;
-    border-left: 4px solid var(--primary);
-    box-shadow: 0 4px 15px var(--shadow);
-}
+    // Grouping logic
+    const groups = {};
+    localRuns.forEach((runStr, index) => {
+        const weekMatch = runStr.match(/@w(\d+)/i);
+        const weekNum = weekMatch ? weekMatch[1] : "1";
+        if (!groups[weekNum]) groups[weekNum] = [];
+        groups[weekNum].push({ raw: runStr, index });
+    });
 
-.strava-card h4 {
-    margin: 0 0 5px 0;
-    font-size: 0.9rem;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+    // Sort weeks numerically
+    const sortedWeeks = Object.keys(groups).sort((a, b) => a - b);
 
-/* --- LIST & WEEK STYLES --- */
-.week-section {
-    margin-bottom: 35px;
-}
+    sortedWeeks.forEach(weekNum => {
+        const section = document.createElement('div');
+        section.className = "week-section";
+        section.innerHTML = `
+            <h3 class="week-heading">Week ${weekNum}</h3>
+            <ul class="drag-list" data-week="${weekNum}"></ul>
+        `;
+        
+        const ul = section.querySelector('ul');
 
-.week-heading {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #333;
-    color: var(--text-dim);
-}
+        groups[weekNum].forEach(item => {
+            const isDone = item.raw.includes("@done");
+            const dateMatch = item.raw.match(/@date\((.*?)\)/i);
+            const cleanText = item.raw
+                .replace(/@w\d+/gi, "")
+                .replace(/@done/gi, "")
+                .replace(/@date\(.*?\)/gi, "")
+                .trim();
 
-ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    min-height: 30px; /* Essential for dropping into empty weeks */
-}
+            const li = document.createElement('li');
+            if (isDone) li.classList.add('done');
+            
+            li.innerHTML = `
+                <div class="task-info" onclick="handleTaskClick(${item.index})">
+                    <span class="task-text">${cleanText}</span>
+                    ${dateMatch ? `<span class="completion-date">Done: ${dateMatch[1]}</span>` : ""}
+                </div>
+                ${window.isAdmin() ? `<button onclick="window.deleteRun(${item.index})">✕</button>` : ""}
+            `;
+            ul.appendChild(li);
+        });
 
-li {
-    background: var(--card);
-    margin-bottom: 10px;
-    padding: 14px 16px;
-    border-radius: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: transform 0.1s, box-shadow 0.2s;
-    user-select: none;
-}
+        listContainer.appendChild(section);
 
-li:active {
-    cursor: grabbing;
-}
+        // Initialize Sortable for each week list
+        if (window.isAdmin()) {
+            new Sortable(ul, {
+                group: 'shared-weeks', // Allows dragging between weeks
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: () => window.saveNewOrder()
+            });
+        }
+    });
+    
+    window.syncDropdown();
+};
 
-li.done {
-    opacity: 0.4;
-    border-left: 3px solid var(--primary);
-}
+// --- ACTION FUNCTIONS ---
 
-li.done .task-text {
-    text-decoration: line-through;
-    color: var(--text-dim);
-}
+window.handleTaskClick = (index) => {
+    if (window.isAdmin()) {
+        window.toggleDone(index);
+    }
+};
 
-.task-info {
-    flex-grow: 1;
-    cursor: pointer;
-}
+window.saveNewOrder = async () => {
+    const updatedRuns = [];
+    // We scrape the DOM to see which run ended up in which week
+    document.querySelectorAll('.drag-list').forEach(ul => {
+        const weekNum = ul.getAttribute('data-week');
+        ul.querySelectorAll('li').forEach(li => {
+            const text = li.querySelector('.task-text').innerText;
+            const isDone = li.classList.contains('done');
+            const dateSpan = li.querySelector('.completion-date');
+            
+            let runStr = `${text} @w${weekNum}`;
+            if (isDone) runStr += " @done";
+            if (dateSpan) runStr += ` @date(${dateSpan.innerText.replace('Done: ', '')})`;
+            
+            updatedRuns.push(runStr);
+        });
+    });
 
-.task-text {
-    font-weight: 500;
-    display: block;
-}
+    try {
+        await updateDoc(doc(db, "plans", currentProject), { runs: updatedRuns });
+    } catch (e) {
+        console.error("Error saving order: ", e);
+    }
+};
 
-.completion-date {
-    font-size: 0.7rem;
-    color: var(--primary);
-    font-weight: 600;
-    margin-top: 2px;
-    display: block;
-}
+window.toggleDone = async (index) => {
+    const runs = [...localRuns];
+    let run = runs[index];
 
-li button {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-dim);
-    border: none;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    margin-left: 10px;
-}
+    if (run.includes("@done")) {
+        run = run.replace(/@done/g, "").replace(/@date\(.*?\)/g, "").trim();
+    } else {
+        const d = new Date();
+        const dateStr = `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })}`;
+        run = `${run} @done @date(${dateStr})`;
+    }
 
-li button:hover {
-    background: var(--danger);
-    color: white;
-}
+    runs[index] = run;
+    await updateDoc(doc(db, "plans", currentProject), { runs });
+};
 
-/* --- DRAG & DROP GHOST --- */
-.sortable-ghost {
-    opacity: 0.2;
-    background: var(--primary) !important;
-    transform: scale(0.98);
-}
+window.addRun = async () => {
+    const input = document.getElementById('runInput');
+    if (!input.value) return;
+    const newRuns = [...localRuns, input.value];
+    await updateDoc(doc(db, "plans", currentProject), { runs: newRuns });
+    input.value = "";
+};
 
-.sortable-chosen {
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-}
+window.deleteRun = async (index) => {
+    if (!confirm("Delete this run?")) return;
+    const runs = [...localRuns];
+    runs.splice(index, 1);
+    await updateDoc(doc(db, "plans", currentProject), { runs });
+};
 
-/* --- ADMIN UI --- */
-#admin-ui {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px dashed #444;
-}
+// --- PROJECT MANAGEMENT ---
 
-.admin-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
+window.syncDropdown = async () => {
+    const select = document.getElementById('projectSelect');
+    const querySnapshot = await getDocs(collection(db, "plans"));
+    
+    // Only update if count changed to avoid loop
+    if (select.options.length !== querySnapshot.size) {
+        select.innerHTML = "";
+        querySnapshot.forEach((doc) => {
+            const opt = document.createElement('option');
+            opt.value = doc.id;
+            opt.innerText = doc.id.replace(/-/g, ' ').toUpperCase();
+            opt.selected = (doc.id === currentProject);
+            select.appendChild(opt);
+        });
+    }
+};
 
-.admin-controls input {
-    flex: 1;
-    background: #2a2a2a;
-    border: 1px solid #444;
-    padding: 12px;
-    border-radius: 8px;
-    color: white;
-    outline: none;
-}
+window.handleProjectChange = (id) => {
+    window.loadProject(id);
+};
 
-.admin-controls input:focus {
-    border-color: var(--primary);
-}
+window.restartProject = async () => {
+    if (!confirm("Reset all progress for this plan?")) return;
+    const cleaned = localRuns.map(r => r.replace(/@done/g, "").replace(/@date\(.*?\)/g, "").trim());
+    await updateDoc(doc(db, "plans", currentProject), { runs: cleaned });
+};
 
-.admin-controls button {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 0 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.admin-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-.admin-actions button {
-    background: #333;
-    color: var(--text);
-    border: none;
-    padding: 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-
-.admin-actions button:hover {
-    background: #444;
-}
-
-/* --- LOGIN MODAL --- */
-.overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(5px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal {
-    background: var(--card);
-    padding: 30px;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 320px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-.modal h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-}
-
-.modal input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
-    background: #121212;
-    border: 1px solid #333;
-    border-radius: 8px;
-    color: white;
-    text-align: center;
-    font-size: 1.2rem;
-    letter-spacing: 4px;
-}
-
-.modal button {
-    width: 100%;
-    padding: 12px;
-    border-radius: 8px;
-    border: none;
-    margin-bottom: 10px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.modal button:first-of-type {
-    background: var(--primary);
-    color: white;
-}
-
-.modal button:last-of-type {
-    background: transparent;
-    color: var(--text-dim);
-}
-
-/* --- RESPONSIVE MOBILE OPTIMIZATION --- */
-@media (max-width: 600px) {
-    body { padding: 10px; }
-    .admin-actions { grid-template-columns: 1fr; }
-}
+// --- INIT ---
+window.loadProject(currentProject);
