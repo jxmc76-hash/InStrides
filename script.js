@@ -17,32 +17,7 @@ let currentProject = "fast-5k";
 let localRuns = [];
 let unsubscribe = null;
 
-// --- RELIABLE STRAVA FETCH ---
-const fetchStrava = async () => {
-    const rssUrl = "https://feedmyride.net/activities/5266316";
-    // Using a CORS proxy to bypass security blocks
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
-    
-    try {
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-        
-        // Parse the XML string into data
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-        const items = xmlDoc.getElementsByTagName("item");
-
-        if (items.length > 0) {
-            const latestTitle = items[0].getElementsByTagName("title")[0].textContent;
-            document.getElementById('strava-text').innerText = latestTitle;
-        } else {
-            document.getElementById('strava-text').innerText = "No recent activities found.";
-        }
-    } catch (e) {
-        console.error("Strava Fetch Error:", e);
-        document.getElementById('strava-text').innerText = "Run logged! Refreshing Strava...";
-    }
-};
+// --- RUN MANAGEMENT ---
 
 window.renameRun = async (index) => {
     const raw = localRuns[index];
@@ -76,6 +51,8 @@ window.deleteRun = async (i) => {
     await updateDoc(doc(db, "plans", currentProject), { runs });
 };
 
+// --- PROJECT MANAGEMENT ---
+
 window.archiveProject = async () => {
     if (!confirm("Archive this plan?")) return;
     await updateDoc(doc(db, "plans", currentProject), { archived: true });
@@ -105,6 +82,8 @@ window.deleteProject = async () => {
     await deleteDoc(doc(db, "plans", currentProject));
     location.reload();
 };
+
+// --- RENDERING ---
 
 const renderApp = () => {
     const listContainer = document.getElementById('runList');
@@ -183,7 +162,8 @@ window.syncDropdown = async () => {
         if (!data.archived || showArchived) {
             const opt = document.createElement('option');
             opt.value = d.id;
-            opt.innerText = d.id.replace(/-/g, ' ').toUpperCase();
+            const icon = data.archived ? "📁 " : "";
+            opt.innerText = `${icon}${d.id.replace(/-/g, ' ').toUpperCase()}`;
             opt.selected = (d.id === currentProject);
             select.appendChild(opt);
         }
@@ -200,6 +180,5 @@ window.handleProjectChange = (id) => {
 };
 
 window.handleProjectChange(currentProject);
-fetchStrava();
 
 
