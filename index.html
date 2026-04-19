@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Adding ?v=2 forces your browser to update the design -->
+    <link rel="stylesheet" href="style.css?v=2">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -16,17 +17,18 @@
                 <h1 class="app-title">In Strides</h1>
             </header>
 
-            <!-- Latest Activity Placeholder -->
+            <!-- Activity Card -->
             <div class="activity-card">
                 <span class="activity-label">LATEST ACTIVITY</span>
                 <p>Loading Strava activity...</p>
             </div>
 
+            <!-- Project Selection -->
             <nav class="plan-navigator">
                 <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
             </nav>
 
-            <!-- Management Buttons -->
+            <!-- Management Buttons (Archive, Restart, etc) -->
             <div class="plan-actions">
                 <button onclick="window.archiveProject()" class="btn-action">ARCHIVE</button>
                 <button onclick="window.restartProject()" class="btn-action">RESTART</button>
@@ -34,21 +36,23 @@
                 <button onclick="window.deleteProject()" class="btn-action">DELETE</button>
             </div>
 
-            <!-- Archive Toggle -->
+            <!-- Archive Checkbox -->
             <div class="archive-toggle">
                 <input type="checkbox" id="showArchived" onchange="window.syncDropdown()">
                 <label for="showArchived">Show archived plans</label>
             </div>
 
+            <!-- Add Run Input -->
             <div class="admin-controls-inline">
                 <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1">
                 <button onclick="window.addRun()" class="btn-add">Add</button>
             </div>
 
+            <!-- The Runs List -->
             <div id="runList"></div>
         </div>
     </div>
 
-    <script type="module" src="script.js"></script>
+    <script type="module" src="script.js?v=2"></script>
 </body>
 </html>
