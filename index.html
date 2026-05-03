@@ -3,50 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=11">
+    <title>Training Log</title>
+    <link rel="stylesheet" href="style.css?v=13">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
     <div class="app-modal">
         <div class="modal-content">
             <header class="app-header">
                 <img src="logo.png" alt="Logo" class="app-logo">
-                <h1 class="app-title">In Strides</h1>
+                <h1 class="app-title">Training Log</h1>
             </header>
+
+            <section class="analysis-zone">
+                <div class="chart-wrapper">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+            </section>
 
             <div class="project-management-zone">
                 <div class="plan-selector-row">
                     <nav class="plan-navigator">
                         <select id="projectSelect" class="plan-dropdown" onchange="window.handleProjectChange(this.value)"></select>
                     </nav>
-                    <button onclick="window.addNewPlan()" class="btn-add-plan" title="Add New Plan">+</button>
+                    <button onclick="window.addNewPlan()" class="btn-add-plan">+</button>
                 </div>
-
                 <div class="plan-actions">
                     <button id="archiveBtn" onclick="window.toggleArchive()" class="btn-action">ARCHIVE</button>
                     <button onclick="window.restartProject()" class="btn-action">RESTART</button>
-                    <button onclick="window.renameProject()" class="btn-action">RENAME</button>
                     <button onclick="window.deleteProject()" class="btn-action">DELETE</button>
-                </div>
-
-                <div class="archive-toggle">
-                    <input type="checkbox" id="showArchived" onchange="window.syncDropdown()">
-                    <label for="showArchived">Show archived plans</label>
                 </div>
             </div>
 
             <div class="admin-controls-inline">
-                <input type="text" id="runInput" placeholder="Ex: 5k intervals @w1">
+                <select id="exerciseType" class="type-dropdown">
+                    <option value="🏃">Run</option>
+                    <option value="🚲">Cycle</option>
+                    <option value="🏋️">Gym</option>
+                    <option value="🏊">Swim</option>
+                </select>
+                <input type="text" id="runInput" placeholder="Planned workout...">
                 <button onclick="window.addRun()" class="btn-add">Add</button>
             </div>
 
             <div id="runList"></div>
         </div>
     </div>
-
-    <script type="module" src="script.js?v=11"></script>
+    <script type="module" src="script.js?v=13"></script>
 </body>
 </html>
-
