@@ -20,6 +20,53 @@ let unsubscribe = null;
 let isOverviewMode = false;
 window.tempMark = 1;
 
+// --- TYPE MANAGEMENT ---
+window.showTypeModal = () => {
+    if (isOverviewMode) return alert("Select a specific log to manage types.");
+    const container = document.getElementById('typeList');
+    container.innerHTML = logData.types.map((type, idx) => `
+        <div class="type-item">
+            <input type="text" value="${type}" id="type-input-${idx}">
+            <button onclick="window.renameType(${idx})" class="btn-icon save">RENAME</button>
+            <button onclick="window.removeType(${idx})" class="btn-icon del">✕</button>
+        </div>
+    `).join('');
+    document.getElementById('typeModal').style.display = 'flex';
+};
+
+window.addType = async () => {
+    const input = document.getElementById('newTypeInput');
+    const val = input.value.toUpperCase().trim();
+    if (val && !logData.types.includes(val)) {
+        logData.types.push(val);
+        await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+        input.value = "";
+        window.showTypeModal();
+    }
+};
+
+window.renameType = async (idx) => {
+    const oldType = logData.types[idx];
+    const newType = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
+    if (!newType || newType === oldType) return;
+
+    // Update the type list
+    logData.types[idx] = newType;
+    // Update all entries that had the old type
+    logData.entries = logData.entries.map(e => e.type === oldType ? { ...e, type: newType } : e);
+    
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.showTypeModal();
+};
+
+window.removeType = async (idx) => {
+    if (!confirm(`Delete "${logData.types[idx]}"? (Entries will be hidden unless you recreate the type)`)) return;
+    logData.types.splice(idx, 1);
+    await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+    window.showTypeModal();
+};
+
+// --- LOG CONTROLS ---
 const syncLogDropdown = async () => {
     const dropdown = document.getElementById('logDropdown');
     const querySnapshot = await getDocs(collection(db, "logs"));
@@ -37,37 +84,36 @@ window.handleLogSelect = (val) => {
 };
 
 window.addNewLog = async () => {
-    const name = prompt("Enter name for new log:");
-    if (name) {
-        const id = name.toLowerCase().replace(/\s+/g, '-').trim();
-        if (id) initApp(id);
-    }
+    const name = prompt("New log name:");
+    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
 };
 
 window.deleteCurrentLog = async () => {
-    if (isOverviewMode) return alert("Cannot delete the Overview.");
-    if (!confirm(`Permanently delete log "${currentLogId}"?`)) return;
-    await deleteDoc(doc(db, "logs", currentLogId));
-    initApp("main-log");
+    if (isOverviewMode) return;
+    if (confirm(`Delete log "${currentLogId}"?`)) {
+        await deleteDoc(doc(db, "logs", currentLogId));
+        initApp("main-log");
+    }
 };
 
 const loadOverview = async () => {
     isOverviewMode = true;
     document.getElementById('deleteLogBtn').style.display = "none";
-    const querySnapshot = await getDocs(collection(db, "logs"));
-    const masterData = { types: new Set(), entries: [] };
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        (data.types || []).forEach(t => masterData.types.add(t));
-        masterData.entries = [...masterData.entries, ...(data.entries || [])];
+    const snap = await getDocs(collection(db, "logs"));
+    const master = { types: new Set(), entries: [] };
+    snap.forEach(d => {
+        const data = d.data();
+        (data.types || []).forEach(t => master.types.add(t));
+        master.entries = [...master.entries, ...(data.entries || [])];
     });
-    logData = { types: Array.from(masterData.types), entries: masterData.entries };
+    logData = { types: Array.from(master.types), entries: master.entries };
     renderMatrix();
     syncLogDropdown();
 };
 
+// --- ENTRY MODALS ---
 window.showInputModal = () => {
-    if (isOverviewMode) return alert("Switch to a specific log to add entries.");
+    if (isOverviewMode) return alert("Select a specific log.");
     editingId = null;
     document.getElementById('modalTitle').innerText = "Log Entry";
     document.getElementById('submitEntryBtn').innerText = "Save Workout";
@@ -94,13 +140,11 @@ window.editEntry = (id) => {
     document.getElementById('inputModal').style.display = 'flex';
 };
 
-window.closeModal = () => { document.getElementById('inputModal').style.display = 'none'; };
+window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
 
 window.selectMark = (val) => {
     window.tempMark = val;
-    document.querySelectorAll('.rate-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-val') == val);
-    });
+    document.querySelectorAll('.rate-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-val') == val));
 };
 
 window.saveExercise = async () => {
@@ -119,39 +163,17 @@ window.saveExercise = async () => {
         logData.entries.push(entryData);
     }
     await setDoc(doc(db, "logs", currentLogId), logData);
-    window.closeModal();
+    window.closeModal('inputModal');
 };
 
 window.deleteEntry = async () => {
-    if (!confirm("Delete this entry?")) return;
+    if (!confirm("Delete entry?")) return;
     logData.entries = logData.entries.filter(e => e.id !== editingId);
     await setDoc(doc(db, "logs", currentLogId), logData);
-    window.closeModal();
+    window.closeModal('inputModal');
 };
 
-window.manageTypes = async () => {
-    if (isOverviewMode) return alert("Switch to a specific log.");
-    const mode = prompt("Type 'ADD' to create a new type, or 'DELETE' to remove one:").toUpperCase();
-    
-    if (mode === 'ADD') {
-        const t = prompt("New exercise type:");
-        if (t) {
-            logData.types.push(t.toUpperCase());
-            await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
-        }
-    } else if (mode === 'DELETE') {
-        const t = prompt(`Enter the exact name of the type to delete (${logData.types.join(', ')}):`).toUpperCase();
-        if (logData.types.includes(t)) {
-            if (confirm(`Removing "${t}" will hide related entries in this log. Proceed?`)) {
-                logData.types = logData.types.filter(item => item !== t);
-                await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
-            }
-        } else {
-            alert("Type not found.");
-        }
-    }
-};
-
+// --- RENDERING ---
 const getMondayDate = (dStr) => {
     const d = new Date(dStr);
     const day = d.getDay();
@@ -196,7 +218,6 @@ const initApp = (logId) => {
     if (unsubscribe) unsubscribe();
     currentLogId = logId;
     document.getElementById('deleteLogBtn').style.display = "flex";
-    
     unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
         if (snap.exists()) { 
             logData = snap.data(); 
