@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=22">
+    <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -13,7 +13,7 @@
             <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
             
             <div class="action-bar">
-                <button onclick="window.manageTypes()" class="nav-btn btn-type">Manage Types</button>
+                <button onclick="window.showTypeModal()" class="nav-btn btn-type">Manage Types</button>
                 <button onclick="window.showInputModal()" class="nav-btn btn-add">Add Exercise</button>
                 
                 <div class="dropdown-wrapper">
@@ -41,9 +41,8 @@
             <div class="modal-card">
                 <div class="modal-header">
                     <h2 id="modalTitle">Log Entry</h2>
-                    <button onclick="window.closeModal()" class="close-btn">✕</button>
+                    <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
                 </div>
-                
                 <div class="form-body">
                     <div class="input-row">
                         <label>Exercise Type</label>
@@ -72,8 +71,31 @@
                 </div>
             </div>
         </div>
+
+        <div id="typeModal" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2>Manage Types</h2>
+                    <button onclick="window.closeModal('typeModal')" class="close-btn">✕</button>
+                </div>
+                <div class="form-body">
+                    <div class="input-row">
+                        <label>Current Types</label>
+                        <div id="typeList" class="type-editor-list">
+                            </div>
+                    </div>
+                    <div class="input-row" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                        <label>Add New Type</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="newTypeInput" placeholder="e.g. CYCLING">
+                            <button onclick="window.addType()" class="btn-add-inline">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script type="module" src="script.js?v=22"></script>
+    <script type="module" src="script.js?v=23"></script>
 </body>
 </html>
