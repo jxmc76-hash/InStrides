@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -20,41 +20,44 @@ let unsubscribe = null;
 let isOverviewMode = false;
 window.tempMark = 1;
 
-// --- LOG SELECTOR LOGIC ---
+// --- LOG MANAGEMENT ---
 const syncLogDropdown = async () => {
     const dropdown = document.getElementById('logDropdown');
     const querySnapshot = await getDocs(collection(db, "logs"));
     
     let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
-    
     querySnapshot.forEach((doc) => {
         const id = doc.id;
-        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>${id.replace(/-/g, ' ')}</option>`;
+        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id.replace(/-/g, ' ')}</option>`;
     });
-    
     dropdown.innerHTML = options;
 };
 
 window.handleLogSelect = (val) => {
-    if (val === "OVERVIEW") {
-        loadOverview();
-    } else {
-        isOverviewMode = false;
-        initApp(val);
-    }
+    if (val === "OVERVIEW") { loadOverview(); } 
+    else { isOverviewMode = false; initApp(val); }
 };
 
 window.addNewLog = async () => {
-    const name = prompt("Enter a unique name for the new log (e.g., strength-phase):");
+    const name = prompt("Enter name for new log:");
     if (name) {
-        const formattedName = name.toLowerCase().replace(/\s+/g, '-');
-        isOverviewMode = false;
-        initApp(formattedName);
+        const id = name.toLowerCase().replace(/\s+/g, '-').trim();
+        if (id) initApp(id);
     }
+};
+
+window.deleteCurrentLog = async () => {
+    if (isOverviewMode) return alert("Cannot delete the Overview.");
+    if (!confirm(`Permanently delete log "${currentLogId}"?`)) return;
+    await deleteDoc(doc(db, "logs", currentLogId));
+    initApp("main-log");
 };
 
 const loadOverview = async () => {
     isOverviewMode = true;
+    document.getElementById('viewIndicator').innerText = "MASTER OVERVIEW";
+    document.getElementById('deleteLogBtn').style.display = "none";
+    
     const querySnapshot = await getDocs(collection(db, "logs"));
     const masterData = { types: new Set(), entries: [] };
     querySnapshot.forEach((doc) => {
@@ -67,9 +70,9 @@ const loadOverview = async () => {
     syncLogDropdown();
 };
 
-// --- MODAL & DATA ---
+// --- MODALS & ENTRIES ---
 window.showInputModal = () => {
-    if (isOverviewMode) return alert("Select a specific log to add entries.");
+    if (isOverviewMode) return alert("Switch to a specific log to add entries.");
     editingId = null;
     document.getElementById('modalTitle').innerText = "Log Entry";
     document.getElementById('submitEntryBtn').innerText = "Save Workout";
@@ -82,7 +85,7 @@ window.showInputModal = () => {
 };
 
 window.editEntry = (id) => {
-    if (isOverviewMode) return alert("Editing disabled in Overview.");
+    if (isOverviewMode) return;
     const entry = logData.entries.find(e => e.id === id);
     if (!entry) return;
     editingId = id;
@@ -140,13 +143,13 @@ window.manageTypes = async () => {
     }
 };
 
-// --- RENDER ---
-const getMonday = (dStr) => {
+// --- RENDERING ---
+const getMondayDate = (dStr) => {
     const d = new Date(dStr);
     const day = d.getDay();
     const diff = d.getDate() - (day === 0 ? 6 : day - 1);
     const mon = new Date(d.setDate(diff));
-    return mon.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    return mon.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const renderMatrix = () => {
@@ -156,7 +159,7 @@ const renderMatrix = () => {
 
     const weeksMap = {};
     logData.entries.forEach(e => {
-        const mon = getMonday(e.date);
+        const mon = getMondayDate(e.date);
         if (!weeksMap[mon]) weeksMap[mon] = {};
         if (!weeksMap[mon][e.type]) weeksMap[mon][e.type] = [];
         weeksMap[mon][e.type].push(e);
@@ -170,7 +173,7 @@ const renderMatrix = () => {
             const items = weeksMap[mon][type] || [];
             const cards = items.map(i => `
                 <div class="entry-pill int-${i.mark}" ${isOverviewMode ? '' : `onclick="window.editEntry(${i.id})"`}>
-                    <span class="entry-date">${i.date.split('-').reverse().slice(0,2).join('/')}</span>
+                    <span class="entry-date">${i.date.split('-').reverse().join('/')}</span>
                     <p class="entry-desc">${i.details || 'Activity'}</p>
                     <div class="entry-mark-tag">${i.mark === 1 ? 'Recovery' : i.mark === 2 ? 'Moderate' : 'High Intensity'}</div>
                 </div>
@@ -184,6 +187,9 @@ const renderMatrix = () => {
 const initApp = (logId) => {
     if (unsubscribe) unsubscribe();
     currentLogId = logId;
+    document.getElementById('viewIndicator').innerText = `CURRENT LOG: ${logId.replace(/-/g, ' ').toUpperCase()}`;
+    document.getElementById('deleteLogBtn').style.display = "flex";
+    
     unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
         if (snap.exists()) { 
             logData = snap.data(); 
