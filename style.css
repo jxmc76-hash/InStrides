@@ -7,7 +7,6 @@
     --border: #e2e8f0;
     --red: #ef4444;
     
-    /* Intensity Palette */
     --int-1-bg: #f0fdf4;
     --int-1-text: #166534;
     --int-2-bg: #eff6ff;
@@ -28,10 +27,8 @@ body {
 
 .app-shell { max-width: 1400px; margin: 0 auto; }
 .app-header { text-align: center; margin-bottom: 50px; }
-.logo-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 10px; color: var(--text); }
+.logo-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 30px; color: var(--text); }
 .logo-text span { color: var(--primary); }
-
-.view-indicator { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
 
 .action-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 
