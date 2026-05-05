@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -14,32 +14,24 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let currentLogId = "main-log";
-let logData = {
-    types: ["YOGA", "RUN", "GYM", "SWIM"],
-    entries: []
-};
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
 window.tempMark = 1;
 
-// --- MODAL LOGIC ---
 window.showInputModal = () => {
-    const select = document.getElementById('modalType');
-    select.innerHTML = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
+    document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
 };
 
-window.closeModal = () => {
-    document.getElementById('inputModal').style.display = 'none';
-};
+window.closeModal = () => { document.getElementById('inputModal').style.display = 'none'; };
 
 window.selectMark = (val) => {
     window.tempMark = val;
-    document.querySelectorAll('.mark-btn').forEach(btn => {
+    document.querySelectorAll('.rate-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-val') == val);
     });
 };
 
-// --- DATA LOGIC ---
 window.saveExercise = async () => {
     const entry = {
         type: document.getElementById('modalType').value,
@@ -48,74 +40,59 @@ window.saveExercise = async () => {
         mark: window.tempMark,
         id: Date.now()
     };
-
-    if (!entry.date) { alert("Please select a date"); return; }
-
+    if (!entry.date) return alert("Select a date");
     logData.entries.push(entry);
     await setDoc(doc(db, "logs", currentLogId), logData);
     window.closeModal();
 };
 
 window.manageTypes = async () => {
-    const newType = prompt("Enter new exercise type (e.g. CYCLING):");
-    if (newType) {
-        logData.types.push(newType.toUpperCase());
+    const t = prompt("New Exercise Type:");
+    if (t) {
+        logData.types.push(t.toUpperCase());
         await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
     }
 };
 
-// --- RENDER LOGIC ---
-const getWeekNumber = (dateString) => {
-    const date = new Date(dateString);
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date - startOfYear) / 86400000;
-    return Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+const getWeekNumber = (dStr) => {
+    const d = new Date(dStr);
+    const start = new Date(d.getFullYear(), 0, 1);
+    return Math.ceil((((d - start) / 86400000) + start.getDay() + 1) / 7);
 };
 
 const renderMatrix = () => {
-    const headerRow = document.getElementById('headerRow');
-    const matrixBody = document.getElementById('matrixBody');
+    const header = document.getElementById('headerRow');
+    const body = document.getElementById('matrixBody');
 
-    // Headers
-    headerRow.innerHTML = `<th>WEEK</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
+    header.innerHTML = `<th>Week</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
-    // Grouping
     const weeksMap = {};
-    logData.entries.forEach(entry => {
-        const wNum = getWeekNumber(entry.date);
-        if (!weeksMap[wNum]) weeksMap[wNum] = {};
-        if (!weeksMap[wNum][entry.type]) weeksMap[wNum][entry.type] = [];
-        weeksMap[wNum][entry.type].push(entry);
+    logData.entries.forEach(e => {
+        const w = getWeekNumber(e.date);
+        if (!weeksMap[w]) weeksMap[w] = {};
+        if (!weeksMap[w][e.type]) weeksMap[w][e.type] = [];
+        weeksMap[w][e.type].push(e);
     });
 
-    // Rows
-    matrixBody.innerHTML = "";
-    const sortedWeeks = Object.keys(weeksMap).sort((a, b) => b - a);
-
-    sortedWeeks.forEach(w => {
-        let rowHtml = `<tr><td>WEEK ${w}</td>`;
+    body.innerHTML = "";
+    Object.keys(weeksMap).sort((a,b) => b-a).forEach(w => {
+        let row = `<tr><td>W${w}</td>`;
         logData.types.forEach(type => {
             const items = weeksMap[w][type] || [];
-            const content = items.map(item => `
-                <div class="entry-card">
-                    <strong>${item.date.split('-').reverse().slice(0,2).join('/')}</strong>
-                    ${item.details}
-                    <div class="entry-mark">${item.mark}/3</div>
+            const cards = items.map(i => `
+                <div class="entry-pill">
+                    <span class="entry-date">${i.date.split('-').reverse().slice(0,2).join('/')}</span>
+                    <p class="entry-desc">${i.details}</p>
+                    <span class="entry-mark-tag">${i.mark}/3</span>
                 </div>
             `).join('');
-            rowHtml += `<td><div class="cell-content">${content}</div></td>`;
+            row += `<td>${cards}</td>`;
         });
-        rowHtml += `</tr>`;
-        matrixBody.innerHTML += rowHtml;
+        body.innerHTML += row + `</tr>`;
     });
 };
 
-// --- INIT ---
 onSnapshot(doc(db, "logs", currentLogId), (snap) => {
-    if (snap.exists()) {
-        logData = snap.data();
-        renderMatrix();
-    } else {
-        setDoc(doc(db, "logs", currentLogId), logData);
-    }
+    if (snap.exists()) { logData = snap.data(); renderMatrix(); }
+    else { setDoc(doc(db, "logs", currentLogId), logData); }
 });
