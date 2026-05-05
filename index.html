@@ -4,22 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=14">
+    <link rel="stylesheet" href="style.css?v=15">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
-    <div class="app-container">
+    <div class="app-shell">
         <header class="app-header">
-            <h1 class="logo">TRAININGLOG.CO.UK</h1>
-            <div class="top-actions">
-                <button onclick="window.manageTypes()" class="btn btn-red">ADD EX. TYPE</button>
-                <button onclick="window.showInputModal()" class="btn btn-green">ADD EXERCISE</button>
-                <button onclick="window.changeLog()" class="btn btn-orange">CHANGE LOG</button>
+            <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
+            <div class="action-bar">
+                <button onclick="window.manageTypes()" class="nav-btn btn-type">Add Type</button>
+                <button onclick="window.showInputModal()" class="nav-btn btn-add">Add Exercise</button>
+                <button onclick="window.changeLog()" class="nav-btn btn-log">Logs</button>
             </div>
         </header>
 
-        <div class="matrix-wrapper">
-            <table id="trainingMatrix">
+        <div class="matrix-container">
+            <table class="modern-table">
                 <thead>
                     <tr id="headerRow">
                         <th>WEEK</th>
@@ -30,44 +31,40 @@
             </table>
         </div>
 
-        <div id="inputModal" class="modal">
-            <div class="modal-content">
+        <div id="inputModal" class="modal-overlay">
+            <div class="modal-card">
                 <div class="modal-header">
-                    <h2>EXERCISE INPUT</h2>
-                    <button onclick="window.closeModal()" class="close-x">✕</button>
+                    <h2>Log Entry</h2>
+                    <button onclick="window.closeModal()" class="close-btn">✕</button>
                 </div>
                 
-                <div class="input-group">
-                    <label>TYPE</label>
-                    <select id="modalType"></select>
-                </div>
-
-                <div class="input-group">
-                    <label>DATE</label>
-                    <input type="date" id="modalDate">
-                </div>
-
-                <div class="input-group">
-                    <label>DETAILS</label>
-                    <textarea id="modalDetails" rows="3" placeholder="Description..."></textarea>
-                </div>
-
-                <div class="input-group">
-                    <label>MARK /3</label>
-                    <div class="mark-picker">
-                        <button type="button" class="mark-btn" data-val="1" onclick="window.selectMark(1)">1</button>
-                        <button type="button" class="mark-btn" data-val="2" onclick="window.selectMark(2)">2</button>
-                        <button type="button" class="mark-btn" data-val="3" onclick="window.selectMark(3)">3</button>
+                <div class="form-body">
+                    <div class="input-row">
+                        <label>Exercise</label>
+                        <select id="modalType"></select>
                     </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button onclick="window.saveExercise()" class="btn-save">SAVE ENTRY</button>
+                    <div class="input-row">
+                        <label>Date</label>
+                        <input type="date" id="modalDate">
+                    </div>
+                    <div class="input-row">
+                        <label>Notes</label>
+                        <textarea id="modalDetails" placeholder="How did it go?"></textarea>
+                    </div>
+                    <div class="input-row">
+                        <label>Intensity (1-3)</label>
+                        <div class="rating-strip">
+                            <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
+                            <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
+                            <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
+                        </div>
+                    </div>
+                    <button onclick="window.saveExercise()" class="submit-btn">Save Workout</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="script.js?v=14"></script>
+    <script type="module" src="script.js?v=15"></script>
 </body>
 </html>
