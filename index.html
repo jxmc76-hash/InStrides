@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=16">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -27,14 +27,14 @@
                     </tr>
                 </thead>
                 <tbody id="matrixBody">
-                    </tbody>
+                </tbody>
             </table>
         </div>
 
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2>Log Entry</h2>
+                    <h2 id="modalTitle">Log Entry</h2>
                     <button onclick="window.closeModal()" class="close-btn">✕</button>
                 </div>
                 
@@ -59,12 +59,15 @@
                             <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
                         </div>
                     </div>
-                    <button onclick="window.saveExercise()" class="submit-btn">Save Workout</button>
+                    <div class="modal-footer-btns">
+                        <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="delete-btn" style="display:none;">Delete</button>
+                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="submit-btn">Save Workout</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="script.js?v=15"></script>
+    <script type="module" src="script.js?v=16"></script>
 </body>
 </html>
