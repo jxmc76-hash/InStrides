@@ -40,14 +40,14 @@ window.saveExercise = async () => {
         mark: window.tempMark,
         id: Date.now()
     };
-    if (!entry.date) return alert("Select a date");
+    if (!entry.date) return alert("Please select a date.");
     logData.entries.push(entry);
     await setDoc(doc(db, "logs", currentLogId), logData);
     window.closeModal();
 };
 
 window.manageTypes = async () => {
-    const t = prompt("New Exercise Type:");
+    const t = prompt("Add new exercise type:");
     if (t) {
         logData.types.push(t.toUpperCase());
         await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
@@ -83,7 +83,7 @@ const renderMatrix = () => {
                 <div class="entry-pill">
                     <span class="entry-date">${i.date.split('-').reverse().slice(0,2).join('/')}</span>
                     <p class="entry-desc">${i.details}</p>
-                    <span class="entry-mark-tag">${i.mark}/3</span>
+                    <span class="entry-mark-tag">${i.mark}/3 Intensity</span>
                 </div>
             `).join('');
             row += `<td>${cards}</td>`;
@@ -93,6 +93,10 @@ const renderMatrix = () => {
 };
 
 onSnapshot(doc(db, "logs", currentLogId), (snap) => {
-    if (snap.exists()) { logData = snap.data(); renderMatrix(); }
-    else { setDoc(doc(db, "logs", currentLogId), logData); }
+    if (snap.exists()) { 
+        logData = snap.data(); 
+        renderMatrix(); 
+    } else { 
+        setDoc(doc(db, "logs", currentLogId), logData); 
+    }
 });
