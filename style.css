@@ -6,6 +6,7 @@
     --text: #1a1a1b;
     --text-dim: #94a3b8;
     --border: #e2e8f0;
+    --red: #ef4444;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,10 +47,8 @@ body {
 .btn-type { background: #e2e8f0; color: #475569; }
 .btn-add { background: var(--primary); color: white; }
 .btn-log { background: #1e293b; color: white; }
-
 .nav-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
 
-/* Matrix Styling */
 .matrix-container {
     background: var(--card);
     border-radius: 24px;
@@ -75,7 +74,6 @@ th {
 td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top; border-right: 1px solid #f8fafc; }
 td:first-child { font-weight: 800; color: var(--primary); width: 120px; text-align: center; }
 
-/* Entry Cards */
 .entry-pill {
     background: white;
     border: 1px solid var(--border);
@@ -83,7 +81,11 @@ td:first-child { font-weight: 800; color: var(--primary); width: 120px; text-ali
     padding: 14px;
     margin-bottom: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    cursor: pointer;
+    transition: all 0.2s;
 }
+
+.entry-pill:hover { border-color: var(--primary); transform: scale(1.02); }
 
 .entry-date { font-size: 0.7rem; font-weight: 800; color: var(--primary); display: block; margin-bottom: 6px; }
 .entry-desc { font-size: 0.95rem; font-weight: 500; line-height: 1.4; color: #334155; }
@@ -98,7 +100,6 @@ td:first-child { font-weight: 800; color: var(--primary); width: 120px; text-ali
     color: var(--primary);
 }
 
-/* Modal UI */
 .modal-overlay { 
     display: none; position: fixed; inset: 0; 
     background: rgba(15, 23, 42, 0.4); 
@@ -127,4 +128,6 @@ td:first-child { font-weight: 800; color: var(--primary); width: 120px; text-ali
 .rate-btn { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: white; cursor: pointer; font-weight: 800; font-size: 0.75rem; color: var(--text-dim); }
 .rate-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
 
-.submit-btn { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 800; cursor: pointer; margin-top: 10px; }
+.modal-footer-btns { display: flex; gap: 10px; margin-top: 10px; }
+.submit-btn { flex: 3; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
+.delete-btn { flex: 1; padding: 18px; background: #fee2e2; color: var(--red); border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
