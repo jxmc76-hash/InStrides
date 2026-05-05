@@ -70,7 +70,7 @@ const loadOverview = async () => {
     syncLogDropdown();
 };
 
-// --- MODALS & ENTRIES ---
+// --- DATA & MODALS ---
 window.showInputModal = () => {
     if (isOverviewMode) return alert("Switch to a specific log to add entries.");
     editingId = null;
