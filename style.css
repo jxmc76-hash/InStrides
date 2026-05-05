@@ -1,36 +1,134 @@
 :root {
-    --bg-main: #ffffff;
-    --orange: #ff5500;
-    --text: #121212;
-    --border: #eeeeee;
+    --blue: #2563eb;
+    --red: #ef4444;
+    --green: #22c55e;
+    --orange: #f97316;
+    --border: #cbd5e1;
+    --bg: #f8fafc;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg-main); font-family: -apple-system, sans-serif; padding: 20px; display: flex; justify-content: center; }
 
-.app-modal { width: 100%; max-width: 480px; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
-.modal-content { padding: 30px; }
+body { 
+    font-family: 'Courier New', Courier, monospace; 
+    background-color: var(--bg); 
+    color: #334155;
+    padding: 20px;
+}
 
-/* Analysis UI */
-.analysis-zone { margin-bottom: 25px; background: #fcfcfc; border-radius: 24px; padding: 20px; border: 1px solid var(--border); }
-.chart-wrapper { height: 180px; margin-bottom: 20px; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.cal-day { aspect-ratio: 1; border-radius: 6px; background: #eee; font-size: 9px; display: flex; align-items: center; justify-content: center; color: #aaa; font-weight: 700; }
-.cal-day.active { background: var(--orange); color: white; }
+.app-container { max-width: 1200px; margin: 0 auto; }
 
-.plan-selector-row { display: flex; gap: 10px; margin-bottom: 12px; }
-.plan-navigator { background: #f9f9f9; border-radius: 12px; flex: 1; border: 1px solid var(--border); }
-.plan-dropdown { width: 100%; border: none; background: transparent; font-weight: 700; padding: 14px; font-size: 1rem; outline: none; }
-.btn-add-plan { width: 50px; background: #f9f9f9; border: 1px solid var(--border); border-radius: 12px; font-size: 1.4rem; color: var(--orange); cursor: pointer; }
+.app-header { text-align: center; margin-bottom: 40px; }
 
-.admin-controls-inline { display: flex; gap: 8px; margin-bottom: 25px; background: #f9f9f9; padding: 8px; border-radius: 16px; border: 1px solid var(--border); }
-.type-dropdown { border: none; background: #fff; border-radius: 10px; padding: 0 8px; font-size: 1.2rem; cursor: pointer; }
-.admin-controls-inline input { flex: 1; border: none; background: transparent; padding: 10px; outline: none; font-size: 1rem; }
-.btn-add { background: var(--orange); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+.logo { 
+    font-size: 1.8rem; 
+    color: var(--blue); 
+    border: 3px solid var(--blue); 
+    display: inline-block; 
+    padding: 8px 24px; 
+    margin-bottom: 30px;
+    font-weight: 900;
+}
 
-.current-list li { background: #fff; margin-bottom: 12px; padding: 20px; border-radius: 20px; border: 1px solid var(--border); list-style: none; display: flex; flex-direction: column; }
-.current-list li.done { border-color: var(--orange); background: #fffaf8; }
+.top-actions { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
 
-.score-picker { display: flex; gap: 8px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 12px; }
-.score-btn { flex: 1; text-align: center; padding: 8px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 0.7rem; font-weight: 800; cursor: pointer; color: #888; }
-.score-btn.active { background: var(--orange); color: white; border-color: var(--orange); }
+.btn { 
+    padding: 12px 20px; 
+    font-weight: bold; 
+    background: white; 
+    border: 2px solid; 
+    border-radius: 6px; 
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.btn-red { border-color: var(--red); color: var(--red); }
+.btn-green { border-color: var(--green); color: var(--green); }
+.btn-orange { border-color: var(--orange); color: var(--orange); }
+
+/* Matrix Table */
+.matrix-wrapper { 
+    background: white; 
+    border-radius: 12px; 
+    overflow-x: auto; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+
+th, td { 
+    border: 1px solid var(--border); 
+    padding: 15px; 
+    text-align: left; 
+    vertical-align: top;
+}
+
+th { background: #f1f5f9; color: var(--blue); font-size: 0.9rem; }
+
+td:first-child { font-weight: bold; color: var(--blue); width: 100px; }
+
+.cell-content { min-height: 80px; }
+
+.entry-card {
+    background: #fdfdfd;
+    border-left: 4px solid var(--blue);
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.entry-card strong { color: var(--red); display: block; margin-bottom: 2px; }
+
+.entry-mark { 
+    display: inline-block; 
+    margin-top: 5px; 
+    background: #fff7ed; 
+    color: var(--orange); 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-weight: bold;
+}
+
+/* Modal */
+.modal { 
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(15, 23, 42, 0.6); 
+    align-items: center; 
+    justify-content: center; 
+    z-index: 1000; 
+}
+
+.modal-content { 
+    background: white; 
+    width: 95%; 
+    max-width: 450px; 
+    border-radius: 16px; 
+    padding: 30px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.close-x { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--border); }
+
+.input-group { margin-bottom: 15px; }
+.input-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; }
+.input-group input, .input-group select, .input-group textarea {
+    width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+}
+
+.mark-picker { display: flex; gap: 10px; }
+.mark-btn { 
+    flex: 1; padding: 10px; border: 1px solid var(--border); 
+    background: white; border-radius: 8px; cursor: pointer; font-weight: bold;
+}
+.mark-btn.active { background: var(--orange); color: white; border-color: var(--orange); }
+
+.btn-save { 
+    width: 100%; padding: 15px; background: var(--green); 
+    color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+}
