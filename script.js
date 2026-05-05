@@ -20,42 +20,56 @@ let unsubscribe = null;
 let isOverviewMode = false;
 window.tempMark = 1;
 
-// --- MASTER OVERVIEW ---
+// --- LOG SELECTOR LOGIC ---
+const syncLogDropdown = async () => {
+    const dropdown = document.getElementById('logDropdown');
+    const querySnapshot = await getDocs(collection(db, "logs"));
+    
+    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
+    
+    querySnapshot.forEach((doc) => {
+        const id = doc.id;
+        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>${id.replace(/-/g, ' ')}</option>`;
+    });
+    
+    dropdown.innerHTML = options;
+};
+
+window.handleLogSelect = (val) => {
+    if (val === "OVERVIEW") {
+        loadOverview();
+    } else {
+        isOverviewMode = false;
+        initApp(val);
+    }
+};
+
+window.addNewLog = async () => {
+    const name = prompt("Enter a unique name for the new log (e.g., strength-phase):");
+    if (name) {
+        const formattedName = name.toLowerCase().replace(/\s+/g, '-');
+        isOverviewMode = false;
+        initApp(formattedName);
+    }
+};
+
 const loadOverview = async () => {
     isOverviewMode = true;
-    document.getElementById('viewIndicator').innerText = "Mode: MASTER OVERVIEW (Read-Only)";
-    
     const querySnapshot = await getDocs(collection(db, "logs"));
     const masterData = { types: new Set(), entries: [] };
-    
     querySnapshot.forEach((doc) => {
         const data = doc.data();
         (data.types || []).forEach(t => masterData.types.add(t));
         masterData.entries = [...masterData.entries, ...(data.entries || [])];
     });
-    
-    logData = {
-        types: Array.from(masterData.types),
-        entries: masterData.entries
-    };
+    logData = { types: Array.from(masterData.types), entries: masterData.entries };
     renderMatrix();
+    syncLogDropdown();
 };
 
-window.changeLog = () => {
-    const name = prompt("Enter log name (or type 'OVERVIEW'):", currentLogId);
-    if (!name) return;
-    
-    if (name.toUpperCase() === 'OVERVIEW') {
-        loadOverview();
-    } else if (name !== currentLogId) {
-        isOverviewMode = false;
-        initApp(name);
-    }
-};
-
-// --- MODAL CONTROLS ---
+// --- MODAL & DATA ---
 window.showInputModal = () => {
-    if (isOverviewMode) return alert("Switch to a specific log to add entries.");
+    if (isOverviewMode) return alert("Select a specific log to add entries.");
     editingId = null;
     document.getElementById('modalTitle').innerText = "Log Entry";
     document.getElementById('submitEntryBtn').innerText = "Save Workout";
@@ -68,7 +82,7 @@ window.showInputModal = () => {
 };
 
 window.editEntry = (id) => {
-    if (isOverviewMode) return alert("Editing is disabled in Overview mode.");
+    if (isOverviewMode) return alert("Editing disabled in Overview.");
     const entry = logData.entries.find(e => e.id === id);
     if (!entry) return;
     editingId = id;
@@ -91,7 +105,6 @@ window.selectMark = (val) => {
     });
 };
 
-// --- DATA ACTIONS ---
 window.saveExercise = async () => {
     const entryData = {
         type: document.getElementById('modalType').value,
@@ -119,8 +132,8 @@ window.deleteEntry = async () => {
 };
 
 window.manageTypes = async () => {
-    if (isOverviewMode) return alert("Switch to a specific log to manage types.");
-    const t = prompt("New exercise type:");
+    if (isOverviewMode) return alert("Select a specific log.");
+    const t = prompt("Add new exercise type:");
     if (t) {
         logData.types.push(t.toUpperCase());
         await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
@@ -151,7 +164,6 @@ const renderMatrix = () => {
 
     body.innerHTML = "";
     const sortedMondays = Object.keys(weeksMap).sort((a, b) => new Date(b) - new Date(a));
-
     sortedMondays.forEach(mon => {
         let row = `<tr><td>${mon}</td>`;
         logData.types.forEach(type => {
@@ -172,11 +184,11 @@ const renderMatrix = () => {
 const initApp = (logId) => {
     if (unsubscribe) unsubscribe();
     currentLogId = logId;
-    document.getElementById('viewIndicator').innerText = `Current Log: ${logId}`;
     unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
         if (snap.exists()) { 
             logData = snap.data(); 
             renderMatrix(); 
+            syncLogDropdown();
         } else { 
             setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); 
         }
