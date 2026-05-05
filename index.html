@@ -4,19 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
     <div class="app-shell">
         <header class="app-header">
             <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
+            
+            <div class="log-selector-container">
+                <select id="logDropdown" class="log-select" onchange="window.handleLogSelect(this.value)">
+                    </select>
+            </div>
+
             <div class="action-bar">
                 <button onclick="window.manageTypes()" class="nav-btn btn-type">Add Type</button>
                 <button onclick="window.showInputModal()" class="nav-btn btn-add">Add Exercise</button>
-                <button onclick="window.changeLog()" class="nav-btn btn-log">Logs</button>
+                <button onclick="window.addNewLog()" class="nav-btn btn-log">New Log</button>
             </div>
-            <div id="viewIndicator" class="view-indicator">Current Log: main-log</div>
         </header>
 
         <div class="matrix-container">
@@ -67,6 +72,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=19"></script>
+    <script type="module" src="script.js?v=20"></script>
 </body>
 </html>
