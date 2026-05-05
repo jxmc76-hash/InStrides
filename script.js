@@ -20,11 +20,9 @@ let unsubscribe = null;
 let isOverviewMode = false;
 window.tempMark = 1;
 
-// --- LOG MANAGEMENT ---
 const syncLogDropdown = async () => {
     const dropdown = document.getElementById('logDropdown');
     const querySnapshot = await getDocs(collection(db, "logs"));
-    
     let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
     querySnapshot.forEach((doc) => {
         const id = doc.id;
@@ -55,9 +53,7 @@ window.deleteCurrentLog = async () => {
 
 const loadOverview = async () => {
     isOverviewMode = true;
-    document.getElementById('viewIndicator').innerText = "MASTER OVERVIEW";
     document.getElementById('deleteLogBtn').style.display = "none";
-    
     const querySnapshot = await getDocs(collection(db, "logs"));
     const masterData = { types: new Set(), entries: [] };
     querySnapshot.forEach((doc) => {
@@ -70,7 +66,6 @@ const loadOverview = async () => {
     syncLogDropdown();
 };
 
-// --- DATA & MODALS ---
 window.showInputModal = () => {
     if (isOverviewMode) return alert("Switch to a specific log to add entries.");
     editingId = null;
@@ -135,15 +130,28 @@ window.deleteEntry = async () => {
 };
 
 window.manageTypes = async () => {
-    if (isOverviewMode) return alert("Select a specific log.");
-    const t = prompt("Add new exercise type:");
-    if (t) {
-        logData.types.push(t.toUpperCase());
-        await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+    if (isOverviewMode) return alert("Switch to a specific log.");
+    const mode = prompt("Type 'ADD' to create a new type, or 'DELETE' to remove one:").toUpperCase();
+    
+    if (mode === 'ADD') {
+        const t = prompt("New exercise type:");
+        if (t) {
+            logData.types.push(t.toUpperCase());
+            await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+        }
+    } else if (mode === 'DELETE') {
+        const t = prompt(`Enter the exact name of the type to delete (${logData.types.join(', ')}):`).toUpperCase();
+        if (logData.types.includes(t)) {
+            if (confirm(`Removing "${t}" will hide related entries in this log. Proceed?`)) {
+                logData.types = logData.types.filter(item => item !== t);
+                await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+            }
+        } else {
+            alert("Type not found.");
+        }
     }
 };
 
-// --- RENDERING ---
 const getMondayDate = (dStr) => {
     const d = new Date(dStr);
     const day = d.getDay();
@@ -187,7 +195,6 @@ const renderMatrix = () => {
 const initApp = (logId) => {
     if (unsubscribe) unsubscribe();
     currentLogId = logId;
-    document.getElementById('viewIndicator').innerText = `CURRENT LOG: ${logId.replace(/-/g, ' ').toUpperCase()}`;
     document.getElementById('deleteLogBtn').style.display = "flex";
     
     unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
