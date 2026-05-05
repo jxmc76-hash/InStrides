@@ -15,12 +15,40 @@ const db = getFirestore(app);
 
 let currentLogId = "main-log";
 let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
+let editingId = null; 
 window.tempMark = 1;
 
+// --- MODAL CONTROLS ---
 window.showInputModal = () => {
+    editingId = null;
+    document.getElementById('modalTitle').innerText = "Log Entry";
+    document.getElementById('submitEntryBtn').innerText = "Save Workout";
+    document.getElementById('deleteEntryBtn').style.display = "none";
+    
+    // Clear fields
+    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalDetails').value = "";
+    
     document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
+};
+
+window.editEntry = (id) => {
+    const entry = logData.entries.find(e => e.id === id);
+    if (!entry) return;
+
+    editingId = id;
+    document.getElementById('modalTitle').innerText = "Edit Entry";
+    document.getElementById('submitEntryBtn').innerText = "Update Workout";
+    document.getElementById('deleteEntryBtn').style.display = "block";
+
+    document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
+    document.getElementById('modalDate').value = entry.date;
+    document.getElementById('modalDetails').value = entry.details;
+    window.selectMark(entry.mark);
+    
+    document.getElementById('inputModal').style.display = 'flex';
 };
 
 window.closeModal = () => { document.getElementById('inputModal').style.display = 'none'; };
@@ -32,16 +60,32 @@ window.selectMark = (val) => {
     });
 };
 
+// --- DATA ACTIONS ---
 window.saveExercise = async () => {
-    const entry = {
+    const entryData = {
         type: document.getElementById('modalType').value,
         date: document.getElementById('modalDate').value,
         details: document.getElementById('modalDetails').value,
         mark: window.tempMark,
-        id: Date.now()
+        id: editingId || Date.now()
     };
-    if (!entry.date) return alert("Please select a date.");
-    logData.entries.push(entry);
+
+    if (!entryData.date) return alert("Please select a date.");
+
+    if (editingId) {
+        const idx = logData.entries.findIndex(e => e.id === editingId);
+        logData.entries[idx] = entryData;
+    } else {
+        logData.entries.push(entryData);
+    }
+
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.closeModal();
+};
+
+window.deleteEntry = async () => {
+    if (!confirm("Delete this entry permanently?")) return;
+    logData.entries = logData.entries.filter(e => e.id !== editingId);
     await setDoc(doc(db, "logs", currentLogId), logData);
     window.closeModal();
 };
@@ -54,6 +98,7 @@ window.manageTypes = async () => {
     }
 };
 
+// --- RENDER ---
 const getWeekNumber = (dStr) => {
     const d = new Date(dStr);
     const start = new Date(d.getFullYear(), 0, 1);
@@ -63,7 +108,6 @@ const getWeekNumber = (dStr) => {
 const renderMatrix = () => {
     const header = document.getElementById('headerRow');
     const body = document.getElementById('matrixBody');
-
     header.innerHTML = `<th>Week</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
     const weeksMap = {};
@@ -80,9 +124,9 @@ const renderMatrix = () => {
         logData.types.forEach(type => {
             const items = weeksMap[w][type] || [];
             const cards = items.map(i => `
-                <div class="entry-pill">
+                <div class="entry-pill" onclick="window.editEntry(${i.id})">
                     <span class="entry-date">${i.date.split('-').reverse().slice(0,2).join('/')}</span>
-                    <p class="entry-desc">${i.details}</p>
+                    <p class="entry-desc">${i.details || 'No notes'}</p>
                     <span class="entry-mark-tag">${i.mark}/3 Intensity</span>
                 </div>
             `).join('');
