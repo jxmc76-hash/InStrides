@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
     <link rel="stylesheet" href="style.css?v=14">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
     <div class="app-container">
         <header class="app-header">
             <h1 class="logo">TRAININGLOG.CO.UK</h1>
@@ -32,34 +32,42 @@
 
         <div id="inputModal" class="modal">
             <div class="modal-content">
-                <h2>Exercise Input</h2>
+                <div class="modal-header">
+                    <h2>EXERCISE INPUT</h2>
+                    <button onclick="window.closeModal()" class="close-x">✕</button>
+                </div>
+                
                 <div class="input-group">
                     <label>TYPE</label>
                     <select id="modalType"></select>
                 </div>
+
                 <div class="input-group">
                     <label>DATE</label>
                     <input type="date" id="modalDate">
                 </div>
+
                 <div class="input-group">
                     <label>DETAILS</label>
-                    <textarea id="modalDetails" placeholder="Description..."></textarea>
+                    <textarea id="modalDetails" rows="3" placeholder="Description..."></textarea>
                 </div>
+
                 <div class="input-group">
-                    <label>MARK (1-3)</label>
+                    <label>MARK /3</label>
                     <div class="mark-picker">
-                        <button onclick="window.tempMark=1">Easy</button>
-                        <button onclick="window.tempMark=2">Med</button>
-                        <button onclick="window.tempMark=3">Hard</button>
+                        <button type="button" class="mark-btn" data-val="1" onclick="window.selectMark(1)">1</button>
+                        <button type="button" class="mark-btn" data-val="2" onclick="window.selectMark(2)">2</button>
+                        <button type="button" class="mark-btn" data-val="3" onclick="window.selectMark(3)">3</button>
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button onclick="window.saveExercise()" class="btn-save">SAVE ENTRY</button>
-                    <button onclick="window.closeModal()">CANCEL</button>
                 </div>
             </div>
         </div>
     </div>
+
     <script type="module" src="script.js?v=14"></script>
 </body>
 </html>
