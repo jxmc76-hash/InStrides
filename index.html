@@ -1,8 +1,51 @@
-<main class="content-area">
-    <!-- Empty space where the script will inject the chart -->
-    <div id="dynamic-chart-area"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Training Log</title>
+    <!-- Load Chart.js from a reliable global CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Increment ?v= every time you update to force the iPad to refresh -->
+    <link rel="stylesheet" href="style.css?v=101">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
 
-    <div class="matrix-container">
-        <!-- Table stays here -->
+    <div class="app-shell">
+        <header class="app-header">
+            <div class="header-main">
+                <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
+                <div class="action-bar">
+                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Manage Types</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Exercise</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="content-area">
+            <!-- The Chart Container -->
+            <div id="chart-zone" class="chart-wrapper">
+                <canvas id="happinessChart"></canvas>
+            </div>
+
+            <div class="matrix-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr id="headerRow">
+                            <th class="col-date">Date</th>
+                            <th class="col-happiness">Happiness</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrixBody"></tbody>
+                </table>
+            </div>
+        </main>
     </div>
-</main>
+
+    <!-- Modals and script remain standard -->
+    <script type="module" src="script.js?v=101"></script>
+</body>
+</html>
