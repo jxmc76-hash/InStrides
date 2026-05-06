@@ -20,9 +20,63 @@ let unsubscribe = null;
 let isOverviewMode = false;
 window.tempMark = 1;
 
+// --- LOG CONTROLS ---
+const syncLogDropdown = async () => {
+    const dropdown = document.getElementById('logDropdown');
+    const querySnapshot = await getDocs(collection(db, "logs"));
+    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
+    querySnapshot.forEach((doc) => {
+        const id = doc.id;
+        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id.replace(/-/g, ' ')}</option>`;
+    });
+    dropdown.innerHTML = options;
+};
+
+window.handleLogSelect = (val) => {
+    if (val === "OVERVIEW") { loadOverview(); } 
+    else { isOverviewMode = false; initApp(val); }
+};
+
+window.addNewLog = async () => {
+    const name = prompt("New log name:");
+    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
+};
+
+window.deleteCurrentLog = async () => {
+    if (isOverviewMode) return alert("Overview cannot be deleted.");
+    if (currentLogId === "main-log") return alert("You cannot delete the main log.");
+    
+    if (confirm(`Are you sure you want to PERMANENTLY delete the log: "${currentLogId}"? This cannot be undone.`)) {
+        try {
+            await deleteDoc(doc(db, "logs", currentLogId));
+            alert("Log deleted successfully.");
+            // Force return to main-log and refresh
+            window.location.href = window.location.pathname; 
+        } catch (e) {
+            console.error("Error deleting log: ", e);
+            alert("Failed to delete log. Check console for details.");
+        }
+    }
+};
+
+const loadOverview = async () => {
+    isOverviewMode = true;
+    document.getElementById('deleteLogBtn').style.display = "none";
+    const snap = await getDocs(collection(db, "logs"));
+    const master = { types: new Set(), entries: [] };
+    snap.forEach(d => {
+        const data = d.data();
+        (data.types || []).forEach(t => master.types.add(t));
+        master.entries = [...master.entries, ...(data.entries || [])];
+    });
+    logData = { types: Array.from(master.types), entries: master.entries };
+    renderMatrix();
+    syncLogDropdown();
+};
+
 // --- TYPE MANAGEMENT ---
 window.showTypeModal = () => {
-    if (isOverviewMode) return alert("Select a specific log to manage types.");
+    if (isOverviewMode) return alert("Switch to a specific log to manage types.");
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
         <div class="type-item">
@@ -49,66 +103,17 @@ window.renameType = async (idx) => {
     const oldType = logData.types[idx];
     const newType = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
     if (!newType || newType === oldType) return;
-
-    // Update the type list
     logData.types[idx] = newType;
-    // Update all entries that had the old type
     logData.entries = logData.entries.map(e => e.type === oldType ? { ...e, type: newType } : e);
-    
     await setDoc(doc(db, "logs", currentLogId), logData);
     window.showTypeModal();
 };
 
 window.removeType = async (idx) => {
-    if (!confirm(`Delete "${logData.types[idx]}"? (Entries will be hidden unless you recreate the type)`)) return;
+    if (!confirm(`Delete "${logData.types[idx]}"?`)) return;
     logData.types.splice(idx, 1);
     await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
     window.showTypeModal();
-};
-
-// --- LOG CONTROLS ---
-const syncLogDropdown = async () => {
-    const dropdown = document.getElementById('logDropdown');
-    const querySnapshot = await getDocs(collection(db, "logs"));
-    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
-    querySnapshot.forEach((doc) => {
-        const id = doc.id;
-        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id.replace(/-/g, ' ')}</option>`;
-    });
-    dropdown.innerHTML = options;
-};
-
-window.handleLogSelect = (val) => {
-    if (val === "OVERVIEW") { loadOverview(); } 
-    else { isOverviewMode = false; initApp(val); }
-};
-
-window.addNewLog = async () => {
-    const name = prompt("New log name:");
-    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
-};
-
-window.deleteCurrentLog = async () => {
-    if (isOverviewMode) return;
-    if (confirm(`Delete log "${currentLogId}"?`)) {
-        await deleteDoc(doc(db, "logs", currentLogId));
-        initApp("main-log");
-    }
-};
-
-const loadOverview = async () => {
-    isOverviewMode = true;
-    document.getElementById('deleteLogBtn').style.display = "none";
-    const snap = await getDocs(collection(db, "logs"));
-    const master = { types: new Set(), entries: [] };
-    snap.forEach(d => {
-        const data = d.data();
-        (data.types || []).forEach(t => master.types.add(t));
-        master.entries = [...master.entries, ...(data.entries || [])];
-    });
-    logData = { types: Array.from(master.types), entries: master.entries };
-    renderMatrix();
-    syncLogDropdown();
 };
 
 // --- ENTRY MODALS ---
