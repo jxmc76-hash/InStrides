@@ -1,106 +1,19 @@
-:root {
-    --primary: #ff5500;
-    --bg: #f8fafc;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --border: #e2e8f0;
-    --int-1-bg: #f0fdf4; --int-1-text: #166534;
-    --int-2-bg: #eff6ff; --int-2-text: #1e40af;
-    --int-3-bg: #fff7ed; --int-3-text: #9a3412;
-}
+/* ... [Previous v33 styles remain] ... */
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body { 
-    font-family: 'Inter', sans-serif; 
-    background-color: var(--bg); 
-    color: var(--text-main); 
-    padding: 0;
-}
-
-.app-header {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    position: sticky; top: 0; z-index: 100;
-    padding: 20px 40px;
-    border-bottom: 1px solid var(--border);
-}
-
-.header-main { max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-.logo-text { font-size: 1.5rem; font-weight: 900; }
-.logo-text span { color: var(--primary); }
-.action-bar { display: flex; gap: 12px; }
-
-.nav-btn { padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 0.8rem; cursor: pointer; border: none; }
-.btn-primary { background: var(--primary); color: white; }
-.btn-secondary { background: #f1f5f9; color: var(--text-muted); }
-
-.content-area { padding: 30px; width: 100%; }
-
-.matrix-container { 
-    background: white; 
-    border-radius: 20px; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
-    overflow-x: auto;
+.chart-container {
+    background: white;
+    border-radius: 24px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
     border: 1px solid var(--border);
+    height: 300px;
 }
 
-/* THE FIXED GRID LOGIC */
-.modern-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    table-layout: fixed; /* Forces identical widths */
+/* Ensure the chart is responsive */
+#happinessChart {
+    width: 100% !important;
+    height: 100% !important;
 }
 
-th, td { 
-    padding: 15px; 
-    border-bottom: 1px solid #f1f5f9; 
-    border-right: 1px solid #f1f5f9;
-    vertical-align: top; 
-    word-wrap: break-word; /* Wraps text downwards */
-    overflow-wrap: break-word;
-}
-
-th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-
-/* Set base width for the control columns, the rest will split equally */
-.col-date { width: 140px; background: #fafbfc; color: var(--primary); font-weight: 800; text-align: center; }
-.col-happiness { width: 100px; text-align: center; }
-
-.happy-pill {
-    background: #f1f5f9;
-    width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; font-weight: 800; margin: 0 auto;
-}
-
-.entry-pill {
-    border-radius: 12px;
-    padding: 10px;
-    cursor: pointer;
-    margin-bottom: 5px;
-    border: 1px solid transparent;
-}
-.entry-desc { 
-    font-size: 0.8rem; 
-    font-weight: 600; 
-    line-height: 1.4; 
-    white-space: normal; /* Essential for wrapping */
-}
-
-.entry-pill.int-1 { background: var(--int-1-bg); color: var(--int-1-text); }
-.entry-pill.int-2 { background: var(--int-2-bg); color: var(--int-2-text); }
-.entry-pill.int-3 { background: var(--int-3-bg); color: var(--int-3-text); }
-
-/* Modals */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 1000; }
-.modal-card { background: white; width: 95%; max-width: 450px; border-radius: 24px; padding: 30px; }
-.input-row { margin-bottom: 20px; }
-.input-row label { display: block; font-weight: 700; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; }
-.input-row input, .input-row select, .input-row textarea { width: 100%; padding: 12px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; outline: none; }
-.happiness-box { background: #f8fafc; padding: 15px; border-radius: 15px; }
-.rating-strip { display: flex; gap: 8px; }
-.rate-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: white; font-weight: 800; font-size: 0.7rem; cursor: pointer; }
-.rate-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-.btn-submit { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; }
-.add-type-footer { display: flex; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+/* ... [Rest of v33 styles] ... */
