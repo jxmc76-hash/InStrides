@@ -20,7 +20,7 @@ let unsubscribe = null;
 let isOverviewMode = false;
 window.tempMark = 1;
 
-// --- LOG CONTROLS ---
+// --- LOG MANAGEMENT ---
 const syncLogDropdown = async () => {
     const dropdown = document.getElementById('logDropdown');
     const querySnapshot = await getDocs(collection(db, "logs"));
@@ -33,34 +33,48 @@ const syncLogDropdown = async () => {
 };
 
 window.handleLogSelect = (val) => {
-    if (val === "OVERVIEW") { loadOverview(); } 
+    if (val === "OVERVIEW") loadOverview();
     else { isOverviewMode = false; initApp(val); }
 };
 
 window.addNewLog = async () => {
     const name = prompt("New log name:");
-    if (name) {
-        const id = name.toLowerCase().replace(/\s+/g, '-').trim();
-        initApp(id);
+    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
+};
+
+window.renameCurrentLog = async () => {
+    if (isOverviewMode) return alert("Cannot rename Overview mode.");
+    
+    const newName = prompt(`Enter a new name for "${currentLogId}":`);
+    if (!newName) return;
+    
+    const newId = newName.toLowerCase().replace(/\s+/g, '-').trim();
+    if (newId === currentLogId) return;
+
+    try {
+        if (confirm(`This will move all data to "${newId}" and delete the old log. Continue?`)) {
+            if (unsubscribe) unsubscribe();
+            
+            // 1. Save data to the new location
+            await setDoc(doc(db, "logs", newId), logData);
+            
+            // 2. Delete the old document
+            await deleteDoc(doc(db, "logs", currentLogId));
+            
+            alert("Log renamed successfully.");
+            window.location.reload();
+        }
+    } catch (e) {
+        alert("Rename failed: " + e.message);
     }
 };
 
 window.deleteCurrentLog = async () => {
     if (isOverviewMode) return alert("Overview mode cannot be deleted.");
-    if (currentLogId === "main-log") return alert("The main-log is protected.");
-    
-    if (confirm(`PERMANENTLY DELETE log: "${currentLogId}"?`)) {
+    if (confirm(`Permanently delete "${currentLogId}"?`)) {
         try {
-            // Stop listening to this document immediately
-            if (unsubscribe) {
-                unsubscribe();
-                unsubscribe = null;
-            }
-            
-            // Send delete command to server
+            if (unsubscribe) unsubscribe();
             await deleteDoc(doc(db, "logs", currentLogId));
-            
-            // Hard reset the browser to clear any local cache
             window.location.reload(); 
         } catch (error) {
             alert("Error: " + error.message);
@@ -231,19 +245,14 @@ const renderMatrix = () => {
 const initApp = (logId) => {
     if (unsubscribe) unsubscribe();
     currentLogId = logId;
-    document.getElementById('deleteLogBtn').style.display = "flex";
-    
     unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
         if (snap.exists()) { 
             logData = snap.data(); 
             renderMatrix(); 
             syncLogDropdown();
         } else { 
-            // If the document doesn't exist, create the baseline
             setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); 
         }
-    }, (error) => {
-        console.warn("Listener detached or permission denied:", error);
     });
 };
 
