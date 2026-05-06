@@ -1,91 +1,165 @@
-:root {
-    --primary: #ff5500;
-    --bg: #f4f7f9;
-    --card: #ffffff;
-    --text: #1a1a1b;
-    --text-dim: #94a3b8;
-    --border: #e2e8f0;
-    --red: #ef4444;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
+    authDomain: "in-strides.firebaseapp.com",
+    projectId: "in-strides",
+    storageBucket: "in-strides.firebasestorage.app",
+    messagingSenderId: "974987405170",
+    appId: "1:974987405170:web:c1f100b44bb85efed7dfeb"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let currentLogId = "main-log";
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
+let editingId = null; 
+let unsubscribe = null;
+let isOverviewMode = false;
+window.tempMark = 1;
+
+// --- LOG CONTROLS ---
+const syncLogDropdown = async () => {
+    const dropdown = document.getElementById('logDropdown');
+    const querySnapshot = await getDocs(collection(db, "logs"));
+    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
+    querySnapshot.forEach((doc) => {
+        const id = doc.id;
+        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id}</option>`;
+    });
+    dropdown.innerHTML = options;
+};
+
+window.handleLogSelect = (val) => {
+    if (val === "OVERVIEW") loadOverview();
+    else { isOverviewMode = false; initApp(val); }
+};
+
+window.addNewLog = async () => {
+    const name = prompt("New log name:");
+    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
+};
+
+window.deleteCurrentLog = async () => {
+    if (isOverviewMode || currentLogId === "main-log") return;
+    if (confirm(`Delete "${currentLogId}"?`)) {
+        await deleteDoc(doc(db, "logs", currentLogId));
+        initApp("main-log");
+    }
+};
+
+// --- DATA LOGIC ---
+window.showInputModal = () => {
+    if (isOverviewMode) return;
+    editingId = null;
+    document.getElementById('modalTitle').innerText = "Daily Log";
+    document.getElementById('deleteEntryBtn').style.display = "none";
+    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalHappiness').value = 5;
+    document.getElementById('happyVal').innerText = 5;
+    document.getElementById('modalDetails').value = "";
+    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
+    document.getElementById('inputModal').style.display = 'flex';
+    window.selectMark(1);
+};
+
+window.editEntry = (id) => {
+    const entry = logData.entries.find(e => e.id === id);
+    if (!entry) return;
+    editingId = id;
+    document.getElementById('modalTitle').innerText = "Edit Entry";
+    document.getElementById('deleteEntryBtn').style.display = "block";
+    document.getElementById('modalDate').value = entry.date;
+    document.getElementById('modalHappiness').value = entry.happiness || 5;
+    document.getElementById('happyVal').innerText = entry.happiness || 5;
+    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
+    document.getElementById('modalDetails').value = entry.details || "";
+    window.selectMark(entry.mark || 1);
+    document.getElementById('inputModal').style.display = 'flex';
+};
+
+window.saveExercise = async () => {
+    const entryData = {
+        date: document.getElementById('modalDate').value,
+        happiness: parseInt(document.getElementById('modalHappiness').value),
+        type: document.getElementById('modalType').value,
+        details: document.getElementById('modalDetails').value,
+        mark: window.tempMark,
+        id: editingId || Date.now()
+    };
     
-    --int-1-bg: #f0fdf4;
-    --int-1-text: #166534;
-    --int-2-bg: #eff6ff;
-    --int-2-text: #1e40af;
-    --int-3-bg: #fff7ed;
-    --int-3-text: #9a3412;
-}
+    if (editingId) {
+        const idx = logData.entries.findIndex(e => e.id === editingId);
+        logData.entries[idx] = entryData;
+    } else {
+        logData.entries.push(entryData);
+    }
+    
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.closeModal('inputModal');
+};
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+// --- RENDER LOGIC ---
+const renderMatrix = () => {
+    const body = document.getElementById('matrixBody');
+    const header = document.getElementById('headerRow');
+    header.innerHTML = `<th>Date</th><th class="sticky-col">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
-body { 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg); 
-    color: var(--text);
-    padding: 30px;
-    -webkit-font-smoothing: antialiased;
-}
+    if (logData.entries.length === 0) {
+        body.innerHTML = `<tr><td colspan="10" style="padding:40px; text-align:center;">No data yet.</td></tr>`;
+        return;
+    }
 
-.app-shell { max-width: 1400px; margin: 0 auto; }
-.app-header { text-align: center; margin-bottom: 50px; }
-.logo-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 30px; }
-.logo-text span { color: var(--primary); }
+    const entriesByDate = {};
+    logData.entries.forEach(e => {
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: 0, exercises: {} };
+        entriesByDate[e.date].happiness = e.happiness;
+        if (e.type !== "NONE") {
+            if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
+            entriesByDate[e.date].exercises[e.type].push(e);
+        }
+    });
 
-.action-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.nav-btn { padding: 12px 20px; border-radius: 14px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; outline: none; }
-.btn-type { background: #e2e8f0; color: #475569; }
-.btn-add { background: var(--primary); color: white; }
-.btn-log { 
-    background: #1e293b; color: white; 
-    appearance: none; -webkit-appearance: none; 
-    padding-right: 35px; 
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; 
-    background-position: right 12px center; 
-}
-.btn-new { background: #cbd5e1; color: #1e293b; }
-.btn-del { background: #fee2e2; color: var(--red); }
-.nav-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    const sortedDates = Object.keys(entriesByDate).sort((a,b) => new Date(a) - new Date(b));
+    const firstDate = new Date(sortedDates[0]);
+    const today = new Date();
 
-.matrix-container { background: var(--card); border-radius: 24px; padding: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.04); overflow-x: auto; border: 1px solid var(--border); }
-.modern-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1100px; }
-th { padding: 20px; text-align: left; font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
-td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top; border-right: 1px solid #f8fafc; }
+    body.innerHTML = "";
+    for (let d = new Date(today); d >= firstDate; d.setDate(d.getDate() - 1)) {
+        const dateKey = d.toISOString().split('T')[0];
+        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' });
+        const dayData = entriesByDate[dateKey] || { happiness: '-', exercises: {} };
 
-/* Date column */
-td:first-child { 
-    font-weight: 800; 
-    color: var(--primary); 
-    width: 160px; 
-    text-align: center; 
-    font-size: 0.8rem; 
-    line-height: 1.4;
-    background: #fafbfc;
-}
+        let row = `<tr>
+            <td>${displayDate}</td>
+            <td class="sticky-col">${dayData.happiness !== '-' ? `<div class="happy-pill">${dayData.happiness}</div>` : '-'}</td>`;
+            
+        logData.types.forEach(type => {
+            const exercises = dayData.exercises[type] || [];
+            const content = exercises.map(ex => `
+                <div class="entry-pill int-${ex.mark}" onclick="window.editEntry(${ex.id})">
+                    <p class="entry-desc">${ex.details || 'Activity'}</p>
+                </div>
+            `).join('');
+            row += `<td>${content}</td>`;
+        });
+        row += `</tr>`;
+        body.innerHTML += row;
+    }
+};
 
-.entry-pill { border-radius: 16px; padding: 12px; margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-.entry-pill.int-1 { background-color: var(--int-1-bg); border-color: #dcfce7; color: var(--int-1-text); }
-.entry-pill.int-2 { background-color: var(--int-2-bg); border-color: #dbeafe; color: var(--int-2-text); }
-.entry-pill.int-3 { background-color: var(--int-3-bg); border-color: #ffedd5; color: var(--int-3-text); }
-.entry-desc { font-size: 0.9rem; font-weight: 600; line-height: 1.3; }
-.entry-mark-tag { margin-top: 8px; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
 
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
-.modal-card { background: white; width: 90%; max-width: 450px; border-radius: 28px; padding: 35px; box-shadow: 0 30px 60px rgba(0,0,0,0.15); }
-.modal-header { display: flex; justify-content: space-between; margin-bottom: 25px; }
-.modal-header h2 { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
-.close-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+const initApp = (logId) => {
+    if (unsubscribe) unsubscribe();
+    currentLogId = logId;
+    unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
+        if (snap.exists()) { logData = snap.data(); renderMatrix(); syncLogDropdown(); }
+        else { setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); }
+    });
+};
 
-.type-editor-list { display: flex; flex-direction: column; gap: 10px; }
-.type-item { display: flex; gap: 8px; align-items: center; }
-.type-item input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-weight: 700; }
-.btn-icon { background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; }
-.btn-icon.save { background: var(--primary); color: white; }
-.btn-icon.del { color: var(--red); }
-.btn-add-inline { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 700; cursor: pointer; }
-
-.rating-strip { display: flex; gap: 8px; }
-.rate-btn { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: white; cursor: pointer; font-weight: 800; font-size: 0.75rem; color: var(--text-dim); }
-.rate-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
-.modal-footer-btns { display: flex; gap: 10px; margin-top: 10px; }
-.submit-btn { flex: 3; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
-.delete-btn { flex: 1; padding: 18px; background: #fee2e2; color: var(--red); border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
+initApp(currentLogId);
