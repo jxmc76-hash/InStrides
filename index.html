@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=33">
+    <link rel="stylesheet" href="style.css?v=34">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -23,19 +25,25 @@
         </header>
 
         <main class="content-area">
+            <!-- New Happiness Chart Section -->
+            <div class="chart-container">
+                <canvas id="happinessChart"></canvas>
+            </div>
+
             <div class="matrix-container">
                 <table class="modern-table">
                     <thead>
                         <tr id="headerRow">
                             <th class="col-date">Date</th>
                             <th class="col-happiness">Happiness</th>
-                            </tr>
+                        </tr>
                     </thead>
                     <tbody id="matrixBody"></tbody>
                 </table>
             </div>
         </main>
 
+        <!-- Modals remain the same as v33 -->
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
@@ -47,7 +55,6 @@
                         <label>Date</label>
                         <input type="date" id="modalDate">
                     </div>
-                    
                     <div class="input-row happiness-box">
                         <label>Daily Happiness</label>
                         <div class="happiness-input-wrapper">
@@ -55,17 +62,14 @@
                             <span id="happyVal" class="score-display">5</span>
                         </div>
                     </div>
-
                     <div class="input-row">
                         <label>Exercise Category</label>
                         <select id="modalType"></select>
                     </div>
-
                     <div class="input-row">
                         <label>Workout Notes</label>
                         <textarea id="modalDetails" rows="4" placeholder="How did it feel today?"></textarea>
                     </div>
-
                     <div class="input-row">
                         <label>Intensity Level</label>
                         <div class="rating-strip">
@@ -74,7 +78,6 @@
                             <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
                         </div>
                     </div>
-
                     <div class="modal-footer">
                         <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none;">Delete Entry</button>
                         <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Workout</button>
@@ -100,6 +103,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=33"></script>
+    <script type="module" src="script.js?v=34"></script>
 </body>
 </html>
