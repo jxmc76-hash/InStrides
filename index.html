@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 
@@ -32,7 +32,8 @@
                 <thead>
                     <tr id="headerRow">
                         <th>Date</th>
-                    </tr>
+                        <th class="sticky-col">Happiness</th>
+                        </tr>
                 </thead>
                 <tbody id="matrixBody"></tbody>
             </table>
@@ -41,33 +42,48 @@
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2 id="modalTitle">Log Entry</h2>
+                    <h2 id="modalTitle">Daily Log</h2>
                     <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
                     <div class="input-row">
-                        <label>Exercise Type</label>
-                        <select id="modalType"></select>
-                    </div>
-                    <div class="input-row">
                         <label>Date</label>
                         <input type="date" id="modalDate">
                     </div>
-                    <div class="input-row">
-                        <label>Notes</label>
-                        <textarea id="modalDetails" placeholder="How did it feel?"></textarea>
-                    </div>
-                    <div class="input-row">
-                        <label>Intensity (1-3)</label>
-                        <div class="rating-strip">
-                            <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
-                            <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
-                            <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
+                    
+                    <div class="input-row highlight-box">
+                        <label>Daily Happiness (1-10)</label>
+                        <div class="happiness-input">
+                            <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
+                            <span id="happyVal" class="score-display">5</span>
                         </div>
                     </div>
+
+                    <div class="input-row">
+                        <label>Exercise Type (Optional)</label>
+                        <select id="modalType">
+                            <option value="NONE">No Exercise</option>
+                        </select>
+                    </div>
+
+                    <div id="exerciseDetailsSection">
+                        <div class="input-row">
+                            <label>Workout Notes</label>
+                            <textarea id="modalDetails" placeholder="Details..."></textarea>
+                        </div>
+                        <div class="input-row">
+                            <label>Intensity (1-3)</label>
+                            <div class="rating-strip">
+                                <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
+                                <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
+                                <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="modal-footer-btns">
                         <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="delete-btn" style="display:none;">Delete</button>
-                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="submit-btn">Save Workout</button>
+                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="submit-btn">Save Day</button>
                     </div>
                 </div>
             </div>
@@ -80,10 +96,8 @@
                     <button onclick="window.closeModal('typeModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
-                    <div class="input-row">
-                        <label>Current Types</label>
-                        <div id="typeList" class="type-editor-list"></div>
-                    </div>
+                    <p style="font-size: 0.7rem; color: #999; margin-bottom: 15px;">Note: Happiness column is permanent and cannot be managed here.</p>
+                    <div id="typeList" class="type-editor-list"></div>
                     <div class="input-row" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                         <label>Add New Type</label>
                         <div style="display: flex; gap: 10px;">
@@ -96,6 +110,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=28"></script>
+    <script type="module" src="script.js?v=29"></script>
 </body>
 </html>
