@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -13,59 +13,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let currentLogId = "main-log";
+const LOG_ID = "single-master-log";
 let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
-let editingId = null; 
-let unsubscribe = null;
-let isOverviewMode = false;
+let editingId = null;
 window.tempMark = 1;
-
-// --- LOG CONTROLS ---
-const syncLogDropdown = async () => {
-    const dropdown = document.getElementById('logDropdown');
-    const querySnapshot = await getDocs(collection(db, "logs"));
-    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
-    querySnapshot.forEach((doc) => {
-        const id = doc.id;
-        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id}</option>`;
-    });
-    dropdown.innerHTML = options;
-};
-
-window.handleLogSelect = (val) => {
-    if (val === "OVERVIEW") loadOverview();
-    else { isOverviewMode = false; initApp(val); }
-};
-
-window.addNewLog = async () => {
-    const name = prompt("New log name:");
-    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
-};
-
-window.renameCurrentLog = async () => {
-    if (isOverviewMode) return;
-    const name = prompt(`Rename "${currentLogId}" to:`);
-    if (!name) return;
-    const newId = name.toLowerCase().replace(/\s+/g, '-').trim();
-    if (confirm(`Move data to "${newId}" and delete old?`)) {
-        if (unsubscribe) unsubscribe();
-        await setDoc(doc(db, "logs", newId), logData);
-        await deleteDoc(doc(db, "logs", currentLogId));
-        window.location.reload();
-    }
-};
-
-window.deleteCurrentLog = async () => {
-    if (isOverviewMode || currentLogId === "main-log") return alert("Cannot delete this view.");
-    if (confirm(`Delete "${currentLogId}"?`)) {
-        await deleteDoc(doc(db, "logs", currentLogId));
-        initApp("main-log");
-    }
-};
 
 // --- TYPE MANAGEMENT ---
 window.showTypeModal = () => {
-    if (isOverviewMode) return;
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
         <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
@@ -82,7 +36,7 @@ window.addType = async () => {
     const val = input.value.toUpperCase().trim();
     if (val && !logData.types.includes(val)) {
         logData.types.push(val);
-        await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+        await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
         input.value = "";
         window.showTypeModal();
     }
@@ -94,20 +48,20 @@ window.renameType = async (idx) => {
     if (!n || n === old) return;
     logData.types[idx] = n;
     logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
-    await setDoc(doc(db, "logs", currentLogId), logData);
+    await setDoc(doc(db, "logs", LOG_ID), logData);
     window.showTypeModal();
 };
 
 window.removeType = async (idx) => {
-    if (!confirm(`Delete "${logData.types[idx]}"?`)) return;
-    logData.types.splice(idx, 1);
-    await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
-    window.showTypeModal();
+    if (confirm(`Delete "${logData.types[idx]}"?`)) {
+        logData.types.splice(idx, 1);
+        await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
+        window.showTypeModal();
+    }
 };
 
 // --- DATA LOGIC ---
 window.showInputModal = () => {
-    if (isOverviewMode) return;
     editingId = null;
     document.getElementById('modalTitle').innerText = "Daily Log";
     document.getElementById('deleteEntryBtn').style.display = "none";
@@ -150,15 +104,16 @@ window.saveExercise = async () => {
     } else {
         logData.entries.push(entryData);
     }
-    await setDoc(doc(db, "logs", currentLogId), logData);
+    await setDoc(doc(db, "logs", LOG_ID), logData);
     window.closeModal('inputModal');
 };
 
 window.deleteEntry = async () => {
-    if (!confirm("Delete entry?")) return;
-    logData.entries = logData.entries.filter(e => e.id !== editingId);
-    await setDoc(doc(db, "logs", currentLogId), logData);
-    window.closeModal('inputModal');
+    if (confirm("Delete entry?")) {
+        logData.entries = logData.entries.filter(e => e.id !== editingId);
+        await setDoc(doc(db, "logs", LOG_ID), logData);
+        window.closeModal('inputModal');
+    }
 };
 
 const renderMatrix = () => {
@@ -169,9 +124,7 @@ const renderMatrix = () => {
     const entriesByDate = {};
     logData.entries.forEach(e => {
         if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, exercises: {} };
-        // Set happiness if it's a number
         if (typeof e.happiness === 'number') entriesByDate[e.date].happiness = e.happiness;
-        
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
@@ -208,13 +161,7 @@ const renderMatrix = () => {
 window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
 
-const initApp = (logId) => {
-    if (unsubscribe) unsubscribe();
-    currentLogId = logId;
-    unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
-        if (snap.exists()) { logData = snap.data(); renderMatrix(); syncLogDropdown(); }
-        else { setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); }
-    });
-};
-
-initApp(currentLogId);
+onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
+    if (snap.exists()) { logData = snap.data(); renderMatrix(); }
+    else { setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); }
+});
