@@ -15,15 +15,6 @@
             <div class="action-bar">
                 <button onclick="window.showTypeModal()" class="nav-btn btn-type">Manage Types</button>
                 <button onclick="window.showInputModal()" class="nav-btn btn-add">Add Exercise</button>
-                
-                <div class="dropdown-wrapper">
-                    <select id="logDropdown" class="nav-btn btn-log" onchange="window.handleLogSelect(this.value)">
-                    </select>
-                </div>
-
-                <button onclick="window.addNewLog()" class="nav-btn btn-new">New Log</button>
-                <button onclick="window.renameCurrentLog()" class="nav-btn btn-type">Rename Log</button>
-                <button id="deleteLogBtn" onclick="window.deleteCurrentLog()" class="nav-btn btn-del">Delete Log</button>
             </div>
         </header>
 
@@ -33,7 +24,7 @@
                     <tr id="headerRow">
                         <th>Date</th>
                         <th class="neutral-col">Happiness</th>
-                    </tr>
+                        </tr>
                 </thead>
                 <tbody id="matrixBody"></tbody>
             </table>
@@ -68,7 +59,7 @@
 
                     <div class="input-row">
                         <label>Workout Notes</label>
-                        <textarea id="modalDetails" placeholder="Details..."></textarea>
+                        <textarea id="modalDetails" placeholder="Notes..."></textarea>
                     </div>
 
                     <div class="input-row">
@@ -96,10 +87,10 @@
                 </div>
                 <div class="form-body">
                     <div id="typeList" class="type-editor-list"></div>
-                    <div class="input-row add-type-section">
-                        <label>Add New Type</label>
+                    <div class="input-row" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                        <label>Add New Category</label>
                         <div class="flex-row">
-                            <input type="text" id="newTypeInput" placeholder="e.g. CYCLING">
+                            <input type="text" id="newTypeInput" placeholder="e.g. SWIM">
                             <button onclick="window.addType()" class="btn-save-small">Add</button>
                         </div>
                     </div>
