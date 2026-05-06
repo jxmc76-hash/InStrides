@@ -39,27 +39,31 @@ window.handleLogSelect = (val) => {
 
 window.addNewLog = async () => {
     const name = prompt("New log name:");
-    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
+    if (name) {
+        const id = name.toLowerCase().replace(/\s+/g, '-').trim();
+        initApp(id);
+    }
 };
 
 window.deleteCurrentLog = async () => {
     if (isOverviewMode) return alert("Overview mode cannot be deleted.");
-    if (currentLogId === "main-log") return alert("The main-log is protected and cannot be deleted.");
+    if (currentLogId === "main-log") return alert("The main-log is protected.");
     
-    if (confirm(`PERMANENTLY DELETE "${currentLogId}"?\n\nThis will erase all entries in this specific log forever.`)) {
+    if (confirm(`PERMANENTLY DELETE log: "${currentLogId}"?`)) {
         try {
-            // 1. Unsubscribe from the current log listener first to prevent "ghosting"
-            if (unsubscribe) unsubscribe();
+            // Stop listening to this document immediately
+            if (unsubscribe) {
+                unsubscribe();
+                unsubscribe = null;
+            }
             
-            // 2. Delete the document from Firestore
+            // Send delete command to server
             await deleteDoc(doc(db, "logs", currentLogId));
             
-            // 3. Clear local storage/state and force refresh to main-log
-            alert("Log deleted.");
+            // Hard reset the browser to clear any local cache
             window.location.reload(); 
         } catch (error) {
-            console.error("Deletion failed:", error);
-            alert("Delete failed. You might not have permission or the connection timed out.");
+            alert("Error: " + error.message);
         }
     }
 };
@@ -81,7 +85,7 @@ const loadOverview = async () => {
 
 // --- TYPE MANAGEMENT ---
 window.showTypeModal = () => {
-    if (isOverviewMode) return alert("Switch to a specific log to manage types.");
+    if (isOverviewMode) return alert("Select a specific log.");
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
         <div class="type-item">
@@ -228,15 +232,18 @@ const initApp = (logId) => {
     if (unsubscribe) unsubscribe();
     currentLogId = logId;
     document.getElementById('deleteLogBtn').style.display = "flex";
+    
     unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
         if (snap.exists()) { 
             logData = snap.data(); 
             renderMatrix(); 
             syncLogDropdown();
         } else { 
-            // Fallback for new logs
+            // If the document doesn't exist, create the baseline
             setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); 
         }
+    }, (error) => {
+        console.warn("Listener detached or permission denied:", error);
     });
 };
 
