@@ -43,18 +43,23 @@ window.addNewLog = async () => {
 };
 
 window.deleteCurrentLog = async () => {
-    if (isOverviewMode) return alert("Overview cannot be deleted.");
-    if (currentLogId === "main-log") return alert("You cannot delete the main log.");
+    if (isOverviewMode) return alert("Overview mode cannot be deleted.");
+    if (currentLogId === "main-log") return alert("The main-log is protected and cannot be deleted.");
     
-    if (confirm(`Are you sure you want to PERMANENTLY delete the log: "${currentLogId}"? This cannot be undone.`)) {
+    if (confirm(`PERMANENTLY DELETE "${currentLogId}"?\n\nThis will erase all entries in this specific log forever.`)) {
         try {
+            // 1. Unsubscribe from the current log listener first to prevent "ghosting"
+            if (unsubscribe) unsubscribe();
+            
+            // 2. Delete the document from Firestore
             await deleteDoc(doc(db, "logs", currentLogId));
-            alert("Log deleted successfully.");
-            // Force return to main-log and refresh
-            window.location.href = window.location.pathname; 
-        } catch (e) {
-            console.error("Error deleting log: ", e);
-            alert("Failed to delete log. Check console for details.");
+            
+            // 3. Clear local storage/state and force refresh to main-log
+            alert("Log deleted.");
+            window.location.reload(); 
+        } catch (error) {
+            console.error("Deletion failed:", error);
+            alert("Delete failed. You might not have permission or the connection timed out.");
         }
     }
 };
@@ -229,6 +234,7 @@ const initApp = (logId) => {
             renderMatrix(); 
             syncLogDropdown();
         } else { 
+            // Fallback for new logs
             setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); 
         }
     });
