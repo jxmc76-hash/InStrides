@@ -233,3 +233,17 @@ onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] });
     }
 });
+
+// ... [Keep your existing Firebase and Render logic] ...
+
+// Add this safety trigger at the very bottom of script.js
+const forceChartInit = () => {
+    if (typeof Chart !== 'undefined' && logData.entries.length > 0) {
+        renderAll(); // Or whatever your main render function is named
+    } else {
+        setTimeout(forceChartInit, 2000); // Try again in 2 seconds if not ready
+    }
+};
+
+forceChartInit();
+
