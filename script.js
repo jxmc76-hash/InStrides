@@ -16,49 +16,36 @@ const db = getFirestore(app);
 const LOG_ID = "single-master-log";
 let logData = { types: ["SIT", "YOGA", "RUN", "SWIM", "LIFT"], entries: [] };
 let editingId = null;
-let chartInstance = null;
 window.tempMark = 1;
 
-// --- CHART LOGIC ---
-const drawHappinessChart = (labels, values) => {
-    if (typeof Chart === 'undefined') return;
-    const canvas = document.getElementById('happinessChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartInstance) chartInstance.destroy();
+// --- STATS LOGIC ---
+const updateDashboard = () => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
+    
+    const recentEntries = logData.entries.filter(e => e.date >= sevenDaysAgo);
+    
+    // 1. Consistency
+    const activeDays = new Set(recentEntries.filter(e => e.type !== "NONE").map(e => e.date)).size;
+    document.getElementById('statConsistency').innerText = Math.round((activeDays / 7) * 100) + "%";
 
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: values,
-                borderColor: '#ff5500',
-                backgroundColor: 'rgba(255, 85, 0, 0.05)',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 4,
-                pointBackgroundColor: '#ff5500'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { min: 1, max: 10, ticks: { stepSize: 1 } },
-                x: { grid: { display: false } }
-            }
-        }
-    });
+    // 2. Avg Mood
+    const moods = recentEntries.map(e => e.happiness).filter(h => typeof h === 'number');
+    const avgMood = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1) : "-";
+    document.getElementById('statMood').innerText = avgMood;
+
+    // 3. Top Intensity
+    const intensities = recentEntries.map(e => e.mark).filter(m => m > 0);
+    const mostFreq = intensities.sort((a,b) => intensities.filter(v => v===a).length - intensities.filter(v => v===b).length).pop();
+    const intLabels = { 1: "EASY", 2: "MED", 3: "HARD" };
+    document.getElementById('statIntensity').innerText = intLabels[mostFreq] || "-";
 };
 
 // --- RENDER LOGIC ---
 const renderApp = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
-    header.innerHTML = `<th class="col-date">Date</th><th class="col-happiness">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
+    header.innerHTML = `<th class="col-date">Date</th><th class="col-happiness">Mood</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
@@ -70,22 +57,9 @@ const renderApp = () => {
         }
     });
 
-    const sortedDates = Object.keys(entriesByDate).sort((a,b) => new Date(a) - new Date(b));
+    const sortedDates = Object.keys(entriesByDate).sort((a,b) => new Date(b) - new Date(a));
+    const firstDate = sortedDates.length > 0 ? new Date(sortedDates[sortedDates.length-1]) : new Date();
     const today = new Date();
-    const firstDate = sortedDates.length > 0 ? new Date(sortedDates[0]) : new Date();
-
-    // Prepare Chart (Last 14 days)
-    const chartLabels = [];
-    const chartValues = [];
-    const chartStart = new Date();
-    chartStart.setDate(chartStart.getDate() - 13);
-    for (let i = 0; i < 14; i++) {
-        const d = new Date(chartStart);
-        d.setDate(d.getDate() + i);
-        const key = d.toISOString().split('T')[0];
-        chartLabels.push(d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
-        chartValues.push(entriesByDate[key]?.happiness || 5);
-    }
 
     body.innerHTML = "";
     for (let d = new Date(today); d >= firstDate; d.setDate(d.getDate() - 1)) {
@@ -93,17 +67,17 @@ const renderApp = () => {
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
         const dayData = entriesByDate[key] || { happiness: null, exercises: {} };
 
-        let row = `<tr><td>${displayDate}</td><td>${dayData.happiness ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
+        let row = `<tr><td class="col-date">${displayDate}</td><td class="col-happiness">${dayData.happiness ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
         logData.types.forEach(t => {
             const ex = dayData.exercises[t] || [];
             row += `<td>${ex.map(i => `<div class="entry-pill int-${i.mark}" onclick="window.editEntry(${i.id})"><p class="entry-desc">${i.details || 'View'}</p></div>`).join('')}</td>`;
         });
         body.innerHTML += row + `</tr>`;
     }
-    drawHappinessChart(chartLabels, chartValues);
+    updateDashboard();
 };
 
-// --- ACTIONS ---
+// --- HANDLERS ---
 window.showInputModal = () => {
     editingId = null;
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
@@ -150,7 +124,7 @@ window.saveExercise = async () => {
 };
 
 window.deleteEntry = async () => {
-    if (!confirm("Delete this?")) return;
+    if (!confirm("Delete?")) return;
     logData.entries = logData.entries.filter(i => i.id !== editingId);
     await setDoc(doc(db, "logs", LOG_ID), logData);
     window.closeModal('inputModal');
@@ -161,8 +135,8 @@ window.showTypeModal = () => {
     list.innerHTML = logData.types.map((t, i) => `
         <div style="display:flex; gap:10px; margin-bottom:10px;">
             <input type="text" value="${t}" id="t-in-${i}" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd;">
-            <button onclick="window.renameType(${i})" class="nav-btn btn-secondary">Rename</button>
-            <button onclick="window.removeType(${i})" class="nav-btn btn-secondary" style="color:red">✕</button>
+            <button onclick="window.renameType(${i})" class="nav-btn btn-secondary" style="font-size:0.6rem">Rename</button>
+            <button onclick="window.removeType(${i})" class="nav-btn btn-secondary" style="color:red; font-size:0.6rem">✕</button>
         </div>
     `).join('');
     document.getElementById('typeModal').style.display = 'flex';
@@ -190,7 +164,7 @@ window.renameType = async (i) => {
 };
 
 window.removeType = async (i) => {
-    if (!confirm("Delete category?")) return;
+    if (!confirm("Delete?")) return;
     logData.types.splice(i, 1);
     await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
     window.showTypeModal();
