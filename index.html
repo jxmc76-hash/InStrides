@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=61">
+    <link rel="stylesheet" href="style.css?v=34">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -15,92 +15,96 @@
         <header class="app-header">
             <div class="header-main">
                 <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
-                <nav class="tab-nav">
-                    <button onclick="window.switchTab('log')" id="btn-tab-log" class="tab-btn active">Log</button>
-                    <button onclick="window.switchTab('stats')" id="btn-tab-stats" class="tab-btn">Insights</button>
-                </nav>
                 <div class="action-bar">
-                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Types</button>
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Entry</button>
+                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Manage Types</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Exercise</button>
                 </div>
             </div>
         </header>
 
         <main class="content-area">
-            <!-- Insights Tab -->
-            <section id="tab-stats" class="tab-content" style="display:none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <label>Consistency (7d)</label>
-                        <div class="stat-val" id="statConsistency">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <label>Avg Happiness</label>
-                        <div class="stat-val" id="statMood">-</div>
-                    </div>
-                    <div class="stat-card">
-                        <label>Top Intensity</label>
-                        <div class="stat-val" id="statIntensity">-</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Log Tab -->
-            <section id="tab-log" class="tab-content">
-                <div class="matrix-container">
-                    <table class="modern-table">
-                        <thead>
-                            <tr id="headerRow">
-                                <th class="col-date">Date</th>
-                                <th class="col-happiness">Mood</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matrixBody"></tbody>
-                    </table>
-                </div>
-            </section>
+            <div class="matrix-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr id="headerRow">
+                            <th class="col-date">Date</th>
+                            <th class="col-happiness">Happiness</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrixBody"></tbody>
+                </table>
+            </div>
         </main>
 
-        <!-- Modals -->
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
-                <div class="modal-header"><h2>Daily Log</h2><button onclick="window.closeModal('inputModal')" class="close-btn">✕</button></div>
+                <div class="modal-header">
+                    <h2 id="modalTitle">Daily Log</h2>
+                    <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
+                </div>
                 <div class="form-body">
-                    <div class="input-row"><label>Date</label><input type="date" id="modalDate"></div>
+                    <div class="input-row">
+                        <label>Date</label>
+                        <input type="date" id="modalDate">
+                    </div>
+                    
                     <div class="input-row happiness-box">
-                        <label>Happiness</label>
+                        <label>Daily Happiness</label>
                         <div class="happiness-input-wrapper">
                             <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                             <span id="happyVal" class="score-display">5</span>
                         </div>
                     </div>
-                    <div class="input-row"><label>Category</label><select id="modalType"></select></div>
-                    <div class="input-row"><label>Notes</label><textarea id="modalDetails" rows="3"></textarea></div>
+
                     <div class="input-row">
-                        <label>Intensity</label>
+                        <label>Exercise Category</label>
+                        <select id="modalType"></select>
+                    </div>
+
+                    <div class="input-row">
+                        <label>Workout Notes</label>
+                        <textarea id="modalDetails" rows="3" placeholder="Notes..."></textarea>
+                    </div>
+
+                    <div class="input-row">
+                        <label>Photo URL (Optional)</label>
+                        <input type="text" id="modalPhoto" placeholder="Link to an image...">
+                    </div>
+
+                    <div class="input-row">
+                        <label>Intensity Level</label>
                         <div class="rating-strip">
                             <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
                             <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
                             <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
                         </div>
                     </div>
-                    <button onclick="window.saveExercise()" class="btn-submit">Save Day</button>
-                    <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none; margin-top:10px;">Delete</button>
+
+                    <div class="modal-footer">
+                        <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none;">Delete</button>
+                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Day</button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="typeModal" class="modal-overlay">
             <div class="modal-card">
-                <div class="modal-header"><h2>Categories</h2><button onclick="window.closeModal('typeModal')" class="close-btn">✕</button></div>
+                <div class="modal-header">
+                    <h2>Manage Categories</h2>
+                    <button onclick="window.closeModal('typeModal')" class="close-btn">✕</button>
+                </div>
                 <div class="form-body">
                     <div id="typeList" class="type-editor-list"></div>
-                    <div class="add-type-footer"><input type="text" id="newTypeInput" placeholder="Add..."><button onclick="window.addType()" class="btn-submit" style="padding:10px;">Add</button></div>
+                    <div class="add-type-footer">
+                        <input type="text" id="newTypeInput" placeholder="New Category">
+                        <button onclick="window.addType()" class="btn-submit">Add</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="script.js?v=61"></script>
+    <script type="module" src="script.js?v=34"></script>
 </body>
 </html>
