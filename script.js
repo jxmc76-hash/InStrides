@@ -42,12 +42,67 @@ window.addNewLog = async () => {
     if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
 };
 
+window.renameCurrentLog = async () => {
+    if (isOverviewMode) return;
+    const name = prompt(`Rename "${currentLogId}" to:`);
+    if (!name) return;
+    const newId = name.toLowerCase().replace(/\s+/g, '-').trim();
+    if (confirm(`Move data to "${newId}" and delete old?`)) {
+        if (unsubscribe) unsubscribe();
+        await setDoc(doc(db, "logs", newId), logData);
+        await deleteDoc(doc(db, "logs", currentLogId));
+        window.location.reload();
+    }
+};
+
 window.deleteCurrentLog = async () => {
-    if (isOverviewMode || currentLogId === "main-log") return;
+    if (isOverviewMode || currentLogId === "main-log") return alert("Cannot delete this view.");
     if (confirm(`Delete "${currentLogId}"?`)) {
         await deleteDoc(doc(db, "logs", currentLogId));
         initApp("main-log");
     }
+};
+
+// --- TYPE MANAGEMENT ---
+window.showTypeModal = () => {
+    if (isOverviewMode) return;
+    const container = document.getElementById('typeList');
+    container.innerHTML = logData.types.map((type, idx) => `
+        <div class="type-item">
+            <input type="text" value="${type}" id="type-input-${idx}">
+            <button onclick="window.renameType(${idx})" class="btn-save-small">Rename</button>
+            <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444;" class="btn-save-small">✕</button>
+        </div>
+    `).join('');
+    document.getElementById('typeModal').style.display = 'flex';
+};
+
+window.addType = async () => {
+    const input = document.getElementById('newTypeInput');
+    const val = input.value.toUpperCase().trim();
+    if (val && !logData.types.includes(val)) {
+        logData.types.push(val);
+        await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+        input.value = "";
+        window.showTypeModal();
+    }
+};
+
+window.renameType = async (idx) => {
+    const old = logData.types[idx];
+    const n = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
+    if (!n || n === old) return;
+    logData.types[idx] = n;
+    logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.showTypeModal();
+};
+
+window.removeType = async (idx) => {
+    if (!confirm(`Delete "${logData.types[idx]}"?`)) return;
+    logData.types.splice(idx, 1);
+    await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+    window.showTypeModal();
 };
 
 // --- DATA LOGIC ---
@@ -89,41 +144,32 @@ window.saveExercise = async () => {
         mark: window.tempMark,
         id: editingId || Date.now()
     };
-    
     if (editingId) {
         const idx = logData.entries.findIndex(e => e.id === editingId);
         logData.entries[idx] = entryData;
     } else {
         logData.entries.push(entryData);
     }
-    
     await setDoc(doc(db, "logs", currentLogId), logData);
     window.closeModal('inputModal');
 };
 
-// --- RENDER LOGIC ---
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
     header.innerHTML = `<th>Date</th><th class="sticky-col">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
-    if (logData.entries.length === 0) {
-        body.innerHTML = `<tr><td colspan="10" style="padding:40px; text-align:center;">No data yet.</td></tr>`;
-        return;
-    }
-
     const entriesByDate = {};
     logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: 0, exercises: {} };
-        entriesByDate[e.date].happiness = e.happiness;
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: e.happiness || '-', exercises: {} };
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
         }
     });
 
-    const sortedDates = Object.keys(entriesByDate).sort((a,b) => new Date(a) - new Date(b));
-    const firstDate = new Date(sortedDates[0]);
+    const dates = Object.keys(entriesByDate).sort((a,b) => new Date(b) - new Date(a));
+    const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
     const today = new Date();
 
     body.innerHTML = "";
@@ -145,8 +191,7 @@ const renderMatrix = () => {
             `).join('');
             row += `<td>${content}</td>`;
         });
-        row += `</tr>`;
-        body.innerHTML += row;
+        body.innerHTML += row + `</tr>`;
     }
 };
 
