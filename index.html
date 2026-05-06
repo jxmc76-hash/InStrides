@@ -4,36 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=31">
+    <link rel="stylesheet" href="style.css?v=32">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <div class="app-shell">
         <header class="app-header">
-            <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
-            
-            <div class="action-bar">
-                <button onclick="window.showTypeModal()" class="nav-btn btn-type">Manage Types</button>
-                <button onclick="window.showInputModal()" class="nav-btn btn-add">Add Exercise</button>
+            <div class="header-main">
+                <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
+                <div class="action-bar">
+                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Manage Types</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Exercise</button>
+                </div>
             </div>
         </header>
 
-        <div class="matrix-container">
-            <table class="modern-table">
-                <thead>
-                    <tr id="headerRow">
-                        <th>Date</th>
-                        <th class="neutral-col">Happiness</th>
-                        </tr>
-                </thead>
-                <tbody id="matrixBody"></tbody>
-            </table>
-        </div>
+        <main class="content-area">
+            <div class="matrix-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr id="headerRow">
+                            <th class="col-date">Date</th>
+                            <th class="col-happiness">Happiness</th>
+                            </tr>
+                    </thead>
+                    <tbody id="matrixBody"></tbody>
+                </table>
+            </div>
+        </main>
 
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2 id="modalTitle">Daily Log</h2>
+                    <h2>Daily Log</h2>
                     <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
@@ -42,28 +48,26 @@
                         <input type="date" id="modalDate">
                     </div>
                     
-                    <div class="input-row highlight-box">
-                        <label>Daily Happiness (1-10)</label>
-                        <div class="happiness-input">
+                    <div class="input-row happiness-box">
+                        <label>Daily Happiness</label>
+                        <div class="happiness-input-wrapper">
                             <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                             <span id="happyVal" class="score-display">5</span>
                         </div>
                     </div>
 
                     <div class="input-row">
-                        <label>Exercise Type</label>
-                        <select id="modalType">
-                            <option value="NONE">No Exercise</option>
-                        </select>
+                        <label>Exercise Category</label>
+                        <select id="modalType"></select>
                     </div>
 
                     <div class="input-row">
                         <label>Workout Notes</label>
-                        <textarea id="modalDetails" placeholder="Notes..."></textarea>
+                        <textarea id="modalDetails" placeholder="How did it feel today?"></textarea>
                     </div>
 
                     <div class="input-row">
-                        <label>Intensity (1-3)</label>
+                        <label>Intensity Level</label>
                         <div class="rating-strip">
                             <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
                             <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
@@ -71,9 +75,9 @@
                         </div>
                     </div>
 
-                    <div class="modal-footer-btns">
-                        <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="delete-btn" style="display:none;">Delete</button>
-                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="submit-btn">Save Day</button>
+                    <div class="modal-footer">
+                        <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none;">Delete Entry</button>
+                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Workout</button>
                     </div>
                 </div>
             </div>
@@ -82,23 +86,20 @@
         <div id="typeModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2>Manage Types</h2>
+                    <h2>Manage Categories</h2>
                     <button onclick="window.closeModal('typeModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
                     <div id="typeList" class="type-editor-list"></div>
-                    <div class="input-row" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-                        <label>Add New Category</label>
-                        <div class="flex-row">
-                            <input type="text" id="newTypeInput" placeholder="e.g. SWIM">
-                            <button onclick="window.addType()" class="btn-save-small">Add</button>
-                        </div>
+                    <div class="add-type-footer">
+                        <input type="text" id="newTypeInput" placeholder="New Category (e.g. SWIM)">
+                        <button onclick="window.addType()" class="btn-submit">Add</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="script.js?v=31"></script>
+    <script type="module" src="script.js?v=32"></script>
 </body>
 </html>
