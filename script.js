@@ -68,8 +68,8 @@ window.showTypeModal = () => {
     if (isOverviewMode) return;
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
-        <div class="type-item">
-            <input type="text" value="${type}" id="type-input-${idx}">
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
+            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;">
             <button onclick="window.renameType(${idx})" class="btn-save-small">Rename</button>
             <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444;" class="btn-save-small">✕</button>
         </div>
@@ -154,14 +154,24 @@ window.saveExercise = async () => {
     window.closeModal('inputModal');
 };
 
+window.deleteEntry = async () => {
+    if (!confirm("Delete entry?")) return;
+    logData.entries = logData.entries.filter(e => e.id !== editingId);
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.closeModal('inputModal');
+};
+
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
-    header.innerHTML = `<th>Date</th><th class="sticky-col">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
+    header.innerHTML = `<th>Date</th><th class="neutral-col">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: e.happiness || '-', exercises: {} };
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, exercises: {} };
+        // Set happiness if it's a number
+        if (typeof e.happiness === 'number') entriesByDate[e.date].happiness = e.happiness;
+        
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
@@ -176,11 +186,11 @@ const renderMatrix = () => {
     for (let d = new Date(today); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' });
-        const dayData = entriesByDate[dateKey] || { happiness: '-', exercises: {} };
+        const dayData = entriesByDate[dateKey] || { happiness: null, exercises: {} };
 
         let row = `<tr>
             <td>${displayDate}</td>
-            <td class="sticky-col">${dayData.happiness !== '-' ? `<div class="happy-pill">${dayData.happiness}</div>` : '-'}</td>`;
+            <td class="neutral-col">${dayData.happiness !== null ? `<div class="happy-pill">${dayData.happiness}</div>` : '-'}</td>`;
             
         logData.types.forEach(type => {
             const exercises = dayData.exercises[type] || [];
