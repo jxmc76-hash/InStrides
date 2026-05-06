@@ -1,259 +1,91 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
-    authDomain: "in-strides.firebaseapp.com",
-    projectId: "in-strides",
-    storageBucket: "in-strides.firebasestorage.app",
-    messagingSenderId: "974987405170",
-    appId: "1:974987405170:web:c1f100b44bb85efed7dfeb"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let currentLogId = "main-log";
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
-let editingId = null; 
-let unsubscribe = null;
-let isOverviewMode = false;
-window.tempMark = 1;
-
-// --- LOG MANAGEMENT ---
-const syncLogDropdown = async () => {
-    const dropdown = document.getElementById('logDropdown');
-    const querySnapshot = await getDocs(collection(db, "logs"));
-    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
-    querySnapshot.forEach((doc) => {
-        const id = doc.id;
-        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id.replace(/-/g, ' ')}</option>`;
-    });
-    dropdown.innerHTML = options;
-};
-
-window.handleLogSelect = (val) => {
-    if (val === "OVERVIEW") loadOverview();
-    else { isOverviewMode = false; initApp(val); }
-};
-
-window.addNewLog = async () => {
-    const name = prompt("New log name:");
-    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
-};
-
-window.renameCurrentLog = async () => {
-    if (isOverviewMode) return alert("Cannot rename Overview mode.");
+:root {
+    --primary: #ff5500;
+    --bg: #f4f7f9;
+    --card: #ffffff;
+    --text: #1a1a1b;
+    --text-dim: #94a3b8;
+    --border: #e2e8f0;
+    --red: #ef4444;
     
-    const newName = prompt(`Enter a new name for "${currentLogId}":`);
-    if (!newName) return;
-    
-    const newId = newName.toLowerCase().replace(/\s+/g, '-').trim();
-    if (newId === currentLogId) return;
+    --int-1-bg: #f0fdf4;
+    --int-1-text: #166534;
+    --int-2-bg: #eff6ff;
+    --int-2-text: #1e40af;
+    --int-3-bg: #fff7ed;
+    --int-3-text: #9a3412;
+}
 
-    try {
-        if (confirm(`This will move all data to "${newId}" and delete the old log. Continue?`)) {
-            if (unsubscribe) unsubscribe();
-            
-            // 1. Save data to the new location
-            await setDoc(doc(db, "logs", newId), logData);
-            
-            // 2. Delete the old document
-            await deleteDoc(doc(db, "logs", currentLogId));
-            
-            alert("Log renamed successfully.");
-            window.location.reload();
-        }
-    } catch (e) {
-        alert("Rename failed: " + e.message);
-    }
-};
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-window.deleteCurrentLog = async () => {
-    if (isOverviewMode) return alert("Overview mode cannot be deleted.");
-    if (confirm(`Permanently delete "${currentLogId}"?`)) {
-        try {
-            if (unsubscribe) unsubscribe();
-            await deleteDoc(doc(db, "logs", currentLogId));
-            window.location.reload(); 
-        } catch (error) {
-            alert("Error: " + error.message);
-        }
-    }
-};
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg); 
+    color: var(--text);
+    padding: 30px;
+    -webkit-font-smoothing: antialiased;
+}
 
-const loadOverview = async () => {
-    isOverviewMode = true;
-    document.getElementById('deleteLogBtn').style.display = "none";
-    const snap = await getDocs(collection(db, "logs"));
-    const master = { types: new Set(), entries: [] };
-    snap.forEach(d => {
-        const data = d.data();
-        (data.types || []).forEach(t => master.types.add(t));
-        master.entries = [...master.entries, ...(data.entries || [])];
-    });
-    logData = { types: Array.from(master.types), entries: master.entries };
-    renderMatrix();
-    syncLogDropdown();
-};
+.app-shell { max-width: 1400px; margin: 0 auto; }
+.app-header { text-align: center; margin-bottom: 50px; }
+.logo-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 30px; }
+.logo-text span { color: var(--primary); }
 
-// --- TYPE MANAGEMENT ---
-window.showTypeModal = () => {
-    if (isOverviewMode) return alert("Select a specific log.");
-    const container = document.getElementById('typeList');
-    container.innerHTML = logData.types.map((type, idx) => `
-        <div class="type-item">
-            <input type="text" value="${type}" id="type-input-${idx}">
-            <button onclick="window.renameType(${idx})" class="btn-icon save">RENAME</button>
-            <button onclick="window.removeType(${idx})" class="btn-icon del">✕</button>
-        </div>
-    `).join('');
-    document.getElementById('typeModal').style.display = 'flex';
-};
+.action-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.nav-btn { padding: 12px 20px; border-radius: 14px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; outline: none; }
+.btn-type { background: #e2e8f0; color: #475569; }
+.btn-add { background: var(--primary); color: white; }
+.btn-log { 
+    background: #1e293b; color: white; 
+    appearance: none; -webkit-appearance: none; 
+    padding-right: 35px; 
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; 
+    background-position: right 12px center; 
+}
+.btn-new { background: #cbd5e1; color: #1e293b; }
+.btn-del { background: #fee2e2; color: var(--red); }
+.nav-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
 
-window.addType = async () => {
-    const input = document.getElementById('newTypeInput');
-    const val = input.value.toUpperCase().trim();
-    if (val && !logData.types.includes(val)) {
-        logData.types.push(val);
-        await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
-        input.value = "";
-        window.showTypeModal();
-    }
-};
+.matrix-container { background: var(--card); border-radius: 24px; padding: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.04); overflow-x: auto; border: 1px solid var(--border); }
+.modern-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1100px; }
+th { padding: 20px; text-align: left; font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top; border-right: 1px solid #f8fafc; }
 
-window.renameType = async (idx) => {
-    const oldType = logData.types[idx];
-    const newType = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
-    if (!newType || newType === oldType) return;
-    logData.types[idx] = newType;
-    logData.entries = logData.entries.map(e => e.type === oldType ? { ...e, type: newType } : e);
-    await setDoc(doc(db, "logs", currentLogId), logData);
-    window.showTypeModal();
-};
+/* Date column */
+td:first-child { 
+    font-weight: 800; 
+    color: var(--primary); 
+    width: 160px; 
+    text-align: center; 
+    font-size: 0.8rem; 
+    line-height: 1.4;
+    background: #fafbfc;
+}
 
-window.removeType = async (idx) => {
-    if (!confirm(`Delete "${logData.types[idx]}"?`)) return;
-    logData.types.splice(idx, 1);
-    await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
-    window.showTypeModal();
-};
+.entry-pill { border-radius: 16px; padding: 12px; margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+.entry-pill.int-1 { background-color: var(--int-1-bg); border-color: #dcfce7; color: var(--int-1-text); }
+.entry-pill.int-2 { background-color: var(--int-2-bg); border-color: #dbeafe; color: var(--int-2-text); }
+.entry-pill.int-3 { background-color: var(--int-3-bg); border-color: #ffedd5; color: var(--int-3-text); }
+.entry-desc { font-size: 0.9rem; font-weight: 600; line-height: 1.3; }
+.entry-mark-tag { margin-top: 8px; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
 
-// --- ENTRY MODALS ---
-window.showInputModal = () => {
-    if (isOverviewMode) return alert("Select a specific log.");
-    editingId = null;
-    document.getElementById('modalTitle').innerText = "Log Entry";
-    document.getElementById('submitEntryBtn').innerText = "Save Workout";
-    document.getElementById('deleteEntryBtn').style.display = "none";
-    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('modalDetails').value = "";
-    document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
-    document.getElementById('inputModal').style.display = 'flex';
-    window.selectMark(1);
-};
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+.modal-card { background: white; width: 90%; max-width: 450px; border-radius: 28px; padding: 35px; box-shadow: 0 30px 60px rgba(0,0,0,0.15); }
+.modal-header { display: flex; justify-content: space-between; margin-bottom: 25px; }
+.modal-header h2 { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
+.close-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: bold; }
 
-window.editEntry = (id) => {
-    if (isOverviewMode) return;
-    const entry = logData.entries.find(e => e.id === id);
-    if (!entry) return;
-    editingId = id;
-    document.getElementById('modalTitle').innerText = "Edit Entry";
-    document.getElementById('submitEntryBtn').innerText = "Update Workout";
-    document.getElementById('deleteEntryBtn').style.display = "block";
-    document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
-    document.getElementById('modalDate').value = entry.date;
-    document.getElementById('modalDetails').value = entry.details;
-    window.selectMark(entry.mark);
-    document.getElementById('inputModal').style.display = 'flex';
-};
+.type-editor-list { display: flex; flex-direction: column; gap: 10px; }
+.type-item { display: flex; gap: 8px; align-items: center; }
+.type-item input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-weight: 700; }
+.btn-icon { background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; }
+.btn-icon.save { background: var(--primary); color: white; }
+.btn-icon.del { color: var(--red); }
+.btn-add-inline { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 700; cursor: pointer; }
 
-window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
-
-window.selectMark = (val) => {
-    window.tempMark = val;
-    document.querySelectorAll('.rate-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-val') == val));
-};
-
-window.saveExercise = async () => {
-    const entryData = {
-        type: document.getElementById('modalType').value,
-        date: document.getElementById('modalDate').value,
-        details: document.getElementById('modalDetails').value,
-        mark: window.tempMark,
-        id: editingId || Date.now()
-    };
-    if (!entryData.date) return alert("Select a date.");
-    if (editingId) {
-        const idx = logData.entries.findIndex(e => e.id === editingId);
-        logData.entries[idx] = entryData;
-    } else {
-        logData.entries.push(entryData);
-    }
-    await setDoc(doc(db, "logs", currentLogId), logData);
-    window.closeModal('inputModal');
-};
-
-window.deleteEntry = async () => {
-    if (!confirm("Delete entry?")) return;
-    logData.entries = logData.entries.filter(e => e.id !== editingId);
-    await setDoc(doc(db, "logs", currentLogId), logData);
-    window.closeModal('inputModal');
-};
-
-// --- RENDERING ---
-const getMondayDate = (dStr) => {
-    const d = new Date(dStr);
-    const day = d.getDay();
-    const diff = d.getDate() - (day === 0 ? 6 : day - 1);
-    const mon = new Date(d.setDate(diff));
-    return mon.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-const renderMatrix = () => {
-    const body = document.getElementById('matrixBody');
-    const header = document.getElementById('headerRow');
-    header.innerHTML = `<th>Week Starting</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
-
-    const weeksMap = {};
-    logData.entries.forEach(e => {
-        const mon = getMondayDate(e.date);
-        if (!weeksMap[mon]) weeksMap[mon] = {};
-        if (!weeksMap[mon][e.type]) weeksMap[mon][e.type] = [];
-        weeksMap[mon][e.type].push(e);
-    });
-
-    body.innerHTML = "";
-    const sortedMondays = Object.keys(weeksMap).sort((a, b) => new Date(b) - new Date(a));
-    sortedMondays.forEach(mon => {
-        let row = `<tr><td>${mon}</td>`;
-        logData.types.forEach(type => {
-            const items = weeksMap[mon][type] || [];
-            const cards = items.map(i => `
-                <div class="entry-pill int-${i.mark}" ${isOverviewMode ? '' : `onclick="window.editEntry(${i.id})"`}>
-                    <span class="entry-date">${i.date.split('-').reverse().join('/')}</span>
-                    <p class="entry-desc">${i.details || 'Activity'}</p>
-                    <div class="entry-mark-tag">${i.mark === 1 ? 'Recovery' : i.mark === 2 ? 'Moderate' : 'High Intensity'}</div>
-                </div>
-            `).join('');
-            row += `<td>${cards}</td>`;
-        });
-        body.innerHTML += row + `</tr>`;
-    });
-};
-
-const initApp = (logId) => {
-    if (unsubscribe) unsubscribe();
-    currentLogId = logId;
-    unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
-        if (snap.exists()) { 
-            logData = snap.data(); 
-            renderMatrix(); 
-            syncLogDropdown();
-        } else { 
-            setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); 
-        }
-    });
-};
-
-initApp(currentLogId);
+.rating-strip { display: flex; gap: 8px; }
+.rate-btn { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: white; cursor: pointer; font-weight: 800; font-size: 0.75rem; color: var(--text-dim); }
+.rate-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+.modal-footer-btns { display: flex; gap: 10px; margin-top: 10px; }
+.submit-btn { flex: 3; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
+.delete-btn { flex: 1; padding: 18px; background: #fee2e2; color: var(--red); border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
