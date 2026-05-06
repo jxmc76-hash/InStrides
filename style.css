@@ -1,65 +1,245 @@
-:root {
-    --primary: #ff5500;
-    --bg: #f4f7f9;
-    --card: #ffffff;
-    --text: #1a1a1b;
-    --text-dim: #94a3b8;
-    --border: #e2e8f0;
-    --red: #ef4444;
-    --int-1-bg: #f0fdf4;
-    --int-1-text: #166534;
-    --int-2-bg: #eff6ff;
-    --int-2-text: #1e40af;
-    --int-3-bg: #fff7ed;
-    --int-3-text: #9a3412;
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, onSnapshot, updateDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); padding: 30px; -webkit-font-smoothing: antialiased; }
+const firebaseConfig = {
+    apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
+    authDomain: "in-strides.firebaseapp.com",
+    projectId: "in-strides",
+    storageBucket: "in-strides.firebasestorage.app",
+    messagingSenderId: "974987405170",
+    appId: "1:974987405170:web:c1f100b44bb85efed7dfeb"
+};
 
-.app-shell { max-width: 1400px; margin: 0 auto; }
-.app-header { text-align: center; margin-bottom: 50px; }
-.logo-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 30px; }
-.logo-text span { color: var(--primary); }
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-.action-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.nav-btn { padding: 12px 20px; border-radius: 14px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; outline: none; }
-.btn-type { background: #e2e8f0; color: #475569; }
-.btn-add { background: var(--primary); color: white; }
-.btn-log { background: #1e293b; color: white; appearance: none; -webkit-appearance: none; padding-right: 35px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
-.btn-new { background: #cbd5e1; color: #1e293b; }
-.btn-del { background: #fee2e2; color: var(--red); }
-.nav-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+let currentLogId = "main-log";
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
+let editingId = null; 
+let unsubscribe = null;
+let isOverviewMode = false;
+window.tempMark = 1;
 
-.matrix-container { background: var(--card); border-radius: 24px; padding: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.04); overflow-x: auto; border: 1px solid var(--border); }
-.modern-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1100px; }
-th { padding: 20px; text-align: left; font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
-td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top; border-right: 1px solid #f8fafc; }
-td:first-child { font-weight: 800; color: var(--primary); width: 150px; text-align: center; font-size: 0.8rem; line-height: 1.4; }
+// --- LOG CONTROLS ---
+const syncLogDropdown = async () => {
+    const dropdown = document.getElementById('logDropdown');
+    const querySnapshot = await getDocs(collection(db, "logs"));
+    let options = `<option value="OVERVIEW" ${isOverviewMode ? 'selected' : ''}>Master Overview</option>`;
+    querySnapshot.forEach((doc) => {
+        const id = doc.id;
+        options += `<option value="${id}" ${(!isOverviewMode && currentLogId === id) ? 'selected' : ''}>Log: ${id.replace(/-/g, ' ')}</option>`;
+    });
+    dropdown.innerHTML = options;
+};
 
-.entry-pill { border-radius: 16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-.entry-pill.int-1 { background-color: var(--int-1-bg); border-color: #dcfce7; color: var(--int-1-text); }
-.entry-pill.int-2 { background-color: var(--int-2-bg); border-color: #dbeafe; color: var(--int-2-text); }
-.entry-pill.int-3 { background-color: var(--int-3-bg); border-color: #ffedd5; color: var(--int-3-text); }
+window.handleLogSelect = (val) => {
+    if (val === "OVERVIEW") loadOverview();
+    else { isOverviewMode = false; initApp(val); }
+};
 
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
-.modal-card { background: white; width: 90%; max-width: 450px; border-radius: 28px; padding: 35px; box-shadow: 0 30px 60px rgba(0,0,0,0.15); }
-.modal-header { display: flex; justify-content: space-between; margin-bottom: 25px; }
-.modal-header h2 { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
-.close-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+window.addNewLog = async () => {
+    const name = prompt("New log name:");
+    if (name) initApp(name.toLowerCase().replace(/\s+/g, '-').trim());
+};
 
-/* Type Manager Specifics */
-.type-editor-list { display: flex; flex-direction: column; gap: 10px; }
-.type-item { display: flex; gap: 8px; align-items: center; }
-.type-item input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-weight: 700; }
-.btn-icon { background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 800; }
-.btn-icon.del { color: var(--red); }
-.btn-icon.save { background: var(--primary); color: white; }
-.btn-add-inline { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+window.renameCurrentLog = async () => {
+    if (isOverviewMode) return;
+    const name = prompt(`Rename "${currentLogId}" to:`);
+    if (!name) return;
+    const newId = name.toLowerCase().replace(/\s+/g, '-').trim();
+    if (newId === currentLogId) return;
+    if (confirm(`Move data to "${newId}" and delete old?`)) {
+        if (unsubscribe) unsubscribe();
+        await setDoc(doc(db, "logs", newId), logData);
+        await deleteDoc(doc(db, "logs", currentLogId));
+        window.location.reload();
+    }
+};
 
-.rating-strip { display: flex; gap: 8px; }
-.rate-btn { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: white; cursor: pointer; font-weight: 800; font-size: 0.75rem; color: var(--text-dim); }
-.rate-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
-.modal-footer-btns { display: flex; gap: 10px; margin-top: 10px; }
-.submit-btn { flex: 3; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
-.delete-btn { flex: 1; padding: 18px; background: #fee2e2; color: var(--red); border: none; border-radius: 14px; font-weight: 800; cursor: pointer; }
+window.deleteCurrentLog = async () => {
+    if (isOverviewMode) return;
+    if (confirm(`Delete "${currentLogId}"?`)) {
+        await deleteDoc(doc(db, "logs", currentLogId));
+        initApp("main-log");
+    }
+};
+
+const loadOverview = async () => {
+    isOverviewMode = true;
+    document.getElementById('deleteLogBtn').style.display = "none";
+    const snap = await getDocs(collection(db, "logs"));
+    const master = { types: new Set(), entries: [] };
+    snap.forEach(d => {
+        const data = d.data();
+        (data.types || []).forEach(t => master.types.add(t));
+        master.entries = [...master.entries, ...(data.entries || [])];
+    });
+    logData = { types: Array.from(master.types), entries: master.entries };
+    renderMatrix();
+    syncLogDropdown();
+};
+
+// --- TYPE MANAGEMENT ---
+window.showTypeModal = () => {
+    if (isOverviewMode) return alert("Select a log first.");
+    const container = document.getElementById('typeList');
+    container.innerHTML = logData.types.map((type, idx) => `
+        <div class="type-item">
+            <input type="text" value="${type}" id="type-input-${idx}">
+            <button onclick="window.renameType(${idx})" class="btn-icon save">RENAME</button>
+            <button onclick="window.removeType(${idx})" class="btn-icon del">✕</button>
+        </div>
+    `).join('');
+    document.getElementById('typeModal').style.display = 'flex';
+};
+
+window.addType = async () => {
+    const input = document.getElementById('newTypeInput');
+    const val = input.value.toUpperCase().trim();
+    if (val && !logData.types.includes(val)) {
+        logData.types.push(val);
+        await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+        input.value = "";
+        window.showTypeModal();
+    }
+};
+
+window.renameType = async (idx) => {
+    const old = logData.types[idx];
+    const n = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
+    if (!n || n === old) return;
+    logData.types[idx] = n;
+    logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.showTypeModal();
+};
+
+window.removeType = async (idx) => {
+    if (!confirm(`Delete "${logData.types[idx]}"?`)) return;
+    logData.types.splice(idx, 1);
+    await updateDoc(doc(db, "logs", currentLogId), { types: logData.types });
+    window.showTypeModal();
+};
+
+// --- ENTRY MODALS ---
+window.showInputModal = () => {
+    if (isOverviewMode) return alert("Select a specific log.");
+    editingId = null;
+    document.getElementById('modalTitle').innerText = "Log Entry";
+    document.getElementById('submitEntryBtn').innerText = "Save Workout";
+    document.getElementById('deleteEntryBtn').style.display = "none";
+    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalDetails').value = "";
+    document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
+    document.getElementById('inputModal').style.display = 'flex';
+    window.selectMark(1);
+};
+
+window.editEntry = (id) => {
+    if (isOverviewMode) return;
+    const entry = logData.entries.find(e => e.id === id);
+    if (!entry) return;
+    editingId = id;
+    document.getElementById('modalTitle').innerText = "Edit Entry";
+    document.getElementById('submitEntryBtn').innerText = "Update Workout";
+    document.getElementById('deleteEntryBtn').style.display = "block";
+    document.getElementById('modalType').innerHTML = logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
+    document.getElementById('modalDate').value = entry.date;
+    document.getElementById('modalDetails').value = entry.details;
+    window.selectMark(entry.mark);
+    document.getElementById('inputModal').style.display = 'flex';
+};
+
+window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+
+window.selectMark = (val) => {
+    window.tempMark = val;
+    document.querySelectorAll('.rate-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-val') == val));
+};
+
+window.saveExercise = async () => {
+    const entryData = {
+        type: document.getElementById('modalType').value,
+        date: document.getElementById('modalDate').value,
+        details: document.getElementById('modalDetails').value,
+        mark: window.tempMark,
+        id: editingId || Date.now()
+    };
+    if (!entryData.date) return alert("Select a date.");
+    if (editingId) {
+        const idx = logData.entries.findIndex(e => e.id === editingId);
+        logData.entries[idx] = entryData;
+    } else {
+        logData.entries.push(entryData);
+    }
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.closeModal('inputModal');
+};
+
+window.deleteEntry = async () => {
+    if (!confirm("Delete entry?")) return;
+    logData.entries = logData.entries.filter(e => e.id !== editingId);
+    await setDoc(doc(db, "logs", currentLogId), logData);
+    window.closeModal('inputModal');
+};
+
+// --- CONTINUOUS DAILY RENDERING ---
+const renderMatrix = () => {
+    const body = document.getElementById('matrixBody');
+    const header = document.getElementById('headerRow');
+    header.innerHTML = `<th>Date</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
+
+    if (logData.entries.length === 0) {
+        body.innerHTML = `<tr><td colspan="${logData.types.length + 1}" style="padding:40px; text-align:center; color:#999;">No entries yet. Add your first workout!</td></tr>`;
+        return;
+    }
+
+    // Find first date and current date
+    const sortedEntries = [...logData.entries].sort((a, b) => new Date(a.date) - new Date(b) - new Date(b.date));
+    const firstDate = new Date(sortedEntries[0].date);
+    const lastDate = new Date(); // To today
+
+    const entriesByDate = {};
+    logData.entries.forEach(e => {
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = {};
+        if (!entriesByDate[e.date][e.type]) entriesByDate[e.date][e.type] = [];
+        entriesByDate[e.date][e.type].push(e);
+    });
+
+    body.innerHTML = "";
+    // Loop backwards from today to the first entry date
+    for (let d = new Date(lastDate); d >= firstDate; d.setDate(d.getDate() - 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' });
+        
+        let row = `<tr><td>${displayDate}</td>`;
+        logData.types.forEach(type => {
+            const items = (entriesByDate[dateStr] && entriesByDate[dateStr][type]) || [];
+            const cards = items.map(i => `
+                <div class="entry-pill int-${i.mark}" ${isOverviewMode ? '' : `onclick="window.editEntry(${i.id})"`}>
+                    <p class="entry-desc">${i.details || 'Activity'}</p>
+                    <div class="entry-mark-tag">${i.mark === 1 ? 'Recovery' : i.mark === 2 ? 'Moderate' : 'High Intensity'}</div>
+                </div>
+            `).join('');
+            row += `<td>${cards}</td>`;
+        });
+        body.innerHTML += row + `</tr>`;
+    }
+};
+
+const initApp = (logId) => {
+    if (unsubscribe) unsubscribe();
+    currentLogId = logId;
+    document.getElementById('deleteLogBtn').style.display = "flex";
+    unsubscribe = onSnapshot(doc(db, "logs", logId), (snap) => {
+        if (snap.exists()) { 
+            logData = snap.data(); 
+            renderMatrix(); 
+            syncLogDropdown();
+        } else { 
+            setDoc(doc(db, "logs", logId), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); 
+        }
+    });
+};
+
+initApp(currentLogId);
