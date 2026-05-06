@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=34">
+    <link rel="stylesheet" href="style.css?v=35">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -28,7 +28,9 @@
                     <thead>
                         <tr id="headerRow">
                             <th class="col-date">Date</th>
-                            <th class="col-happiness">Happiness</th>
+                            <th class="col-stat">Happiness</th>
+                            <th class="col-stat">Food</th>
+                            <th class="col-stat">Web</th>
                         </tr>
                     </thead>
                     <tbody id="matrixBody"></tbody>
@@ -48,11 +50,28 @@
                         <input type="date" id="modalDate">
                     </div>
                     
-                    <div class="input-row happiness-box">
+                    <div class="input-row highlight-box">
                         <label>Daily Happiness</label>
                         <div class="happiness-input-wrapper">
                             <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                             <span id="happyVal" class="score-display">5</span>
+                        </div>
+                    </div>
+
+                    <div class="toggle-group">
+                        <div class="input-row">
+                            <label>Healthy Eating (Food)</label>
+                            <div class="binary-strip">
+                                <button id="foodYes" class="bin-btn" onclick="window.toggleBin('food', true)">YES</button>
+                                <button id="foodNo" class="bin-btn active" onclick="window.toggleBin('food', false)">NO</button>
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <label>No Internet (Web)</label>
+                            <div class="binary-strip">
+                                <button id="webYes" class="bin-btn" onclick="window.toggleBin('web', true)">YES</button>
+                                <button id="webNo" class="bin-btn active" onclick="window.toggleBin('web', false)">NO</button>
+                            </div>
                         </div>
                     </div>
 
@@ -63,7 +82,7 @@
 
                     <div class="input-row">
                         <label>Workout Notes</label>
-                        <textarea id="modalDetails" rows="3" placeholder="Notes..."></textarea>
+                        <textarea id="modalDetails" rows="2" placeholder="Notes..."></textarea>
                     </div>
 
                     <div class="input-row">
@@ -105,6 +124,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=34"></script>
+    <script type="module" src="script.js?v=35"></script>
 </body>
 </html>
