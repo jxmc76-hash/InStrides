@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=32">
+    <link rel="stylesheet" href="style.css?v=33">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2>Daily Log</h2>
+                    <h2 id="modalTitle">Daily Log</h2>
                     <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
@@ -63,7 +63,7 @@
 
                     <div class="input-row">
                         <label>Workout Notes</label>
-                        <textarea id="modalDetails" placeholder="How did it feel today?"></textarea>
+                        <textarea id="modalDetails" rows="4" placeholder="How did it feel today?"></textarea>
                     </div>
 
                     <div class="input-row">
@@ -92,7 +92,7 @@
                 <div class="form-body">
                     <div id="typeList" class="type-editor-list"></div>
                     <div class="add-type-footer">
-                        <input type="text" id="newTypeInput" placeholder="New Category (e.g. SWIM)">
+                        <input type="text" id="newTypeInput" placeholder="New Category">
                         <button onclick="window.addType()" class="btn-submit">Add</button>
                     </div>
                 </div>
@@ -100,6 +100,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=32"></script>
+    <script type="module" src="script.js?v=33"></script>
 </body>
 </html>
