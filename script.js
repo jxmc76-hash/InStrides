@@ -14,30 +14,19 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const LOG_ID = "single-master-log";
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
+let logData = { types: ["SIT", "YOGA", "RUN", "SWIM", "LIFT"], entries: [] };
 let editingId = null;
 let chartInstance = null;
 window.tempMark = 1;
 
-// --- REBUILT CHART ENGINE ---
-const updateHappinessChart = (labels, values) => {
-    // 1. Check if Chart.js is actually loaded
-    if (typeof Chart === 'undefined') {
-        console.error("Chart.js not loaded yet");
-        return;
-    }
-
+// --- CHART LOGIC ---
+const drawHappinessChart = (labels, values) => {
+    if (typeof Chart === 'undefined') return;
     const canvas = document.getElementById('happinessChart');
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
+    if (chartInstance) chartInstance.destroy();
 
-    // 2. Clear old chart
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-
-    // 3. Create new chart
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -65,8 +54,8 @@ const updateHappinessChart = (labels, values) => {
     });
 };
 
-// --- DATA LOGIC ---
-const renderMatrix = () => {
+// --- RENDER LOGIC ---
+const renderApp = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
     header.innerHTML = `<th class="col-date">Date</th><th class="col-happiness">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
@@ -81,16 +70,15 @@ const renderMatrix = () => {
         }
     });
 
-    const dates = Object.keys(entriesByDate).sort((a,b) => new Date(a) - new Date(b));
+    const sortedDates = Object.keys(entriesByDate).sort((a,b) => new Date(a) - new Date(b));
     const today = new Date();
-    const firstDate = dates.length > 0 ? new Date(dates[0]) : new Date();
+    const firstDate = sortedDates.length > 0 ? new Date(sortedDates[0]) : new Date();
 
-    // Prepare Chart Arrays
+    // Prepare Chart (Last 14 days)
     const chartLabels = [];
     const chartValues = [];
     const chartStart = new Date();
-    chartStart.setDate(chartStart.getDate() - 13); // Last 14 days
-
+    chartStart.setDate(chartStart.getDate() - 13);
     for (let i = 0; i < 14; i++) {
         const d = new Date(chartStart);
         d.setDate(d.getDate() + i);
@@ -99,62 +87,51 @@ const renderMatrix = () => {
         chartValues.push(entriesByDate[key]?.happiness || 5);
     }
 
-    // Build Table Rows
     body.innerHTML = "";
     for (let d = new Date(today); d >= firstDate; d.setDate(d.getDate() - 1)) {
-        const dateKey = d.toISOString().split('T')[0];
-        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' });
-        const dayData = entriesByDate[dateKey] || { happiness: null, exercises: {} };
+        const key = d.toISOString().split('T')[0];
+        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
+        const dayData = entriesByDate[key] || { happiness: null, exercises: {} };
 
-        let row = `<tr>
-            <td class="col-date">${displayDate}</td>
-            <td class="col-happiness">${dayData.happiness !== null ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
-            
-        logData.types.forEach(type => {
-            const exercises = dayData.exercises[type] || [];
-            const content = exercises.map(ex => `
-                <div class="entry-pill int-${ex.mark}" onclick="window.editEntry(${ex.id})">
-                    <p class="entry-desc">${ex.details || 'View'}</p>
-                </div>
-            `).join('');
-            row += `<td>${content}</td>`;
+        let row = `<tr><td>${displayDate}</td><td>${dayData.happiness ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
+        logData.types.forEach(t => {
+            const ex = dayData.exercises[t] || [];
+            row += `<td>${ex.map(i => `<div class="entry-pill int-${i.mark}" onclick="window.editEntry(${i.id})"><p class="entry-desc">${i.details || 'View'}</p></div>`).join('')}</td>`;
         });
         body.innerHTML += row + `</tr>`;
     }
-
-    // Fire Chart Update
-    updateHappinessChart(chartLabels, chartValues);
+    drawHappinessChart(chartLabels, chartValues);
 };
 
-// --- MODAL & ACTION HANDLERS ---
+// --- ACTIONS ---
 window.showInputModal = () => {
     editingId = null;
-    document.getElementById('deleteEntryBtn').style.display = "none";
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalHappiness').value = 5;
     document.getElementById('happyVal').innerText = 5;
     document.getElementById('modalDetails').value = "";
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
+    document.getElementById('deleteEntryBtn').style.display = 'none';
     window.selectMark(1);
 };
 
 window.editEntry = (id) => {
-    const entry = logData.entries.find(e => e.id === id);
-    if (!entry) return;
+    const e = logData.entries.find(i => i.id === id);
+    if (!e) return;
     editingId = id;
-    document.getElementById('deleteEntryBtn').style.display = "block";
-    document.getElementById('modalDate').value = entry.date;
-    document.getElementById('modalHappiness').value = entry.happiness || 5;
-    document.getElementById('happyVal').innerText = entry.happiness || 5;
-    document.getElementById('modalDetails').value = entry.details || "";
-    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
-    window.selectMark(entry.mark || 1);
+    document.getElementById('modalDate').value = e.date;
+    document.getElementById('modalHappiness').value = e.happiness || 5;
+    document.getElementById('happyVal').innerText = e.happiness || 5;
+    document.getElementById('modalDetails').value = e.details || "";
+    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t===e.type?'selected':''}>${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
+    document.getElementById('deleteEntryBtn').style.display = 'block';
+    window.selectMark(e.mark || 1);
 };
 
 window.saveExercise = async () => {
-    const entryData = {
+    const data = {
         date: document.getElementById('modalDate').value,
         happiness: parseInt(document.getElementById('modalHappiness').value),
         type: document.getElementById('modalType').value,
@@ -163,87 +140,67 @@ window.saveExercise = async () => {
         id: editingId || Date.now()
     };
     if (editingId) {
-        const idx = logData.entries.findIndex(e => e.id === editingId);
-        logData.entries[idx] = entryData;
+        const idx = logData.entries.findIndex(i => i.id === editingId);
+        logData.entries[idx] = data;
     } else {
-        logData.entries.push(entryData);
+        logData.entries.push(data);
     }
     await setDoc(doc(db, "logs", LOG_ID), logData);
     window.closeModal('inputModal');
 };
 
 window.deleteEntry = async () => {
-    if (confirm("Delete entry?")) {
-        logData.entries = logData.entries.filter(e => e.id !== editingId);
-        await setDoc(doc(db, "logs", LOG_ID), logData);
-        window.closeModal('inputModal');
-    }
+    if (!confirm("Delete this?")) return;
+    logData.entries = logData.entries.filter(i => i.id !== editingId);
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+    window.closeModal('inputModal');
 };
 
 window.showTypeModal = () => {
-    const container = document.getElementById('typeList');
-    container.innerHTML = logData.types.map((type, idx) => `
-        <div class="type-item" style="display:flex; gap:8px; margin-bottom:12px;">
-            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd;">
-            <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.6rem">RENAME</button>
-            <button onclick="window.removeType(${idx})" class="nav-btn btn-secondary" style="color:red; font-size:0.6rem">✕</button>
+    const list = document.getElementById('typeList');
+    list.innerHTML = logData.types.map((t, i) => `
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <input type="text" value="${t}" id="t-in-${i}" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd;">
+            <button onclick="window.renameType(${i})" class="nav-btn btn-secondary">Rename</button>
+            <button onclick="window.removeType(${i})" class="nav-btn btn-secondary" style="color:red">✕</button>
         </div>
     `).join('');
     document.getElementById('typeModal').style.display = 'flex';
 };
 
 window.addType = async () => {
-    const input = document.getElementById('newTypeInput');
-    const val = input.value.toUpperCase().trim();
+    const val = document.getElementById('newTypeInput').value.toUpperCase().trim();
     if (val && !logData.types.includes(val)) {
         logData.types.push(val);
         await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
-        input.value = "";
+        document.getElementById('newTypeInput').value = "";
         window.showTypeModal();
     }
 };
 
-window.renameType = async (idx) => {
-    const old = logData.types[idx];
-    const n = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
-    if (!n || n === old) return;
-    logData.types[idx] = n;
-    logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
-    await setDoc(doc(db, "logs", LOG_ID), logData);
+window.renameType = async (i) => {
+    const old = logData.types[i];
+    const n = document.getElementById(`t-in-${i}`).value.toUpperCase().trim();
+    if (n && n !== old) {
+        logData.types[i] = n;
+        logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
+        await setDoc(doc(db, "logs", LOG_ID), logData);
+        window.showTypeModal();
+    }
+};
+
+window.removeType = async (i) => {
+    if (!confirm("Delete category?")) return;
+    logData.types.splice(i, 1);
+    await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
     window.showTypeModal();
-};
-
-window.removeType = async (idx) => {
-    if (confirm(`Delete category?`)) {
-        logData.types.splice(idx, 1);
-        await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
-        window.showTypeModal();
-    }
 };
 
 window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
 
-// --- FIREBASE SYNC ---
+// Initialize
 onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
-    if (snap.exists()) {
-        logData = snap.data();
-        renderMatrix();
-    } else {
-        setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] });
-    }
+    if (snap.exists()) { logData = snap.data(); renderApp(); }
+    else { setDoc(doc(db, "logs", LOG_ID), { types: ["SIT", "YOGA", "RUN", "SWIM", "LIFT"], entries: [] }); }
 });
-
-// ... [Keep your existing Firebase and Render logic] ...
-
-// Add this safety trigger at the very bottom of script.js
-const forceChartInit = () => {
-    if (typeof Chart !== 'undefined' && logData.entries.length > 0) {
-        renderAll(); // Or whatever your main render function is named
-    } else {
-        setTimeout(forceChartInit, 2000); // Try again in 2 seconds if not ready
-    }
-};
-
-forceChartInit();
-
