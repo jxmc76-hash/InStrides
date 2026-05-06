@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <!-- Load Chart.js Library First -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css?v=50">
+    <link rel="stylesheet" href="style.css?v=60">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -18,16 +16,27 @@
             <div class="header-main">
                 <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
                 <div class="action-bar">
-                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Manage Types</button>
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Exercise</button>
+                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Types</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Entry</button>
                 </div>
             </div>
         </header>
 
         <main class="content-area">
-            <!-- The Chart Container -->
-            <div class="chart-wrapper">
-                <canvas id="happinessChart"></canvas>
+            <!-- New Stat Dashboard -->
+            <div class="stats-bar" id="statsBar">
+                <div class="stat-card">
+                    <label>Consistency (7d)</label>
+                    <div class="stat-val" id="statConsistency">0%</div>
+                </div>
+                <div class="stat-card">
+                    <label>Avg Happiness</label>
+                    <div class="stat-val" id="statMood">-</div>
+                </div>
+                <div class="stat-card">
+                    <label>Top Intensity</label>
+                    <div class="stat-val" id="statIntensity">-</div>
+                </div>
             </div>
 
             <div class="matrix-container">
@@ -35,7 +44,7 @@
                     <thead>
                         <tr id="headerRow">
                             <th class="col-date">Date</th>
-                            <th class="col-happiness">Happiness</th>
+                            <th class="col-happiness">Mood</th>
                         </tr>
                     </thead>
                     <tbody id="matrixBody"></tbody>
@@ -53,7 +62,7 @@
                 <div class="form-body">
                     <div class="input-row"><label>Date</label><input type="date" id="modalDate"></div>
                     <div class="input-row happiness-box">
-                        <label>Daily Happiness</label>
+                        <label>Happiness (1-10)</label>
                         <div class="happiness-input-wrapper">
                             <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                             <span id="happyVal" class="score-display">5</span>
@@ -78,10 +87,7 @@
         <!-- Types Modal -->
         <div id="typeModal" class="modal-overlay">
             <div class="modal-card">
-                <div class="modal-header">
-                    <h2>Categories</h2>
-                    <button onclick="window.closeModal('typeModal')" class="close-btn">✕</button>
-                </div>
+                <div class="modal-header"><h2>Categories</h2><button onclick="window.closeModal('typeModal')" class="close-btn">✕</button></div>
                 <div class="form-body">
                     <div id="typeList" class="type-editor-list"></div>
                     <div class="add-type-footer">
@@ -93,6 +99,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=50"></script>
+    <script type="module" src="script.js?v=60"></script>
 </body>
 </html>
