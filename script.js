@@ -17,6 +17,13 @@ const LOG_ID = "single-master-log";
 let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
 let editingId = null;
 window.tempMark = 1;
+let currentBin = { food: false, web: false };
+
+window.toggleBin = (key, val) => {
+    currentBin[key] = val;
+    document.getElementById(`${key}Yes`).classList.toggle('active', val);
+    document.getElementById(`${key}No`).classList.toggle('active', !val);
+};
 
 window.showInputModal = () => {
     editingId = null;
@@ -26,6 +33,8 @@ window.showInputModal = () => {
     document.getElementById('happyVal').innerText = 5;
     document.getElementById('modalDetails').value = "";
     document.getElementById('modalPhoto').value = "";
+    window.toggleBin('food', false);
+    window.toggleBin('web', false);
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
@@ -41,6 +50,8 @@ window.editEntry = (id) => {
     document.getElementById('happyVal').innerText = entry.happiness || 5;
     document.getElementById('modalDetails').value = entry.details || "";
     document.getElementById('modalPhoto').value = entry.photo || "";
+    window.toggleBin('food', !!entry.food);
+    window.toggleBin('web', !!entry.web);
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
@@ -50,6 +61,8 @@ window.saveExercise = async () => {
     const entryData = {
         date: document.getElementById('modalDate').value,
         happiness: parseInt(document.getElementById('modalHappiness').value),
+        food: currentBin.food,
+        web: currentBin.web,
         type: document.getElementById('modalType').value,
         details: document.getElementById('modalDetails').value,
         photo: document.getElementById('modalPhoto').value,
@@ -69,12 +82,14 @@ window.saveExercise = async () => {
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
-    header.innerHTML = `<th class="col-date">Date</th><th class="col-happiness">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
+    header.innerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th><th class="col-stat">Food</th><th class="col-stat">Web</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, exercises: {} };
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, food: false, web: false, exercises: {} };
         if (typeof e.happiness === 'number') entriesByDate[e.date].happiness = e.happiness;
+        entriesByDate[e.date].food = e.food;
+        entriesByDate[e.date].web = e.web;
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
@@ -86,23 +101,24 @@ const renderMatrix = () => {
     const today = new Date();
 
     body.innerHTML = "";
-    let weekHappiness = [];
-    let weekWorkouts = 0;
+    let weekStats = { hap: [], food: 0, web: 0, work: 0 };
 
     for (let d = new Date(today); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
-        const dayOfWeek = d.getDay(); // 0 is Sunday
-        const dayData = entriesByDate[dateKey] || { happiness: null, exercises: {} };
+        const dayOfWeek = d.getDay();
+        const dayData = entriesByDate[dateKey] || { happiness: null, food: false, web: false, exercises: {} };
 
-        // Accumulate stats
-        if (dayData.happiness !== null) weekHappiness.push(dayData.happiness);
-        Object.values(dayData.exercises).forEach(list => weekWorkouts += list.length);
+        if (dayData.happiness !== null) weekStats.hap.push(dayData.happiness);
+        if (dayData.food) weekStats.food++;
+        if (dayData.web) weekStats.web++;
+        Object.values(dayData.exercises).forEach(l => weekStats.work += l.length);
 
-        // Build Row
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' });
         let row = `<tr>
             <td class="col-date">${displayDate}</td>
-            <td class="col-happiness">${dayData.happiness !== null ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
+            <td class="col-stat">${dayData.happiness !== null ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>
+            <td class="col-stat"><span class="status-icon">${dayData.food ? '✅' : '❌'}</span></td>
+            <td class="col-stat"><span class="status-icon">${dayData.web ? '✅' : '❌'}</span></td>`;
             
         logData.types.forEach(type => {
             const exercises = dayData.exercises[type] || [];
@@ -116,17 +132,17 @@ const renderMatrix = () => {
         });
         body.innerHTML += row + `</tr>`;
 
-        // If it's Monday (end of week display), inject summary
         if (dayOfWeek === 1) {
-            const avgH = weekHappiness.length ? (weekHappiness.reduce((a,b)=>a+b,0)/weekHappiness.length).toFixed(1) : '-';
+            const avgH = weekStats.hap.length ? (weekStats.hap.reduce((a,b)=>a+b,0)/weekStats.hap.length).toFixed(1) : '-';
             body.innerHTML += `
-                <tr class="summary-row">
+                <tr style="background:#f8fafc; font-weight:800; font-size:0.7rem; color:#64748b; text-transform:uppercase;">
                     <td>Weekly Review</td>
-                    <td class="col-happiness">AVG: ${avgH}</td>
-                    <td colspan="${logData.types.length}">Total Activity: <span class="sum-stat">${weekWorkouts}</span></td>
+                    <td class="col-stat">AVG: ${avgH}</td>
+                    <td class="col-stat">YES: ${weekStats.food}</td>
+                    <td class="col-stat">YES: ${weekStats.web}</td>
+                    <td colspan="${logData.types.length}">Total Activity: ${weekStats.work}</td>
                 </tr>`;
-            weekHappiness = [];
-            weekWorkouts = 0;
+            weekStats = { hap: [], food: 0, web: 0, work: 0 };
         }
     }
 };
