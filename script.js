@@ -18,7 +18,6 @@ let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
 let editingId = null;
 window.tempMark = 1;
 
-// --- Modal Logic ---
 window.showInputModal = () => {
     editingId = null;
     document.getElementById('deleteEntryBtn').style.display = "none";
@@ -72,12 +71,11 @@ window.deleteEntry = async () => {
     }
 };
 
-// --- Type Logic ---
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
-        <div class="type-item" style="display:flex; gap:8px; margin-bottom:12px;">
-            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1;">
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
+            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd;">
             <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.6rem">RENAME</button>
             <button onclick="window.removeType(${idx})" class="nav-btn btn-secondary" style="color:red; font-size:0.6rem">✕</button>
         </div>
@@ -107,14 +105,13 @@ window.renameType = async (idx) => {
 };
 
 window.removeType = async (idx) => {
-    if (confirm(`Delete category "${logData.types[idx]}"?`)) {
+    if (confirm(`Delete category?`)) {
         logData.types.splice(idx, 1);
         await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
         window.showTypeModal();
     }
 };
 
-// --- Rendering ---
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
