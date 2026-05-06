@@ -1,3 +1,24 @@
+/* Add this to the top of your existing style.css */
+.chart-wrapper {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 25px;
+    height: 300px; /* This must be here */
+    width: 100%;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+}
+
+#happinessChart {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+
+
 :root {
     --primary: #ff5500;
     --primary-hover: #e64a00;
