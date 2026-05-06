@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=34">
+    <!-- Load Chart.js FIRST -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css?v=35">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
-    <!-- Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -25,8 +25,8 @@
         </header>
 
         <main class="content-area">
-            <!-- New Happiness Chart Section -->
             <div class="chart-container">
+                <!-- Ensure this ID is exactly 'happinessChart' -->
                 <canvas id="happinessChart"></canvas>
             </div>
 
@@ -43,11 +43,11 @@
             </div>
         </main>
 
-        <!-- Modals remain the same as v33 -->
+        <!-- Modals (Kept same as v34) -->
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2 id="modalTitle">Daily Log</h2>
+                    <h2>Daily Log</h2>
                     <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
@@ -68,20 +68,18 @@
                     </div>
                     <div class="input-row">
                         <label>Workout Notes</label>
-                        <textarea id="modalDetails" rows="4" placeholder="How did it feel today?"></textarea>
+                        <textarea id="modalDetails" rows="4"></textarea>
                     </div>
                     <div class="input-row">
-                        <label>Intensity Level</label>
+                        <label>Intensity</label>
                         <div class="rating-strip">
                             <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
                             <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
                             <button class="rate-btn" data-val="3" onclick="window.selectMark(3)">HARD</button>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none;">Delete Entry</button>
-                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Workout</button>
-                    </div>
+                    <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Workout</button>
+                    <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none; margin-top: 10px;">Delete Entry</button>
                 </div>
             </div>
         </div>
@@ -103,6 +101,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=34"></script>
+    <script type="module" src="script.js?v=35"></script>
 </body>
 </html>
