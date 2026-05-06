@@ -18,14 +18,68 @@ let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
 let editingId = null;
 window.tempMark = 1;
 
-// --- TYPE MANAGEMENT ---
+// --- Modal Logic ---
+window.showInputModal = () => {
+    editingId = null;
+    document.getElementById('deleteEntryBtn').style.display = "none";
+    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalHappiness').value = 5;
+    document.getElementById('happyVal').innerText = 5;
+    document.getElementById('modalDetails').value = "";
+    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
+    document.getElementById('inputModal').style.display = 'flex';
+    window.selectMark(1);
+};
+
+window.editEntry = (id) => {
+    const entry = logData.entries.find(e => e.id === id);
+    if (!entry) return;
+    editingId = id;
+    document.getElementById('deleteEntryBtn').style.display = "block";
+    document.getElementById('modalDate').value = entry.date;
+    document.getElementById('modalHappiness').value = entry.happiness || 5;
+    document.getElementById('happyVal').innerText = entry.happiness || 5;
+    document.getElementById('modalDetails').value = entry.details || "";
+    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
+    window.selectMark(entry.mark || 1);
+    document.getElementById('inputModal').style.display = 'flex';
+};
+
+window.saveExercise = async () => {
+    const entryData = {
+        date: document.getElementById('modalDate').value,
+        happiness: parseInt(document.getElementById('modalHappiness').value),
+        type: document.getElementById('modalType').value,
+        details: document.getElementById('modalDetails').value,
+        mark: window.tempMark,
+        id: editingId || Date.now()
+    };
+    if (editingId) {
+        const idx = logData.entries.findIndex(e => e.id === editingId);
+        logData.entries[idx] = entryData;
+    } else {
+        logData.entries.push(entryData);
+    }
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+    window.closeModal('inputModal');
+};
+
+window.deleteEntry = async () => {
+    if (confirm("Delete this entry?")) {
+        logData.entries = logData.entries.filter(e => e.id !== editingId);
+        await setDoc(doc(db, "logs", LOG_ID), logData);
+        window.closeModal('inputModal');
+    }
+};
+
+// --- Type Logic ---
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
-        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
-            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;">
-            <button onclick="window.renameType(${idx})" class="btn-save-small">Rename</button>
-            <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444;" class="btn-save-small">✕</button>
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:12px;">
+            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1;">
+            <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.6rem">RENAME</button>
+            <button onclick="window.removeType(${idx})" class="nav-btn btn-secondary" style="color:red; font-size:0.6rem">✕</button>
         </div>
     `).join('');
     document.getElementById('typeModal').style.display = 'flex';
@@ -53,73 +107,18 @@ window.renameType = async (idx) => {
 };
 
 window.removeType = async (idx) => {
-    if (confirm(`Delete "${logData.types[idx]}"?`)) {
+    if (confirm(`Delete category "${logData.types[idx]}"?`)) {
         logData.types.splice(idx, 1);
         await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
         window.showTypeModal();
     }
 };
 
-// --- DATA LOGIC ---
-window.showInputModal = () => {
-    editingId = null;
-    document.getElementById('modalTitle').innerText = "Daily Log";
-    document.getElementById('deleteEntryBtn').style.display = "none";
-    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('modalHappiness').value = 5;
-    document.getElementById('happyVal').innerText = 5;
-    document.getElementById('modalDetails').value = "";
-    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
-    document.getElementById('inputModal').style.display = 'flex';
-    window.selectMark(1);
-};
-
-window.editEntry = (id) => {
-    const entry = logData.entries.find(e => e.id === id);
-    if (!entry) return;
-    editingId = id;
-    document.getElementById('modalTitle').innerText = "Edit Entry";
-    document.getElementById('deleteEntryBtn').style.display = "block";
-    document.getElementById('modalDate').value = entry.date;
-    document.getElementById('modalHappiness').value = entry.happiness || 5;
-    document.getElementById('happyVal').innerText = entry.happiness || 5;
-    document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
-    document.getElementById('modalDetails').value = entry.details || "";
-    window.selectMark(entry.mark || 1);
-    document.getElementById('inputModal').style.display = 'flex';
-};
-
-window.saveExercise = async () => {
-    const entryData = {
-        date: document.getElementById('modalDate').value,
-        happiness: parseInt(document.getElementById('modalHappiness').value),
-        type: document.getElementById('modalType').value,
-        details: document.getElementById('modalDetails').value,
-        mark: window.tempMark,
-        id: editingId || Date.now()
-    };
-    if (editingId) {
-        const idx = logData.entries.findIndex(e => e.id === editingId);
-        logData.entries[idx] = entryData;
-    } else {
-        logData.entries.push(entryData);
-    }
-    await setDoc(doc(db, "logs", LOG_ID), logData);
-    window.closeModal('inputModal');
-};
-
-window.deleteEntry = async () => {
-    if (confirm("Delete entry?")) {
-        logData.entries = logData.entries.filter(e => e.id !== editingId);
-        await setDoc(doc(db, "logs", LOG_ID), logData);
-        window.closeModal('inputModal');
-    }
-};
-
+// --- Rendering ---
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
-    header.innerHTML = `<th>Date</th><th class="neutral-col">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
+    header.innerHTML = `<th class="col-date">Date</th><th class="col-happiness">Happiness</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
@@ -142,14 +141,14 @@ const renderMatrix = () => {
         const dayData = entriesByDate[dateKey] || { happiness: null, exercises: {} };
 
         let row = `<tr>
-            <td>${displayDate}</td>
-            <td class="neutral-col">${dayData.happiness !== null ? `<div class="happy-pill">${dayData.happiness}</div>` : '-'}</td>`;
+            <td class="col-date">${displayDate}</td>
+            <td class="col-happiness">${dayData.happiness !== null ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
             
         logData.types.forEach(type => {
             const exercises = dayData.exercises[type] || [];
             const content = exercises.map(ex => `
                 <div class="entry-pill int-${ex.mark}" onclick="window.editEntry(${ex.id})">
-                    <p class="entry-desc">${ex.details || 'Activity'}</p>
+                    <p class="entry-desc">${ex.details || 'View'}</p>
                 </div>
             `).join('');
             row += `<td>${content}</td>`;
