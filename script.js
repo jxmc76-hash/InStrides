@@ -18,30 +18,36 @@ let logData = { types: ["SIT", "YOGA", "RUN", "SWIM", "LIFT"], entries: [] };
 let editingId = null;
 window.tempMark = 1;
 
+// --- TAB SYSTEM ---
+window.switchTab = (tabName) => {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    document.getElementById(`btn-tab-${tabName}`).classList.add('active');
+};
+
 // --- STATS LOGIC ---
 const updateDashboard = () => {
     const now = new Date();
-    const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
+    const weekAgo = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
+    const recent = logData.entries.filter(e => e.date >= weekAgo);
     
-    const recentEntries = logData.entries.filter(e => e.date >= sevenDaysAgo);
-    
-    // 1. Consistency
-    const activeDays = new Set(recentEntries.filter(e => e.type !== "NONE").map(e => e.date)).size;
+    // Consistency
+    const activeDays = new Set(recent.filter(e => e.type !== "NONE").map(e => e.date)).size;
     document.getElementById('statConsistency').innerText = Math.round((activeDays / 7) * 100) + "%";
 
-    // 2. Avg Mood
-    const moods = recentEntries.map(e => e.happiness).filter(h => typeof h === 'number');
-    const avgMood = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1) : "-";
-    document.getElementById('statMood').innerText = avgMood;
+    // Mood
+    const moods = recent.map(e => e.happiness).filter(h => typeof h === 'number');
+    document.getElementById('statMood').innerText = moods.length ? (moods.reduce((a,b)=>a+b)/moods.length).toFixed(1) : "-";
 
-    // 3. Top Intensity
-    const intensities = recentEntries.map(e => e.mark).filter(m => m > 0);
-    const mostFreq = intensities.sort((a,b) => intensities.filter(v => v===a).length - intensities.filter(v => v===b).length).pop();
-    const intLabels = { 1: "EASY", 2: "MED", 3: "HARD" };
-    document.getElementById('statIntensity').innerText = intLabels[mostFreq] || "-";
+    // Intensity
+    const ints = recent.map(e => e.mark).filter(m => m > 0);
+    const top = ints.sort((a,b) => ints.filter(v=>v===a).length - ints.filter(v=>v===b).length).pop();
+    document.getElementById('statIntensity').innerText = {1:"EASY", 2:"MED", 3:"HARD"}[top] || "-";
 };
 
-// --- RENDER LOGIC ---
+// --- RENDER ---
 const renderApp = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
@@ -70,14 +76,14 @@ const renderApp = () => {
         let row = `<tr><td class="col-date">${displayDate}</td><td class="col-happiness">${dayData.happiness ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>`;
         logData.types.forEach(t => {
             const ex = dayData.exercises[t] || [];
-            row += `<td>${ex.map(i => `<div class="entry-pill int-${i.mark}" onclick="window.editEntry(${i.id})"><p class="entry-desc">${i.details || 'View'}</p></div>`).join('')}</td>`;
+            row += `<td>${ex.map(i => `<div class="entry-pill int-${i.mark}" onclick="window.editEntry(${i.id})">${i.details || 'View'}</div>`).join('')}</td>`;
         });
         body.innerHTML += row + `</tr>`;
     }
     updateDashboard();
 };
 
-// --- HANDLERS ---
+// --- ACTIONS ---
 window.showInputModal = () => {
     editingId = null;
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
@@ -173,7 +179,6 @@ window.removeType = async (i) => {
 window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
 
-// Initialize
 onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
     if (snap.exists()) { logData = snap.data(); renderApp(); }
     else { setDoc(doc(db, "logs", LOG_ID), { types: ["SIT", "YOGA", "RUN", "SWIM", "LIFT"], entries: [] }); }
