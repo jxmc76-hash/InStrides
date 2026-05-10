@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=36">
+    <link rel="stylesheet" href="style.css?v=38">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -15,26 +15,59 @@
         <header class="app-header">
             <div class="header-main">
                 <h1 class="logo-text">TRAININGLOG<span>.CO.UK</span></h1>
+                
+                <nav class="tab-nav">
+                    <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Daily Log</button>
+                    <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
+                </nav>
+
                 <div class="action-bar">
-                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Types</button>
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Entry</button>
+                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Manage Types</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Exercise</button>
                 </div>
             </div>
         </header>
 
         <main class="content-area">
-            <div class="matrix-container">
-                <table class="modern-table">
-                    <thead>
-                        <tr id="headerRow">
-                            <th class="col-date">Date</th>
-                            <th class="col-stat">Happiness</th>
-                            <th class="col-stat">Food</th>
-                            <th class="col-stat">Web</th>
-                        </tr>
-                    </thead>
-                    <tbody id="matrixBody"></tbody>
-                </table>
+            <div id="viewLog" class="view-pane active">
+                <div class="matrix-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr id="headerRow">
+                                <th class="col-date">Date</th>
+                                <th class="col-stat">Happiness</th>
+                                <th class="col-stat">Food</th>
+                                <th class="col-stat">Web</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrixBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="viewInsights" class="view-pane">
+                <div class="insights-grid">
+                    <div class="stat-card">
+                        <label>Avg Happiness</label>
+                        <div id="statHappy" class="stat-val">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <label>Food Success</label>
+                        <div id="statFood" class="stat-val">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <label>Web Success</label>
+                        <div id="statWeb" class="stat-val">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <label>Exercise Consistency</label>
+                        <div id="statStreak" class="stat-val">-</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>Activity Breakdown</h3>
+                    <div id="activityChart" class="activity-bars"></div>
+                </div>
             </div>
         </main>
 
@@ -51,23 +84,23 @@
                     </div>
                     
                     <div class="input-row highlight-box">
-                        <label>Daily Happiness</label>
-                        <div class="happiness-input-wrapper">
+                        <label>Daily Happiness (1-10)</label>
+                        <div class="slider-row">
                             <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                             <span id="happyVal" class="score-display">5</span>
                         </div>
                     </div>
 
-                    <div class="toggle-group">
+                    <div class="toggle-container">
                         <div class="input-row">
-                            <label>Food (Healthy)</label>
+                            <label>Healthy Food?</label>
                             <div class="binary-strip">
                                 <button id="foodYes" class="bin-btn" onclick="window.toggleBin('food', true)">YES</button>
                                 <button id="foodNo" class="bin-btn active" onclick="window.toggleBin('food', false)">NO</button>
                             </div>
                         </div>
                         <div class="input-row">
-                            <label>Web (Off)</label>
+                            <label>Internet Control?</label>
                             <div class="binary-strip">
                                 <button id="webYes" class="bin-btn" onclick="window.toggleBin('web', true)">YES</button>
                                 <button id="webNo" class="bin-btn active" onclick="window.toggleBin('web', false)">NO</button>
@@ -76,22 +109,17 @@
                     </div>
 
                     <div class="input-row">
-                        <label>Category</label>
+                        <label>Exercise Category</label>
                         <select id="modalType"></select>
                     </div>
 
                     <div class="input-row">
-                        <label>Notes</label>
+                        <label>Workout Notes</label>
                         <textarea id="modalDetails" rows="2" placeholder="Notes..."></textarea>
                     </div>
 
                     <div class="input-row">
-                        <label>Photo URL</label>
-                        <input type="text" id="modalPhoto" placeholder="Link to image...">
-                    </div>
-
-                    <div class="input-row">
-                        <label>Intensity</label>
+                        <label>Intensity Level</label>
                         <div class="rating-strip">
                             <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
                             <button class="rate-btn" data-val="2" onclick="window.selectMark(2)">MED</button>
@@ -110,7 +138,7 @@
         <div id="typeModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2>Categories</h2>
+                    <h2>Manage Categories</h2>
                     <button onclick="window.closeModal('typeModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
@@ -124,6 +152,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=36"></script>
+    <script type="module" src="script.js?v=38"></script>
 </body>
 </html>
