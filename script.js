@@ -21,62 +21,59 @@ let currentBin = { food: false, web: false };
 
 // --- Tab Navigation ---
 window.switchTab = (tab) => {
-    document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('viewLog').classList.toggle('active', tab === 'log');
+    document.getElementById('viewInsights').classList.toggle('active', tab === 'insights');
+    document.getElementById('tabLog').classList.toggle('active', tab === 'log');
+    document.getElementById('tabInsights').classList.toggle('active', tab === 'insights');
     
-    if (tab === 'log') {
-        document.getElementById('viewLog').classList.add('active');
-        document.getElementById('tabLog').classList.add('active');
-    } else {
-        document.getElementById('viewInsights').classList.add('active');
-        document.getElementById('tabInsights').classList.add('active');
-        renderInsights();
-    }
+    if (tab === 'insights') renderInsights();
 };
 
-// --- Insights Logic ---
+// --- Insights Calculation ---
 const renderInsights = () => {
-    if (!logData.entries.length) return;
+    const totalEntries = logData.entries.length;
+    if (totalEntries === 0) {
+        document.getElementById('activityChart').innerHTML = "<p style='text-align:center; color:#94a3b8; padding:20px;'>No data to analyze yet.</p>";
+        return;
+    }
 
-    let totalHap = 0, hapCount = 0;
-    let foodYes = 0, webYes = 0;
-    const activityCounts = {};
-    logData.types.forEach(t => activityCounts[t] = 0);
+    let sumHappy = 0, countHappy = 0, foodYes = 0, webYes = 0, workCount = 0;
+    const typeMap = {};
+    logData.types.forEach(t => typeMap[t] = 0);
 
     logData.entries.forEach(e => {
-        if (e.happiness) { totalHap += e.happiness; hapCount++; }
+        if (e.happiness) { sumHappy += e.happiness; countHappy++; }
         if (e.food) foodYes++;
         if (e.web) webYes++;
-        if (e.type !== "NONE") activityCounts[e.type] = (activityCounts[e.type] || 0) + 1;
+        if (e.type && e.type !== "NONE") {
+            workCount++;
+            typeMap[e.type] = (typeMap[e.type] || 0) + 1;
+        }
     });
 
-    // Update Cards
-    document.getElementById('statHappy').innerText = hapCount ? (totalHap / hapCount).toFixed(1) : '-';
-    document.getElementById('statFood').innerText = Math.round((foodYes / logData.entries.length) * 100) + '%';
-    document.getElementById('statWeb').innerText = Math.round((webYes / logData.entries.length) * 100) + '%';
-    
-    // Simple Streak logic (days with any exercise)
-    let streak = 0;
-    const dates = logData.entries.filter(e => e.type !== "NONE").map(e => e.date).sort().reverse();
-    if (dates.length) streak = 1; // Simplified for this build
-
-    document.getElementById('statStreak').innerText = dates.length + ' Workouts';
+    // Update Stats
+    document.getElementById('statHappy').innerText = countHappy ? (sumHappy/countHappy).toFixed(1) : '-';
+    document.getElementById('statFood').innerText = Math.round((foodYes/totalEntries)*100) + '%';
+    document.getElementById('statWeb').innerText = Math.round((webYes/totalEntries)*100) + '%';
+    document.getElementById('statTotal').innerText = workCount;
 
     // Activity Chart
     const chart = document.getElementById('activityChart');
-    const max = Math.max(...Object.values(activityCounts), 1);
-    chart.innerHTML = logData.types.map(t => `
-        <div class="bar-row">
-            <div class="bar-label">${t}</div>
-            <div class="bar-outer">
-                <div class="bar-inner" style="width: ${(activityCounts[t]/max)*100}%"></div>
+    const maxVal = Math.max(...Object.values(typeMap), 1);
+    chart.innerHTML = logData.types.map(t => {
+        const count = typeMap[t] || 0;
+        const pct = (count / maxVal) * 100;
+        return `
+            <div class="bar-row">
+                <div class="bar-label">${t}</div>
+                <div class="bar-outer"><div class="bar-inner" style="width:${pct}%"></div></div>
+                <div style="width:20px; font-weight:800; font-size:0.7rem;">${count}</div>
             </div>
-            <div style="font-size:0.7rem; font-weight:800">${activityCounts[t]}</div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 };
 
-// --- Entry Logic (Same as v37) ---
+// --- Modal & Entry Logic ---
 window.toggleBin = (key, val) => {
     currentBin[key] = val;
     document.getElementById(`${key}Yes`).classList.toggle('active', val);
@@ -89,8 +86,7 @@ window.showInputModal = () => {
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalHappiness').value = 5;
     document.getElementById('happyVal').innerText = 5;
-    window.toggleBin('food', false);
-    window.toggleBin('web', false);
+    window.toggleBin('food', false); window.toggleBin('web', false);
     document.getElementById('modalDetails').value = "";
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
@@ -105,8 +101,7 @@ window.editEntry = (id) => {
     document.getElementById('modalDate').value = entry.date;
     document.getElementById('modalHappiness').value = entry.happiness || 5;
     document.getElementById('happyVal').innerText = entry.happiness || 5;
-    window.toggleBin('food', !!entry.food);
-    window.toggleBin('web', !!entry.web);
+    window.toggleBin('food', !!entry.food); window.toggleBin('web', !!entry.web);
     document.getElementById('modalDetails').value = entry.details || "";
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Exercise</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
     window.selectMark(entry.mark || 1);
@@ -117,12 +112,10 @@ window.saveExercise = async () => {
     const entryData = {
         date: document.getElementById('modalDate').value,
         happiness: parseInt(document.getElementById('modalHappiness').value),
-        food: currentBin.food,
-        web: currentBin.web,
+        food: currentBin.food, web: currentBin.web,
         type: document.getElementById('modalType').value,
         details: document.getElementById('modalDetails').value,
-        mark: window.tempMark,
-        id: editingId || Date.now()
+        mark: window.tempMark, id: editingId || Date.now()
     };
     if (editingId) {
         const idx = logData.entries.findIndex(e => e.id === editingId);
@@ -143,8 +136,7 @@ const renderMatrix = () => {
     logData.entries.forEach(e => {
         if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, food: false, web: false, exercises: {} };
         if (e.happiness) entriesByDate[e.date].happiness = e.happiness;
-        entriesByDate[e.date].food = e.food;
-        entriesByDate[e.date].web = e.web;
+        entriesByDate[e.date].food = e.food; entriesByDate[e.date].web = e.web;
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
@@ -160,8 +152,8 @@ const renderMatrix = () => {
         const dateKey = d.toISOString().split('T')[0];
         const dayOfWeek = d.getDay();
         const dayData = entriesByDate[dateKey] || { happiness: null, food: false, web: false, exercises: {} };
-
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
+
         let row = `<tr>
             <td class="col-date">${displayDate}</td>
             <td class="col-stat">${dayData.happiness ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>
@@ -173,10 +165,7 @@ const renderMatrix = () => {
             row += `<td>${exercise ? `<div class="tick-cell" onclick="window.editEntry(${exercise.id})">✓</div>` : ''}</td>`;
         });
         body.innerHTML += row + `</tr>`;
-
-        if (dayOfWeek === 1) {
-            body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="30"></td></tr>`;
-        }
+        if (dayOfWeek === 1) body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="30"></td></tr>`;
     }
 };
 
@@ -184,6 +173,6 @@ window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
 
 onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
-    if (snap.exists()) { logData = snap.data(); renderMatrix(); }
+    if (snap.exists()) { logData = snap.data(); renderMatrix(); if(document.getElementById('viewInsights').classList.contains('active')) renderInsights(); }
     else { setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] }); }
 });
