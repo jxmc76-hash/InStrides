@@ -19,6 +19,64 @@ let editingId = null;
 window.tempMark = 1;
 let currentBin = { food: false, web: false };
 
+// --- Tab Navigation ---
+window.switchTab = (tab) => {
+    document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    if (tab === 'log') {
+        document.getElementById('viewLog').classList.add('active');
+        document.getElementById('tabLog').classList.add('active');
+    } else {
+        document.getElementById('viewInsights').classList.add('active');
+        document.getElementById('tabInsights').classList.add('active');
+        renderInsights();
+    }
+};
+
+// --- Insights Logic ---
+const renderInsights = () => {
+    if (!logData.entries.length) return;
+
+    let totalHap = 0, hapCount = 0;
+    let foodYes = 0, webYes = 0;
+    const activityCounts = {};
+    logData.types.forEach(t => activityCounts[t] = 0);
+
+    logData.entries.forEach(e => {
+        if (e.happiness) { totalHap += e.happiness; hapCount++; }
+        if (e.food) foodYes++;
+        if (e.web) webYes++;
+        if (e.type !== "NONE") activityCounts[e.type] = (activityCounts[e.type] || 0) + 1;
+    });
+
+    // Update Cards
+    document.getElementById('statHappy').innerText = hapCount ? (totalHap / hapCount).toFixed(1) : '-';
+    document.getElementById('statFood').innerText = Math.round((foodYes / logData.entries.length) * 100) + '%';
+    document.getElementById('statWeb').innerText = Math.round((webYes / logData.entries.length) * 100) + '%';
+    
+    // Simple Streak logic (days with any exercise)
+    let streak = 0;
+    const dates = logData.entries.filter(e => e.type !== "NONE").map(e => e.date).sort().reverse();
+    if (dates.length) streak = 1; // Simplified for this build
+
+    document.getElementById('statStreak').innerText = dates.length + ' Workouts';
+
+    // Activity Chart
+    const chart = document.getElementById('activityChart');
+    const max = Math.max(...Object.values(activityCounts), 1);
+    chart.innerHTML = logData.types.map(t => `
+        <div class="bar-row">
+            <div class="bar-label">${t}</div>
+            <div class="bar-outer">
+                <div class="bar-inner" style="width: ${(activityCounts[t]/max)*100}%"></div>
+            </div>
+            <div style="font-size:0.7rem; font-weight:800">${activityCounts[t]}</div>
+        </div>
+    `).join('');
+};
+
+// --- Entry Logic (Same as v37) ---
 window.toggleBin = (key, val) => {
     currentBin[key] = val;
     document.getElementById(`${key}Yes`).classList.toggle('active', val);
@@ -107,8 +165,8 @@ const renderMatrix = () => {
         let row = `<tr>
             <td class="col-date">${displayDate}</td>
             <td class="col-stat">${dayData.happiness ? `<div class="happy-pill">${dayData.happiness}</div>` : ''}</td>
-            <td class="col-stat"><span class="status-icon">${dayData.food ? '✅' : '❌'}</span></td>
-            <td class="col-stat"><span class="status-icon">${dayData.web ? '✅' : '❌'}</span></td>`;
+            <td class="col-stat">${dayData.food ? '✅' : '❌'}</td>
+            <td class="col-stat">${dayData.web ? '✅' : '❌'}</td>`;
             
         logData.types.forEach(type => {
             const exercise = dayData.exercises[type] ? dayData.exercises[type][0] : null;
@@ -116,8 +174,8 @@ const renderMatrix = () => {
         });
         body.innerHTML += row + `</tr>`;
 
-        if (dayOfWeek === 1) { // Weekly separator
-            body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="20"></td></tr>`;
+        if (dayOfWeek === 1) {
+            body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="30"></td></tr>`;
         }
     }
 };
