@@ -29,7 +29,7 @@ window.switchTab = (tab) => {
     if (tab === 'insights') renderInsights();
 };
 
-// --- Insights Calculation ---
+// --- Insights Logic ---
 const renderInsights = () => {
     const totalEntries = logData.entries.length;
     if (totalEntries === 0) {
@@ -51,13 +51,11 @@ const renderInsights = () => {
         }
     });
 
-    // Update Stats
     document.getElementById('statHappy').innerText = countHappy ? (sumHappy/countHappy).toFixed(1) : '-';
     document.getElementById('statFood').innerText = Math.round((foodYes/totalEntries)*100) + '%';
     document.getElementById('statWeb').innerText = Math.round((webYes/totalEntries)*100) + '%';
     document.getElementById('statTotal').innerText = workCount;
 
-    // Activity Chart
     const chart = document.getElementById('activityChart');
     const maxVal = Math.max(...Object.values(typeMap), 1);
     chart.innerHTML = logData.types.map(t => {
@@ -73,7 +71,7 @@ const renderInsights = () => {
     }).join('');
 };
 
-// --- Modal & Entry Logic ---
+// --- Toggles & Modals ---
 window.toggleBin = (key, val) => {
     currentBin[key] = val;
     document.getElementById(`${key}Yes`).classList.toggle('active', val);
@@ -127,6 +125,57 @@ window.saveExercise = async () => {
     window.closeModal('inputModal');
 };
 
+window.deleteEntry = async () => {
+    if (confirm("Delete entry?")) {
+        logData.entries = logData.entries.filter(e => e.id !== editingId);
+        await setDoc(doc(db, "logs", LOG_ID), logData);
+        window.closeModal('inputModal');
+    }
+};
+
+// --- Type Management Fix ---
+window.showTypeModal = () => {
+    const container = document.getElementById('typeList');
+    container.innerHTML = logData.types.map((type, idx) => `
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
+            <input type="text" value="${type}" id="type-input-${idx}" style="flex:1; padding:6px; border:1px solid #ddd; border-radius:6px;">
+            <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.65rem; padding:4px 10px;">Rename</button>
+            <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:4px 10px;" class="nav-btn">✕</button>
+        </div>
+    `).join('');
+    document.getElementById('typeModal').style.display = 'flex';
+};
+
+window.addType = async () => {
+    const input = document.getElementById('newTypeInput');
+    const val = input.value.toUpperCase().trim();
+    if (val && !logData.types.includes(val)) {
+        logData.types.push(val);
+        await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
+        input.value = "";
+        window.showTypeModal();
+    }
+};
+
+window.renameType = async (idx) => {
+    const old = logData.types[idx];
+    const n = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
+    if (!n || n === old) return;
+    logData.types[idx] = n;
+    logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+    window.showTypeModal();
+};
+
+window.removeType = async (idx) => {
+    if (confirm(`Delete Category?`)) {
+        logData.types.splice(idx, 1);
+        await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
+        window.showTypeModal();
+    }
+};
+
+// --- Matrix Render Fix ---
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
@@ -165,7 +214,7 @@ const renderMatrix = () => {
             row += `<td>${exercise ? `<div class="tick-cell" onclick="window.editEntry(${exercise.id})">✓</div>` : ''}</td>`;
         });
         body.innerHTML += row + `</tr>`;
-        if (dayOfWeek === 1) body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="30"></td></tr>`;
+        if (dayOfWeek === 1) body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="50"></td></tr>`;
     }
 };
 
