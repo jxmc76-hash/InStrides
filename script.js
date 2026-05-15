@@ -19,7 +19,7 @@ let editingId = null;
 window.tempMark = 1;
 let currentBin = { food: false, web: false };
 
-// --- Tab Navigation ---
+// --- Tab Controls ---
 window.switchTab = (tab) => {
     document.getElementById('viewLog').classList.toggle('active', tab === 'log');
     document.getElementById('viewInsights').classList.toggle('active', tab === 'insights');
@@ -71,7 +71,7 @@ const renderInsights = () => {
     }).join('');
 };
 
-// --- Toggles & Modals ---
+// --- Entry Interactions ---
 window.toggleBin = (key, val) => {
     currentBin[key] = val;
     document.getElementById(`${key}Yes`).classList.toggle('active', val);
@@ -133,7 +133,7 @@ window.deleteEntry = async () => {
     }
 };
 
-// --- Type Management Fix ---
+// --- Structural Type Panel Operations ---
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
@@ -175,7 +175,7 @@ window.removeType = async (idx) => {
     }
 };
 
-// --- Matrix Render Fix ---
+// --- Production Render Pipeline ---
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
