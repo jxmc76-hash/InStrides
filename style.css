@@ -29,18 +29,21 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var
 .view-pane { display: none !important; }
 .view-pane.active { display: block !important; }
 
-/* Squish-proof structural styles */
-.matrix-container { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow-x: auto; border: 1px solid var(--border); }
+/* Table Container styling - prevents table stretching from breaking constraints */
+.matrix-container { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow-x: auto; border: 1px solid var(--border); width: 100%; }
 .modern-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 15px 20px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; vertical-align: middle; text-align: center; white-space: nowrap; }
-th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; min-width: 100px; }
 
-.col-date { width: 140px; min-width: 140px; background: #fafbfc; color: var(--primary); font-weight: 800; }
-.col-stat { width: 95px; min-width: 95px; }
+th, td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
+th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; min-width: 110px; }
+
+/* Explicit column constraints to completely avoid crushing text headers */
+.col-date { width: 150px; min-width: 150px; background: #fafbfc; color: var(--primary); font-weight: 800; }
+.col-stat { width: 105px; min-width: 105px; }
+
 .tick-cell { color: var(--primary); font-size: 1.4rem; font-weight: 900; cursor: pointer; }
 .happy-pill { background: #f1f5f9; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; margin: 0 auto; font-size: 0.8rem; }
 
-/* Insights Tab Styling */
+/* Insights Tab */
 .insights-container { animation: fadeIn 0.3s ease-out; }
 .insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
 .stat-card { background: white; padding: 30px; border-radius: 24px; border: 1px solid var(--border); text-align: center; }
@@ -55,7 +58,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; color: var(--tex
 .bar-outer { flex: 1; height: 12px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
 .bar-inner { height: 100%; background: var(--primary); border-radius: 6px; }
 
-/* Modals & Interaction Fields */
+/* Toggles & Dialog Modals */
 .toggle-container { display: flex; gap: 15px; margin-bottom: 20px; }
 .binary-strip { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 10px; flex: 1; }
 .bin-btn { flex: 1; border: none; padding: 8px; border-radius: 7px; font-weight: 800; font-size: 0.65rem; cursor: pointer; color: var(--text-muted); background: transparent; }
