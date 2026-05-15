@@ -19,7 +19,7 @@ let editingId = null;
 window.tempMark = 1;
 let currentBin = { food: false, web: false };
 
-// --- Tab Controls ---
+// --- Tab Navigation ---
 window.switchTab = (tab) => {
     document.getElementById('viewLog').classList.toggle('active', tab === 'log');
     document.getElementById('viewInsights').classList.toggle('active', tab === 'insights');
@@ -71,7 +71,7 @@ const renderInsights = () => {
     }).join('');
 };
 
-// --- Entry Interactions ---
+// --- Toggles & Modals ---
 window.toggleBin = (key, val) => {
     currentBin[key] = val;
     document.getElementById(`${key}Yes`).classList.toggle('active', val);
@@ -133,9 +133,11 @@ window.deleteEntry = async () => {
     }
 };
 
-// --- Structural Type Panel Operations ---
+// --- Type Management UI Initialization Fix ---
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
+    if (!container || !logData.types) return;
+    
     container.innerHTML = logData.types.map((type, idx) => `
         <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
             <input type="text" value="${type}" id="type-input-${idx}" style="flex:1; padding:6px; border:1px solid #ddd; border-radius:6px;">
@@ -148,6 +150,7 @@ window.showTypeModal = () => {
 
 window.addType = async () => {
     const input = document.getElementById('newTypeInput');
+    if (!input) return;
     const val = input.value.toUpperCase().trim();
     if (val && !logData.types.includes(val)) {
         logData.types.push(val);
@@ -159,8 +162,11 @@ window.addType = async () => {
 
 window.renameType = async (idx) => {
     const old = logData.types[idx];
-    const n = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
+    const targetInput = document.getElementById(`type-input-${idx}`);
+    if (!targetInput) return;
+    const n = targetInput.value.toUpperCase().trim();
     if (!n || n === old) return;
+    
     logData.types[idx] = n;
     logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
     await setDoc(doc(db, "logs", LOG_ID), logData);
@@ -175,10 +181,12 @@ window.removeType = async (idx) => {
     }
 };
 
-// --- Production Render Pipeline ---
+// --- Matrix Rendering Engine ---
 const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
+    if (!body || !header) return;
+    
     header.innerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th><th class="col-stat">Food</th><th class="col-stat">Web</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
 
     const entriesByDate = {};
@@ -218,7 +226,7 @@ const renderMatrix = () => {
     }
 };
 
-window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
 
 onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
