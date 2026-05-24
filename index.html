@@ -4,13 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=41">
+    <link rel="stylesheet" href="style.css?v=42">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
+    <!-- Auth Overlay Barrier -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-card">
+            <h2>TRAININGLOG<span>.CO.UK</span></h2>
+            <p>Sign in to access your personal secure matrix.</p>
+            <div class="input-row">
+                <label>Email Address</label>
+                <input type="email" id="authEmail" placeholder="your@email.com">
+            </div>
+            <div class="input-row">
+                <label>Password</label>
+                <input type="password" id="authPassword" placeholder="••••••••">
+            </div>
+            <div class="auth-buttons">
+                <button onclick="window.handleAuth('login')" class="btn-primary">Sign In</button>
+                <button onclick="window.handleAuth('register')" class="btn-secondary">Create Account</button>
+            </div>
+            <div id="authError" class="auth-error"></div>
+        </div>
+    </div>
+
+    <!-- Main App Frame -->
     <div class="app-shell">
         <header class="app-header">
             <div class="header-main">
@@ -23,12 +45,14 @@
 
                 <div class="action-bar">
                     <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Manage Types</button>
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Exercise</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Log / Plan</button>
+                    <button onclick="window.handleSignOut()" class="nav-btn btn-secondary" style="color: var(--text-muted);">Sign Out</button>
                 </div>
             </div>
         </header>
 
         <main class="content-area">
+            <!-- LOG VIEW -->
             <div id="viewLog" class="view-pane active">
                 <div class="matrix-container">
                     <table class="modern-table">
@@ -45,6 +69,7 @@
                 </div>
             </div>
 
+            <!-- INSIGHTS VIEW -->
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
                     <div class="insights-grid">
@@ -61,7 +86,7 @@
                             <div id="statWeb" class="stat-val">-</div>
                         </div>
                         <div class="stat-card">
-                            <label>Total Workouts</label>
+                            <label>Total Completed Workouts</label>
                             <div id="statTotal" class="stat-val">-</div>
                         </div>
                     </div>
@@ -73,10 +98,11 @@
             </div>
         </main>
 
+        <!-- Dynamic Entry Modal -->
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
-                    <h2 id="modalTitle">Daily Log</h2>
+                    <h2 id="modalTitle">Log Day / Plan</h2>
                     <button onclick="window.closeModal('inputModal')" class="close-btn">✕</button>
                 </div>
                 <div class="form-body">
@@ -84,28 +110,38 @@
                         <label>Date</label>
                         <input type="date" id="modalDate">
                     </div>
-                    
-                    <div class="input-row highlight-box">
-                        <label>Daily Happiness (1-10)</label>
-                        <div class="slider-row">
-                            <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
-                            <span id="happyVal" class="score-display">5</span>
+
+                    <div class="input-row">
+                        <label>Entry Strategy</label>
+                        <div class="binary-strip">
+                            <button id="stratDone" class="bin-btn active" onclick="window.setStrategy(false)">COMPLETED WORKOUT</button>
+                            <button id="stratPlan" class="bin-btn" onclick="window.setStrategy(true)">PLAN UPCOMING</button>
                         </div>
                     </div>
-
-                    <div class="toggle-container">
-                        <div class="input-row">
-                            <label>Healthy Food?</label>
-                            <div class="binary-strip">
-                                <button id="foodYes" class="bin-btn" onclick="window.toggleBin('food', true)">YES</button>
-                                <button id="foodNo" class="bin-btn active" onclick="window.toggleBin('food', false)">NO</button>
+                    
+                    <div id="performanceMetrics">
+                        <div class="input-row highlight-box">
+                            <label>Daily Happiness (1-10)</label>
+                            <div class="slider-row">
+                                <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
+                                <span id="happyVal" class="score-display">5</span>
                             </div>
                         </div>
-                        <div class="input-row">
-                            <label>Internet Control?</label>
-                            <div class="binary-strip">
-                                <button id="webYes" class="bin-btn" onclick="window.toggleBin('web', true)">YES</button>
-                                <button id="webNo" class="bin-btn active" onclick="window.toggleBin('web', false)">NO</button>
+
+                        <div class="toggle-container">
+                            <div class="input-row">
+                                <label>Healthy Food?</label>
+                                <div class="binary-strip">
+                                    <button id="foodYes" class="bin-btn" onclick="window.toggleBin('food', true)">YES</button>
+                                    <button id="foodNo" class="bin-btn active" onclick="window.toggleBin('food', false)">NO</button>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <label>Internet Control?</label>
+                                <div class="binary-strip">
+                                    <button id="webYes" class="bin-btn" onclick="window.toggleBin('web', true)">YES</button>
+                                    <button id="webNo" class="bin-btn active" onclick="window.toggleBin('web', false)">NO</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -116,11 +152,11 @@
                     </div>
 
                     <div class="input-row">
-                        <label>Workout Notes</label>
+                        <label>Workout Notes / Strategy</label>
                         <textarea id="modalDetails" rows="2" placeholder="Notes..."></textarea>
                     </div>
 
-                    <div class="input-row">
+                    <div class="input-row" id="intensityRow">
                         <label>Intensity Level</label>
                         <div class="rating-strip">
                             <button class="rate-btn" data-val="1" onclick="window.selectMark(1)">EASY</button>
@@ -131,12 +167,13 @@
 
                     <div class="modal-footer">
                         <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none;">Delete</button>
-                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Day</button>
+                        <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Entry</button>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Category Configurations -->
         <div id="typeModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
@@ -154,6 +191,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=41"></script>
+    <script type="module" src="script.js?v=42"></script>
 </body>
 </html>
