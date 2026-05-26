@@ -16,14 +16,15 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let LOG_ID = null; 
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], customMetrics: [], entries: [] };
 let editingId = null;
 let unsubSnapshot = null;
 window.tempMark = 1;
 let currentBin = { food: false, web: false };
 let isPlannedStrategy = false; 
+let dynamicMetricValues = {};
 
-// --- USER SESSION CONTROLS ---
+// --- AUTH SESSION HOOKS ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         LOG_ID = `log-${user.uid}`;
@@ -41,43 +42,123 @@ window.handleAuth = async (action) => {
     const password = document.getElementById('authPassword').value;
     const errorEl = document.getElementById('authError');
     errorEl.innerText = "";
-    
-    if(!email || !password) return errorEl.innerText = "Complete all entry fields.";
+    if(!email || !password) return errorEl.innerText = "Complete all layout fields.";
     try {
         if (action === 'login') await signInWithEmailAndPassword(auth, email, password);
         else await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-        errorEl.innerText = err.message.replace("Firebase: ", "");
-    }
+    } catch (err) { errorEl.innerText = err.message.replace("Firebase: ", ""); }
 };
-
 window.handleSignOut = () => signOut(auth);
 
 const attachRealtimeListener = () => {
     if(unsubSnapshot) unsubSnapshot();
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
-            logData = snap.data();
+            const data = snap.data();
+            logData = { types: data.types || [], customMetrics: data.customMetrics || [], entries: data.entries || [] };
             renderMatrix();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
-            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], entries: [] });
+            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], customMetrics: [], entries: [] });
         }
     });
 };
 
-// --- STRATEGY SWITCHER (LOG VS PLAN) ---
+// --- DYNAMIC CUSTOM METRIC IMPLEMENTATIONS ---
+window.showMetricModal = () => {
+    const container = document.getElementById('metricList');
+    container.innerHTML = logData.customMetrics.map((m, idx) => `
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
+            <span style="flex:1; text-align:left; font-weight:700; font-size:0.85rem; align-self:center;">${m.name} (${m.type})</span>
+            <button onclick="window.deleteCustomMetric(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:6px 12px;" class="nav-btn">✕ Delete</button>
+        </div>
+    `).join('');
+    document.getElementById('metricModal').style.display = 'flex';
+};
+
+window.addCustomMetric = async () => {
+    const nameInput = document.getElementById('newMetricName');
+    const typeSelect = document.getElementById('newMetricType');
+    const name = nameInput.value.toUpperCase().replace(/\s+/g, '-').trim();
+    if(!name) return;
+    
+    if(logData.customMetrics.some(m => m.name === name)) return alert('Metric name already active.');
+    logData.customMetrics.push({ name: name, type: typeSelect.value });
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+    nameInput.value = "";
+    window.showMetricModal();
+};
+
+window.deleteCustomMetric = async (idx) => {
+    if(confirm("Permanently erase this custom tracking pillar from your layout?")) {
+        logData.customMetrics.splice(idx, 1);
+        await setDoc(doc(db, "logs", LOG_ID), logData);
+        window.showMetricModal();
+    }
+};
+
+window.updateLocalCustomMetricVal = (name, val) => { dynamicMetricValues[name] = val; };
+
+const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
+    const container = document.getElementById('customMetricsFormContainer');
+    container.innerHTML = "";
+    dynamicMetricValues = {};
+
+    logData.customMetrics.forEach(m => {
+        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : (m.type === 'slider' ? 5 : false);
+        dynamicMetricValues[m.name] = val;
+
+        const div = document.createElement('div');
+        div.className = "input-row";
+        if (m.type === 'slider') {
+            div.className = "input-row highlight-box";
+            div.innerHTML = `
+                <label>${m.name.replace(/-/g, ' ')} (1-10)</label>
+                <div class="slider-row">
+                    <input type="range" min="1" max="10" value="${val}" oninput="document.getElementById('lbl-${m.name}').innerText = this.value; window.updateLocalCustomMetricVal('${m.name}', parseInt(this.value))">
+                    <span id="lbl-${m.name}" class="score-display">${val}</span>
+                </div>`;
+        } else {
+            div.innerHTML = `
+                <label>${m.name.replace(/-/g, ' ')}</label>
+                <div class="binary-strip">
+                    <button id="binBtn-Y-${m.name}" class="bin-btn ${val ? 'active' : ''}" onclick="window.setLocalBinMetric('${m.name}', true)">YES</button>
+                    <button id="binBtn-N-${m.name}" class="bin-btn ${!val ? 'active' : ''}" onclick="window.setLocalBinMetric('${m.name}', false)">NO</button>
+                </div>`;
+        }
+        container.appendChild(div);
+    });
+};
+
+window.setLocalBinMetric = (name, val) => {
+    dynamicMetricValues[name] = val;
+    document.getElementById(`binBtn-Y-${name}`).classList.toggle('active', val);
+    document.getElementById(`binBtn-N-${name}`).classList.toggle('active', !val);
+};
+
+// --- CORE INTERFACE DIALOGS & EXECUTION ---
+window.switchTab = (tab) => {
+    document.getElementById('viewLog').classList.toggle('active', tab === 'log');
+    document.getElementById('viewInsights').classList.toggle('active', tab === 'insights');
+    document.getElementById('tabLog').classList.toggle('active', tab === 'log');
+    document.getElementById('tabInsights').classList.toggle('active', tab === 'insights');
+    if (tab === 'insights') renderInsights();
+};
+
 window.setStrategy = (wantsPlanned) => {
     isPlannedStrategy = wantsPlanned;
     document.getElementById('stratPlan').classList.toggle('active', wantsPlanned);
     document.getElementById('stratDone').classList.toggle('active', !wantsPlanned);
-    
-    // Smoothly mask or unmask metric rows if only setting a target plan
     document.getElementById('performanceMetrics').style.display = wantsPlanned ? 'none' : 'block';
     document.getElementById('intensityRow').style.display = wantsPlanned ? 'none' : 'flex';
 };
 
-// --- DATA LOGIC ---
+window.toggleBin = (key, val) => {
+    currentBin[key] = val;
+    document.getElementById(`${key}Yes`).classList.toggle('active', val);
+    document.getElementById(`${key}No`).classList.toggle('active', !val);
+};
+
 window.showInputModal = () => {
     editingId = null;
     document.getElementById('deleteEntryBtn').style.display = "none";
@@ -87,6 +168,7 @@ window.showInputModal = () => {
     window.toggleBin('food', false); window.toggleBin('web', false);
     document.getElementById('modalDetails').value = "";
     window.setStrategy(false);
+    buildCustomMetricsFormUI();
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
@@ -103,6 +185,7 @@ window.editEntry = (id) => {
     window.toggleBin('food', !!entry.food); window.toggleBin('web', !!entry.web);
     document.getElementById('modalDetails').value = entry.details || "";
     window.setStrategy(!!entry.isPlanned);
+    buildCustomMetricsFormUI(entry.customMetricData || {});
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
@@ -112,10 +195,11 @@ window.quickCompletePlan = async (id) => {
     const idx = logData.entries.findIndex(e => e.id === id);
     if(idx === -1) return;
     logData.entries[idx].isPlanned = false;
-    logData.entries[idx].happiness = 5; // Set base functional values to edit later
+    logData.entries[idx].happiness = 5;
     logData.entries[idx].food = true;
     logData.entries[idx].web = true;
-    logData.entries[idx].mark = 2; 
+    logData.entries[idx].mark = 2;
+    logData.entries[idx].customMetricData = {};
     await setDoc(doc(db, "logs", LOG_ID), logData);
 };
 
@@ -129,6 +213,7 @@ window.saveExercise = async () => {
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark, 
         isPlanned: isPlannedStrategy,
+        customMetricData: isPlannedStrategy ? {} : { ...dynamicMetricValues },
         id: editingId || Date.now()
     };
     if (editingId) {
@@ -149,91 +234,94 @@ window.deleteEntry = async () => {
     }
 };
 
-// --- RENDER MATRIX ENGINE ---
-const renderMatrix = () => {
-    const body = document.getElementById('matrixBody');
-    const header = document.getElementById('headerRow');
-    if (!body || !header) return;
-    
-    header.innerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th><th class="col-stat">Food</th><th class="col-stat">Web</th>` + logData.types.map(t => `<th>${t}</th>`).join('');
-
-    const entriesByDate = {};
-    logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, food: false, web: false, exercises: {} };
-        if (e.happiness && !e.isPlanned) entriesByDate[e.date].happiness = e.happiness;
-        if (!e.isPlanned) {
-            if(e.food) entriesByDate[e.date].food = true;
-            if(e.web) entriesByDate[e.date].web = true;
-        }
-        if (e.type !== "NONE") {
-            if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
-            entriesByDate[e.date].exercises[e.type].push(e);
-        }
-    });
-
-    const dates = Object.keys(entriesByDate).sort((a,b) => new Date(b) - new Date(a));
-    const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
-    
-    // Render out ahead 5 days into future coordinates to track planned strategies
-    const futureBuffer = new Date();
-    futureBuffer.setDate(futureBuffer.getDate() + 5);
-
-    body.innerHTML = "";
-    for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
-        const dateKey = d.toISOString().split('T')[0];
-        const dayOfWeek = d.getDay();
-        const dayData = entriesByDate[dateKey];
-        
-        // Skip future dates if absolutely no upcoming plans exist to keep space tidy
-        if (!dayData && d > new Date()) continue;
-
-        const activeData = dayData || { happiness: null, food: false, web: false, exercises: {} };
-        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
-
-        let row = `<tr>
-            <td class="col-date">${displayDate}</td>
-            <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>
-            <td class="col-stat">${activeData.food ? '✅' : '❌'}</td>
-            <td class="col-stat">${activeData.web ? '✅' : '❌'}</td>`;
-            
-        logData.types.forEach(type => {
-            const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
-            let displaySymbol = '';
-            if (exercise) {
-                if (exercise.isPlanned) {
-                    displaySymbol = `<div class="tick-cell plan" title="Planned. Click to confirm done." onclick="window.quickCompletePlan(${exercise.id})">?</div>`;
-                } else {
-                    displaySymbol = `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>`;
-                }
-            }
-            row += `<td>${displaySymbol}</td>`;
-        });
-        body.innerHTML += row + `</tr>`;
-        if (dayOfWeek === 1) body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="50"></td></tr>`;
-    }
-};
-
-// --- INSIGHTS ENGINE ---
+// --- ADVANCED CORRELATION INSIGHTS GENERATOR ---
 const renderInsights = () => {
-    const completedEntries = logData.entries.filter(e => !e.isPlanned);
-    if (completedEntries.length === 0) {
-        document.getElementById('activityChart').innerHTML = "<p style='text-align:center; color:#94a3b8; padding:20px;'>No tracked performance items yet.</p>";
+    const completed = logData.entries.filter(e => !e.isPlanned);
+    const storyContainer = document.getElementById('correlationStories');
+    
+    if (completed.length < 3) {
+        storyContainer.innerHTML = `<p class="neutral-msg">Gathering a larger history baseline (minimum 3 logs) to process mathematical correlations.</p>`;
         return;
     }
 
     let sumHappy = 0, countHappy = 0, foodYes = 0, webYes = 0, workCount = 0;
     const typeMap = {}; logData.types.forEach(t => typeMap[t] = 0);
+    
+    // Statistical grouping arrays
+    let happyOnFoodDay = [], happyOffFoodDay = [];
+    let happyOnWebDay = [], happyOffWebDay = [];
+    let happyOnWorkoutDay = [], happyOffWorkoutDay = [];
+    
+    let customMetricCorrelations = {}; // Track custom metrics
+    logData.customMetrics.forEach(m => customMetricCorrelations[m.name] = { high: [], low: [] });
 
-    completedEntries.forEach(e => {
-        if (e.happiness) { sumHappy += e.happiness; countHappy++; }
+    completed.forEach(e => {
+        const happy = e.happiness;
+        if (happy) { sumHappy += happy; countHappy++; }
         if (e.food) foodYes++;
         if (e.web) webYes++;
-        if (e.type && e.type !== "NONE") { workCount++; typeMap[e.type] = (typeMap[e.type] || 0) + 1; }
+        
+        const hasWorkout = e.type && e.type !== "NONE";
+        if (hasWorkout) { 
+            workCount++; 
+            typeMap[e.type] = (typeMap[e.type] || 0) + 1; 
+        }
+
+        // Map cross-metric groups
+        if (happy) {
+            if (e.food) happyOnFoodDay.push(happy); else happyOffFoodDay.push(happy);
+            if (e.web) happyOnWebDay.push(happy); else happyOffWebDay.push(happy);
+            if (hasWorkout) happyOnWorkoutDay.push(happy); else happyOffWorkoutDay.push(happy);
+            
+            // Map Custom parameters
+            if (e.customMetricData) {
+                logData.customMetrics.forEach(m => {
+                    const mVal = e.customMetricData[m.name];
+                    if (mVal !== undefined) {
+                        if (m.type === 'slider' && mVal >= 7) customMetricCorrelations[m.name].high.push(happy);
+                        if (m.type === 'slider' && mVal <= 4) customMetricCorrelations[m.name].low.push(happy);
+                        if (m.type === 'binary' && mVal === true) customMetricCorrelations[m.name].high.push(happy);
+                        if (m.type === 'binary' && mVal === false) customMetricCorrelations[m.name].low.push(happy);
+                    }
+                });
+            }
+        }
     });
 
+    // Average processing tool
+    const calcAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+
+    // Generate Discoveries
+    let storiesHTML = "";
+    
+    const fOn = calcAvg(happyOnFoodDay), fOff = calcAvg(happyOffFoodDay);
+    if(fOn && fOff && Math.abs(fOn - fOff) > 0.2) {
+        storiesHTML += `<div class="story-item">Happiness moves from <b>${fOff.toFixed(1)}</b> to <b>${fOn.toFixed(1)}</b> on days with healthy nutrition tracking.</div>`;
+    }
+    const wOn = calcAvg(happyOnWebDay), wOff = calcAvg(happyOffWebDay);
+    if(wOn && wOff && Math.abs(wOn - wOff) > 0.2) {
+        storiesHTML += `<div class="story-item">Internet discipline matches an average mood shift of <b>${(wOn - wOff).toFixed(1)}</b> points.</div>`;
+    }
+    const exOn = calcAvg(happyOnWorkoutDay), exOff = calcAvg(happyOffWorkoutDay);
+    if(exOn && exOff && Math.abs(exOn - exOff) > 0.2) {
+        storiesHTML += `<div class="story-item">Days involving physical activity average a happiness level of <b>${exOn.toFixed(1)}</b> versus <b>${exOff.toFixed(1)}</b> on rest days.</div>`;
+    }
+
+    // Process Custom Discoveries
+    logData.customMetrics.forEach(m => {
+        const hAvg = calcAvg(customMetricCorrelations[m.name].high);
+        const lAvg = calcAvg(customMetricCorrelations[m.name].low);
+        if (hAvg && lAvg && Math.abs(hAvg - lAvg) > 0.3) {
+            storiesHTML += `<div class="story-item">Your tracking parameter <b>${m.name.replace(/-/g, ' ')}</b> signals a prominent correlation variance of <b>${Math.abs(hAvg - lAvg).toFixed(1)}</b> to your happiness core.</div>`;
+        }
+    });
+
+    storyContainer.innerHTML = storiesHTML || `<p class="neutral-msg">No sharp mathematical shifts identified yet. Keep logging to isolate correlations.</p>`;
+
+    // Base layout updates
     document.getElementById('statHappy').innerText = countHappy ? (sumHappy/countHappy).toFixed(1) : '-';
-    document.getElementById('statFood').innerText = Math.round((foodYes/completedEntries.length)*100) + '%';
-    document.getElementById('statWeb').innerText = Math.round((webYes/completedEntries.length)*100) + '%';
+    document.getElementById('statFood').innerText = Math.round((foodYes/completed.length)*100) + '%';
+    document.getElementById('statWeb').innerText = Math.round((webYes/completed.length)*100) + '%';
     document.getElementById('statTotal').innerText = workCount;
 
     const chart = document.getElementById('activityChart');
@@ -243,33 +331,91 @@ const renderInsights = () => {
             <div class="bar-label">${t}</div>
             <div class="bar-outer"><div class="bar-inner" style="width:${((typeMap[t] || 0)/maxVal)*100}%"></div></div>
             <div style="width:20px; font-weight:800; font-size:0.7rem;">${typeMap[t] || 0}</div>
-        </div>
-    `).join('');
+        </div>`).join('');
 };
 
-// --- TYPE MODALS & ROUTINES ---
-window.switchTab = (tab) => {
-    document.getElementById('viewLog').classList.toggle('active', tab === 'log');
-    document.getElementById('viewInsights').classList.toggle('active', tab === 'insights');
-    document.getElementById('tabLog').classList.toggle('active', tab === 'log');
-    document.getElementById('tabInsights').classList.toggle('active', tab === 'insights');
-    if (tab === 'insights') renderInsights();
+// --- CORE RENDERING MATRIX ENGINE ---
+const renderMatrix = () => {
+    const body = document.getElementById('matrixBody');
+    const header = document.getElementById('headerRow');
+    if (!body || !header) return;
+    
+    // Construct headers to include standard pillars + all live custom metrics
+    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th><th class="col-stat">Food</th><th class="col-stat">Web</th>`;
+    logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
+    logData.types.forEach(t => { headerHTML += `<th>${t}</th>`; });
+    header.innerHTML = headerHTML;
+
+    const entriesByDate = {};
+    logData.entries.forEach(e => {
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, food: false, web: false, customVals: {}, exercises: {} };
+        if (e.happiness && !e.isPlanned) entriesByDate[e.date].happiness = e.happiness;
+        if (!e.isPlanned) {
+            if(e.food) entriesByDate[e.date].food = true;
+            if(e.web) entriesByDate[e.date].web = true;
+            if(e.customMetricData) entriesByDate[e.date].customVals = e.customMetricData;
+        }
+        if (e.type !== "NONE") {
+            if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
+            entriesByDate[e.date].exercises[e.type].push(e);
+        }
+    });
+
+    const dates = Object.keys(entriesByDate).sort((a,b) => new Date(b) - new Date(a));
+    const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
+    const futureBuffer = new Date(); futureBuffer.setDate(futureBuffer.getDate() + 5);
+
+    body.innerHTML = "";
+    for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
+        const dateKey = d.toISOString().split('T')[0];
+        const dayOfWeek = d.getDay();
+        const dayData = entriesByDate[dateKey];
+        if (!dayData && d > new Date()) continue;
+
+        const activeData = dayData || { happiness: null, food: false, web: false, customVals: {}, exercises: {} };
+        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
+
+        let row = `<tr>
+            <td class="col-date">${displayDate}</td>
+            <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>
+            <td class="col-stat">${activeData.food ? '✅' : '❌'}</td>
+            <td class="col-stat">${activeData.web ? '✅' : '❌'}</td>`;
+            
+        // Render custom metrics data cells
+        logData.customMetrics.forEach(m => {
+            const mVal = activeData.customVals[m.name];
+            let cellContent = "";
+            if (mVal !== undefined && mVal !== null) {
+                cellContent = m.type === 'slider' ? `<div class="happy-pill" style="background:#f1f5f9; color:#475569;">${mVal}</div>` : (mVal ? '✅' : '❌');
+            }
+            row += `<td class="col-stat">${cellContent}</td>`;
+        });
+
+        // Render standard track execution checkmarks
+        logData.types.forEach(type => {
+            const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
+            let displaySymbol = '';
+            if (exercise) {
+                displaySymbol = exercise.isPlanned ? 
+                    `<div class="tick-cell plan" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` : 
+                    `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>`;
+            }
+            row += `<td>${displaySymbol}</td>`;
+        });
+        body.innerHTML += row + `</tr>`;
+        if (dayOfWeek === 1) body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="100"></td></tr>`;
+    }
 };
-window.toggleBin = (key, val) => {
-    currentBin[key] = val;
-    document.getElementById(`${key}Yes`).classList.toggle('active', val);
-    document.getElementById(`${key}No`).classList.toggle('active', !val);
-};
+
+// --- TYPE MODALS STYLING ROUTINES ---
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
-    if (!container || !logData.types) return;
     container.innerHTML = logData.types.map((type, idx) => `
         <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
             <input type="text" value="${type}" id="type-input-${idx}" style="flex:1;">
             <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.65rem; padding:4px 10px;">Rename</button>
             <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:4px 10px;" class="nav-btn">✕</button>
-        </div>
-    `).join('');
+        </div>`).join('');
     document.getElementById('typeModal').style.display = 'flex';
 };
 window.addType = async () => {
