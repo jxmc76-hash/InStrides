@@ -20,7 +20,6 @@ let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], customMetrics: [], entrie
 let editingId = null;
 let unsubSnapshot = null;
 window.tempMark = 1;
-let currentBin = { food: false, web: false };
 let isPlannedStrategy = false; 
 let dynamicMetricValues = {};
 
@@ -153,19 +152,12 @@ window.setStrategy = (wantsPlanned) => {
     document.getElementById('intensityRow').style.display = wantsPlanned ? 'none' : 'flex';
 };
 
-window.toggleBin = (key, val) => {
-    currentBin[key] = val;
-    document.getElementById(`${key}Yes`).classList.toggle('active', val);
-    document.getElementById(`${key}No`).classList.toggle('active', !val);
-};
-
 window.showInputModal = () => {
     editingId = null;
     document.getElementById('deleteEntryBtn').style.display = "none";
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalHappiness').value = 5;
     document.getElementById('happyVal').innerText = 5;
-    window.toggleBin('food', false); window.toggleBin('web', false);
     document.getElementById('modalDetails').value = "";
     window.setStrategy(false);
     buildCustomMetricsFormUI();
@@ -182,7 +174,6 @@ window.editEntry = (id) => {
     document.getElementById('modalDate').value = entry.date;
     document.getElementById('modalHappiness').value = entry.happiness || 5;
     document.getElementById('happyVal').innerText = entry.happiness || 5;
-    window.toggleBin('food', !!entry.food); window.toggleBin('web', !!entry.web);
     document.getElementById('modalDetails').value = entry.details || "";
     window.setStrategy(!!entry.isPlanned);
     buildCustomMetricsFormUI(entry.customMetricData || {});
@@ -196,8 +187,6 @@ window.quickCompletePlan = async (id) => {
     if(idx === -1) return;
     logData.entries[idx].isPlanned = false;
     logData.entries[idx].happiness = 5;
-    logData.entries[idx].food = true;
-    logData.entries[idx].web = true;
     logData.entries[idx].mark = 2;
     logData.entries[idx].customMetricData = {};
     await setDoc(doc(db, "logs", LOG_ID), logData);
@@ -207,8 +196,6 @@ window.saveExercise = async () => {
     const entryData = {
         date: document.getElementById('modalDate').value,
         happiness: isPlannedStrategy ? null : parseInt(document.getElementById('modalHappiness').value),
-        food: isPlannedStrategy ? false : currentBin.food, 
-        web: isPlannedStrategy ? false : currentBin.web,
         type: document.getElementById('modalType').value,
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark, 
@@ -244,22 +231,16 @@ const renderInsights = () => {
         return;
     }
 
-    let sumHappy = 0, countHappy = 0, foodYes = 0, webYes = 0, workCount = 0;
+    let sumHappy = 0, countHappy = 0, workCount = 0;
     const typeMap = {}; logData.types.forEach(t => typeMap[t] = 0);
     
-    // Statistical grouping arrays
-    let happyOnFoodDay = [], happyOffFoodDay = [];
-    let happyOnWebDay = [], happyOffWebDay = [];
     let happyOnWorkoutDay = [], happyOffWorkoutDay = [];
-    
-    let customMetricCorrelations = {}; // Track custom metrics
+    let customMetricCorrelations = {};
     logData.customMetrics.forEach(m => customMetricCorrelations[m.name] = { high: [], low: [] });
 
     completed.forEach(e => {
         const happy = e.happiness;
         if (happy) { sumHappy += happy; countHappy++; }
-        if (e.food) foodYes++;
-        if (e.web) webYes++;
         
         const hasWorkout = e.type && e.type !== "NONE";
         if (hasWorkout) { 
@@ -267,13 +248,9 @@ const renderInsights = () => {
             typeMap[e.type] = (typeMap[e.type] || 0) + 1; 
         }
 
-        // Map cross-metric groups
         if (happy) {
-            if (e.food) happyOnFoodDay.push(happy); else happyOffFoodDay.push(happy);
-            if (e.web) happyOnWebDay.push(happy); else happyOffWebDay.push(happy);
             if (hasWorkout) happyOnWorkoutDay.push(happy); else happyOffWorkoutDay.push(happy);
             
-            // Map Custom parameters
             if (e.customMetricData) {
                 logData.customMetrics.forEach(m => {
                     const mVal = e.customMetricData[m.name];
@@ -288,40 +265,25 @@ const renderInsights = () => {
         }
     });
 
-    // Average processing tool
     const calcAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
-
-    // Generate Discoveries
     let storiesHTML = "";
     
-    const fOn = calcAvg(happyOnFoodDay), fOff = calcAvg(happyOffFoodDay);
-    if(fOn && fOff && Math.abs(fOn - fOff) > 0.2) {
-        storiesHTML += `<div class="story-item">Happiness moves from <b>${fOff.toFixed(1)}</b> to <b>${fOn.toFixed(1)}</b> on days with healthy nutrition tracking.</div>`;
-    }
-    const wOn = calcAvg(happyOnWebDay), wOff = calcAvg(happyOffWebDay);
-    if(wOn && wOff && Math.abs(wOn - wOff) > 0.2) {
-        storiesHTML += `<div class="story-item">Internet discipline matches an average mood shift of <b>${(wOn - wOff).toFixed(1)}</b> points.</div>`;
-    }
     const exOn = calcAvg(happyOnWorkoutDay), exOff = calcAvg(happyOffWorkoutDay);
     if(exOn && exOff && Math.abs(exOn - exOff) > 0.2) {
         storiesHTML += `<div class="story-item">Days involving physical activity average a happiness level of <b>${exOn.toFixed(1)}</b> versus <b>${exOff.toFixed(1)}</b> on rest days.</div>`;
     }
 
-    // Process Custom Discoveries
     logData.customMetrics.forEach(m => {
         const hAvg = calcAvg(customMetricCorrelations[m.name].high);
         const lAvg = calcAvg(customMetricCorrelations[m.name].low);
         if (hAvg && lAvg && Math.abs(hAvg - lAvg) > 0.3) {
-            storiesHTML += `<div class="story-item">Your tracking parameter <b>${m.name.replace(/-/g, ' ')}</b> signals a prominent correlation variance of <b>${Math.abs(hAvg - lAvg).toFixed(1)}</b> to your happiness core.</div>`;
+            storiesHTML += `<div class="story-item">Your custom parameter <b>${m.name.replace(/-/g, ' ')}</b> signals a prominent correlation variance of <b>${Math.abs(hAvg - lAvg).toFixed(1)}</b> points to your happiness.</div>`;
         }
     });
 
     storyContainer.innerHTML = storiesHTML || `<p class="neutral-msg">No sharp mathematical shifts identified yet. Keep logging to isolate correlations.</p>`;
 
-    // Base layout updates
     document.getElementById('statHappy').innerText = countHappy ? (sumHappy/countHappy).toFixed(1) : '-';
-    document.getElementById('statFood').innerText = Math.round((foodYes/completed.length)*100) + '%';
-    document.getElementById('statWeb').innerText = Math.round((webYes/completed.length)*100) + '%';
     document.getElementById('statTotal').innerText = workCount;
 
     const chart = document.getElementById('activityChart');
@@ -340,21 +302,16 @@ const renderMatrix = () => {
     const header = document.getElementById('headerRow');
     if (!body || !header) return;
     
-    // Construct headers to include standard pillars + all live custom metrics
-    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th><th class="col-stat">Food</th><th class="col-stat">Web</th>`;
+    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
     logData.types.forEach(t => { headerHTML += `<th>${t}</th>`; });
     header.innerHTML = headerHTML;
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, food: false, web: false, customVals: {}, exercises: {} };
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, customVals: {}, exercises: {} };
         if (e.happiness && !e.isPlanned) entriesByDate[e.date].happiness = e.happiness;
-        if (!e.isPlanned) {
-            if(e.food) entriesByDate[e.date].food = true;
-            if(e.web) entriesByDate[e.date].web = true;
-            if(e.customMetricData) entriesByDate[e.date].customVals = e.customMetricData;
-        }
+        if (!e.isPlanned && e.customMetricData) entriesByDate[e.date].customVals = e.customMetricData;
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
@@ -372,14 +329,12 @@ const renderMatrix = () => {
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
 
-        const activeData = dayData || { happiness: null, food: false, web: false, customVals: {}, exercises: {} };
+        const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
 
         let row = `<tr>
             <td class="col-date">${displayDate}</td>
-            <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>
-            <td class="col-stat">${activeData.food ? '✅' : '❌'}</td>
-            <td class="col-stat">${activeData.web ? '✅' : '❌'}</td>`;
+            <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>`;
             
         // Render custom metrics data cells
         logData.customMetrics.forEach(m => {
