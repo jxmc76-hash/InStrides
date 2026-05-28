@@ -15,7 +15,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Enforce browser persistence so users stay logged in indefinitely
 setPersistence(auth, browserLocalPersistence);
 
 let LOG_ID = null; 
@@ -45,7 +44,6 @@ window.toggleResetView = (wantsReset) => {
     isResetMode = wantsReset;
     const errorEl = document.getElementById('authError');
     errorEl.innerText = "";
-    
     document.getElementById('passwordRow').style.display = wantsReset ? 'none' : 'block';
     
     if (wantsReset) {
@@ -346,7 +344,8 @@ const renderMatrix = () => {
     
     let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
-    logData.types.forEach(t => { headerHTML += `<th>${t}</th>`; });
+    // Injected .dynamic-type-th class identifier on exercise rows
+    logData.types.forEach(t => { headerHTML += `<th class="dynamic-type-th">${t}</th>`; });
     header.innerHTML = headerHTML;
 
     const entriesByDate = {};
