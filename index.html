@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=44">
+    <link rel="stylesheet" href="style.css?v=45">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -19,13 +19,14 @@
                 <label>Email Address</label>
                 <input type="email" id="authEmail" placeholder="your@email.com">
             </div>
-            <div class="input-row">
+            <div class="input-row" id="passwordRow">
                 <label>Password</label>
                 <input type="password" id="authPassword" placeholder="••••••••">
             </div>
             <div class="auth-buttons">
-                <button onclick="window.handleAuth('login')" class="btn-primary">Sign In</button>
-                <button onclick="window.handleAuth('register')" class="btn-secondary">Create Account</button>
+                <button id="btnMainAuth" onclick="window.handleAuth('login')" class="btn-primary">Sign In</button>
+                <button id="btnSubAuth" onclick="window.handleAuth('register')" class="btn-secondary">Create Account</button>
+                <button id="btnResetLink" onclick="window.toggleResetView(true)" class="btn-link">Forgot Password?</button>
             </div>
             <div id="authError" class="auth-error"></div>
         </div>
@@ -58,7 +59,7 @@
                             <tr id="headerRow">
                                 <th class="col-date">Date</th>
                                 <th class="col-stat">Happiness</th>
-                                </tr>
+                            </tr>
                         </thead>
                         <tbody id="matrixBody"></tbody>
                     </table>
@@ -120,7 +121,6 @@
                                 <span id="happyVal" class="score-display">5</span>
                             </div>
                         </div>
-
                         <div id="customMetricsFormContainer"></div>
                     </div>
 
@@ -184,3 +184,10 @@
                         <button onclick="window.addType()" class="btn-submit">Add</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js?v=45"></script>
+</body>
+</html>
