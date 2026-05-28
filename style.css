@@ -43,10 +43,16 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var
 .matrix-container { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow-x: auto; border: 1px solid var(--border); width: 100%; }
 .modern-table { width: 100%; border-collapse: collapse; }
 th, td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
-th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; min-width: 115px; }
 
+/* Base header layout settings */
+th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; min-width: 115px; }
+
+/* Font Color for Metrics Headings */
+.col-stat, th:not(.dynamic-type-th) { color: var(--text-muted); }
 .col-date { width: 150px; min-width: 150px; background: #fafbfc; color: var(--primary); font-weight: 800; }
-.col-stat { width: 105px; min-width: 105px; }
+
+/* Distinct Font Color for Exercise Type Headings */
+.dynamic-type-th { color: var(--primary); }
 
 /* Interactive Cells */
 .tick-cell { font-size: 1.4rem; font-weight: 900; cursor: pointer; transition: transform 0.1s ease; margin: 0 auto; width: max-content; }
