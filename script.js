@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, browserLocalPersistence, setPersistence, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -15,6 +15,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Enforce browser persistence so users stay logged in indefinitely
+setPersistence(auth, browserLocalPersistence);
+
 let LOG_ID = null; 
 let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], customMetrics: [], entries: [] };
 let editingId = null;
@@ -22,6 +25,7 @@ let unsubSnapshot = null;
 window.tempMark = 1;
 let isPlannedStrategy = false; 
 let dynamicMetricValues = {};
+let isResetMode = false;
 
 // --- AUTH SESSION HOOKS ---
 onAuthStateChanged(auth, (user) => {
@@ -33,20 +37,58 @@ onAuthStateChanged(auth, (user) => {
         LOG_ID = null;
         if(unsubSnapshot) unsubSnapshot();
         document.getElementById('authOverlay').style.display = 'flex';
+        window.toggleResetView(false);
     }
 });
+
+window.toggleResetView = (wantsReset) => {
+    isResetMode = wantsReset;
+    const errorEl = document.getElementById('authError');
+    errorEl.innerText = "";
+    
+    document.getElementById('passwordRow').style.display = wantsReset ? 'none' : 'block';
+    
+    if (wantsReset) {
+        document.getElementById('btnMainAuth').innerText = "Send Reset Email";
+        document.getElementById('btnSubAuth').style.display = 'none';
+        document.getElementById('btnResetLink').innerText = "Back to Sign In";
+    } else {
+        document.getElementById('btnMainAuth').innerText = "Sign In";
+        document.getElementById('btnSubAuth').style.display = 'block';
+        document.getElementById('btnResetLink').innerText = "Forgot Password?";
+    }
+};
 
 window.handleAuth = async (action) => {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     const errorEl = document.getElementById('authError');
     errorEl.innerText = "";
-    if(!email || !password) return errorEl.innerText = "Complete all layout fields.";
+    
+    if (!email) return errorEl.innerText = "Email address is required.";
+    
     try {
-        if (action === 'login') await signInWithEmailAndPassword(auth, email, password);
-        else await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) { errorEl.innerText = err.message.replace("Firebase: ", ""); }
+        if (isResetMode) {
+            await sendPasswordResetEmail(auth, email);
+            errorEl.style.color = "var(--success)";
+            errorEl.innerText = "Password recovery email sent! Check your inbox.";
+            return;
+        }
+        
+        if (!password) return errorEl.innerText = "Password is required.";
+        errorEl.style.color = "#ef4444";
+        
+        if (action === 'login') {
+            await signInWithEmailAndPassword(auth, email, password);
+        } else {
+            await createUserWithEmailAndPassword(auth, email, password);
+        }
+    } catch (err) {
+        errorEl.style.color = "#ef4444";
+        errorEl.innerText = err.message.replace("Firebase: ", "");
+    }
 };
+
 window.handleSignOut = () => signOut(auth);
 
 const attachRealtimeListener = () => {
@@ -336,7 +378,6 @@ const renderMatrix = () => {
             <td class="col-date">${displayDate}</td>
             <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>`;
             
-        // Render custom metrics data cells
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
@@ -346,7 +387,6 @@ const renderMatrix = () => {
             row += `<td class="col-stat">${cellContent}</td>`;
         });
 
-        // Render standard track execution checkmarks
         logData.types.forEach(type => {
             const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
             let displaySymbol = '';
@@ -362,7 +402,7 @@ const renderMatrix = () => {
     }
 };
 
-// --- TYPE MODALS STYLING ROUTINES ---
+// --- GENERAL CLOSURES & UTILITIES ---
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
