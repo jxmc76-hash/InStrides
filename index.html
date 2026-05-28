@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Training Log</title>
-    <link rel="stylesheet" href="style.css?v=43">
+    <link rel="stylesheet" href="style.css?v=44">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -58,8 +58,6 @@
                             <tr id="headerRow">
                                 <th class="col-date">Date</th>
                                 <th class="col-stat">Happiness</th>
-                                <th class="col-stat">Food</th>
-                                <th class="col-stat">Web</th>
                                 </tr>
                         </thead>
                         <tbody id="matrixBody"></tbody>
@@ -82,20 +80,12 @@
                             <div id="statHappy" class="stat-val">-</div>
                         </div>
                         <div class="stat-card">
-                            <label>Food Success</label>
-                            <div id="statFood" class="stat-val">-</div>
-                        </div>
-                        <div class="stat-card">
-                            <label>Web Success</label>
-                            <div id="statWeb" class="stat-val">-</div>
-                        </div>
-                        <div class="stat-card">
                             <label>Total Workouts</label>
                             <div id="statTotal" class="stat-val">-</div>
                         </div>
                     </div>
                     <div class="chart-container">
-                        <h3>Activity Performance Volume</h3>
+                        <h3>Activity Distribution</h3>
                         <div id="activityChart" class="activity-bars"></div>
                     </div>
                 </div>
@@ -128,23 +118,6 @@
                             <div class="slider-row">
                                 <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                                 <span id="happyVal" class="score-display">5</span>
-                            </div>
-                        </div>
-
-                        <div class="toggle-container">
-                            <div class="input-row">
-                                <label>Healthy Food?</label>
-                                <div class="binary-strip">
-                                    <button id="foodYes" class="bin-btn" onclick="window.toggleBin('food', true)">YES</button>
-                                    <button id="foodNo" class="bin-btn active" onclick="window.toggleBin('food', false)">NO</button>
-                                </div>
-                            </div>
-                            <div class="input-row">
-                                <label>Internet Control?</label>
-                                <div class="binary-strip">
-                                    <button id="webYes" class="bin-btn" onclick="window.toggleBin('web', true)">YES</button>
-                                    <button id="webNo" class="bin-btn active" onclick="window.toggleBin('web', false)">NO</button>
-                                </div>
                             </div>
                         </div>
 
@@ -187,7 +160,7 @@
                 <div class="form-body">
                     <div id="metricList" class="type-editor-list"></div>
                     <div class="add-type-footer" style="flex-direction: column; gap:12px;">
-                        <input type="text" id="newMetricName" placeholder="Metric Name (e.g., SLEEP, WEIGHT)">
+                        <input type="text" id="newMetricName" placeholder="Metric Name (e.g., FOOD, WEB, SLEEP)">
                         <select id="newMetricType">
                             <option value="binary">Yes / No Toggle</option>
                             <option value="slider">1 - 10 Scale Slider</option>
@@ -211,10 +184,3 @@
                         <button onclick="window.addType()" class="btn-submit">Add</button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="script.js?v=43"></script>
-</body>
-</html>
