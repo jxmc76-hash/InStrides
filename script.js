@@ -645,7 +645,50 @@ const renderMatrix = () => {
     const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
     const futureBuffer = new Date(); futureBuffer.setDate(futureBuffer.getDate() + 5);
 
+    const emitWeekSummary = (acc) => {
+        if (acc.days === 0) return '';
+        let html = `<tr class="week-summary-row"><td class="col-date week-summary-label">Week Total</td>`;
+
+        // Happiness avg
+        const happyAvg = acc.happiness.length ? (acc.happiness.reduce((a,b)=>a+b,0)/acc.happiness.length).toFixed(1) : '';
+        html += `<td class="col-stat"><div class="week-summary-pill">${happyAvg}</div></td>`;
+
+        // Custom metrics
+        logData.customMetrics.forEach(m => {
+            const vals = acc.customVals[m.name] || [];
+            let cell = '';
+            if (vals.length) {
+                if (m.type === 'slider') {
+                    const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+                    cell = `<div class="week-summary-pill">${avg}</div>`;
+                } else {
+                    const count = vals.filter(v=>v===true).length;
+                    cell = count > 0 ? `<div class="week-summary-pill">${count}d</div>` : '';
+                }
+            }
+            html += `<td class="col-stat">${cell}</td>`;
+        });
+
+        // Types: active days count
+        logData.types.forEach(type => {
+            const count = acc.typeDays[type] || 0;
+            html += `<td>${count > 0 ? `<div class="week-summary-pill">${count}d</div>` : ''}</td>`;
+        });
+
+        html += `</tr>`;
+        return html;
+    };
+
+    const freshAcc = () => ({
+        days: 0,
+        happiness: [],
+        customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
+        typeDays: Object.fromEntries(logData.types.map(t => [t, 0])),
+    });
+
     body.innerHTML = "";
+    let weekAcc = freshAcc();
+
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
         const dayOfWeek = d.getDay();
@@ -655,10 +698,22 @@ const renderMatrix = () => {
         const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
 
+        // Accumulate for weekly summary
+        weekAcc.days++;
+        if (activeData.happiness) weekAcc.happiness.push(activeData.happiness);
+        logData.customMetrics.forEach(m => {
+            const v = activeData.customVals[m.name];
+            if (v !== undefined && v !== null) weekAcc.customVals[m.name].push(v);
+        });
+        logData.types.forEach(type => {
+            const ex = activeData.exercises[type];
+            if (ex && ex.some(e => !e.isPlanned)) weekAcc.typeDays[type]++;
+        });
+
         let row = `<tr>
             <td class="col-date">${displayDate}</td>
             <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>`;
-            
+
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
@@ -672,14 +727,23 @@ const renderMatrix = () => {
             const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
             let displaySymbol = '';
             if (exercise) {
-                displaySymbol = exercise.isPlanned ? 
-                    `<div class="tick-cell plan" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` : 
+                displaySymbol = exercise.isPlanned ?
+                    `<div class="tick-cell plan" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
                     `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>`;
             }
             row += `<td>${displaySymbol}</td>`;
         });
         body.innerHTML += row + `</tr>`;
-        if (dayOfWeek === 1) body.innerHTML += `<tr style="background:#f8fafc; height:4px;"><td colspan="100"></td></tr>`;
+
+        if (dayOfWeek === 1) {
+            body.innerHTML += emitWeekSummary(weekAcc);
+            body.innerHTML += `<tr style="background:#f8f7f5; height:6px;"><td colspan="100"></td></tr>`;
+            weekAcc = freshAcc();
+        }
+    }
+    // Emit summary for the most recent partial week
+    if (weekAcc.days > 0) {
+        body.innerHTML = emitWeekSummary(weekAcc) + body.innerHTML;
     }
 };
 

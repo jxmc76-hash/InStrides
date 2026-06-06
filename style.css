@@ -113,4 +113,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .add-type-footer { display: flex; gap: 10px; margin-top: 15px; }
 .type-editor-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
 
+.week-summary-row td { background: #fff4ee; border-bottom: 2px solid var(--border); }
+.week-summary-label { color: var(--primary) !important; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.week-summary-pill { background: var(--primary); color: white; border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; font-weight: 800; display: inline-block; margin: 0 auto; }
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
