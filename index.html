@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=78">
+    <link rel="stylesheet" href="style.css?v=79">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -229,6 +229,10 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="input-row" id="metricTime" style="display:none">
+                            <label>Duration (minutes)</label>
+                            <input type="number" id="modalDuration" placeholder="0" min="0" step="1">
+                        </div>
                         <div class="input-row" id="metricOther" style="display:none">
                             <label>Perceived effort (1–10)</label>
                             <input type="number" id="modalOtherRating" min="1" max="10" step="1" placeholder="5">
@@ -292,6 +296,7 @@
                                 <option value="cardio">Distance</option>
                                 <option value="bodyweight">Reps</option>
                                 <option value="gym">Weight</option>
+                                <option value="time">Time</option>
                                 <option value="other">Other</option>
                             </select>
                         </div>
@@ -313,6 +318,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=79"></script>
+    <script type="module" src="script.js?v=80"></script>
 </body>
 </html>

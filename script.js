@@ -26,6 +26,7 @@ const TYPE_CATEGORIES = [
     { value: 'cardio',      label: 'Distance' },
     { value: 'bodyweight',  label: 'Reps' },
     { value: 'gym',         label: 'Weight' },
+    { value: 'time',        label: 'Time' },
     { value: 'other',       label: 'Other' },
 ];
 
@@ -214,10 +215,11 @@ window.toggleDistanceRow = () => {
     const badge = document.getElementById('typeCategoryBadge');
     section.style.display = cat ? 'block' : 'none';
     if (badge) badge.textContent = catLabel;
-    document.getElementById('metricCardio').style.display     = cat === 'cardio'      ? 'block' : 'none';
-    document.getElementById('metricBodyweight').style.display = cat === 'bodyweight'  ? 'block' : 'none';
-    document.getElementById('metricGym').style.display        = cat === 'gym'         ? 'block' : 'none';
-    document.getElementById('metricOther').style.display      = cat === 'other'       ? 'block' : 'none';
+    document.getElementById('metricCardio').style.display     = cat === 'cardio'     ? 'block' : 'none';
+    document.getElementById('metricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
+    document.getElementById('metricGym').style.display        = cat === 'gym'        ? 'block' : 'none';
+    document.getElementById('metricTime').style.display       = cat === 'time'       ? 'block' : 'none';
+    document.getElementById('metricOther').style.display      = cat === 'other'      ? 'block' : 'none';
 };
 
 window.showInputModal = () => {
@@ -235,6 +237,7 @@ window.showInputModal = () => {
     document.getElementById('modalReps').value = '';
     document.getElementById('modalWeight').value = '';
     document.getElementById('modalWeightUnit').value = 'kg';
+    document.getElementById('modalDuration').value = '';
     document.getElementById('modalOtherRating').value = '';
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
@@ -258,6 +261,7 @@ window.editEntry = (id) => {
     document.getElementById('modalReps').value = entry.reps || '';
     document.getElementById('modalWeight').value = entry.weight || '';
     document.getElementById('modalWeightUnit').value = entry.weightUnit || 'kg';
+    document.getElementById('modalDuration').value = entry.duration || '';
     document.getElementById('modalOtherRating').value = entry.otherRating || '';
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
@@ -280,6 +284,7 @@ window.saveExercise = async () => {
     const distVal = parseFloat(document.getElementById('modalDistance').value);
     const repsVal = parseInt(document.getElementById('modalReps').value);
     const weightVal = parseFloat(document.getElementById('modalWeight').value);
+    const durationVal = parseInt(document.getElementById('modalDuration').value);
     const otherRating = Math.min(10, Math.max(1, parseInt(document.getElementById('modalOtherRating').value) || 5));
     const entryData = {
         date: document.getElementById('modalDate').value,
@@ -294,6 +299,7 @@ window.saveExercise = async () => {
         reps: cat === 'bodyweight' && !isNaN(repsVal) && repsVal > 0 ? repsVal : null,
         weight: cat === 'gym' && !isNaN(weightVal) && weightVal > 0 ? weightVal : null,
         weightUnit: document.getElementById('modalWeightUnit').value,
+        duration: cat === 'time' && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
         otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
         id: editingId || Date.now()
     };
@@ -710,7 +716,7 @@ const renderMatrix = () => {
     const header = document.getElementById('headerRow');
     if (!body || !header) return;
     
-    const catOrder = { cardio: 0, gym: 1, bodyweight: 2, other: 3 };
+    const catOrder = { cardio: 0, gym: 1, bodyweight: 2, time: 3, other: 4 };
     const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
 
     let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Mood</th>`;
@@ -762,6 +768,7 @@ const renderMatrix = () => {
                 const avg = total / m.values.length;
                 const fmt = (n) => n % 1 === 0 ? n : n.toFixed(1);
                 if (cat === 'other') cell += ` · ${fmt(avg)}${m.unit}`;
+                else if (cat === 'time') cell += ` · ${fmt(total)}${m.unit}`;
                 else cell += ` · ${fmt(total)}${m.unit}`;
             }
             html += `<td>${cell}</td>`;
@@ -813,6 +820,7 @@ const renderMatrix = () => {
                     if (cat === 'cardio' && done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
                     else if (cat === 'bodyweight' && done.reps) { weekAcc.typeMetric[type].values.push(done.reps); weekAcc.typeMetric[type].unit = 'reps'; }
                     else if (cat === 'gym' && done.weight) { weekAcc.typeMetric[type].values.push(done.weight); weekAcc.typeMetric[type].unit = done.weightUnit || 'kg'; }
+                    else if (cat === 'time' && done.duration) { weekAcc.typeMetric[type].values.push(done.duration); weekAcc.typeMetric[type].unit = 'min'; }
                     else if (cat === 'other' && done.otherRating) { weekAcc.typeMetric[type].values.push(done.otherRating); weekAcc.typeMetric[type].unit = '/10'; }
                 }
             }
@@ -840,6 +848,7 @@ const renderMatrix = () => {
             if (cat === 'cardio' && exercise.distance) metricLabel = `${exercise.distance}${exercise.distanceUnit || 'km'}`;
             else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
             else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
+            else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
             else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
             const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 displaySymbol = exercise.isPlanned ?
