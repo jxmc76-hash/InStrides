@@ -108,6 +108,7 @@ const attachRealtimeListener = () => {
         if (snap.exists()) {
             const data = snap.data();
             logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [] };
+            console.log('onSnapshot fired, entries count:', logData.entries.length, 'first entry mood:', logData.entries[0]?.happiness);
             renderMatrix();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
@@ -1068,6 +1069,7 @@ window.saveCellValue = async (dateKey, field, value) => {
     }
     try {
         await setDoc(doc(db, 'logs', LOG_ID), logData);
+        console.log('setDoc done, saved mood for', dateKey, ':', logData.entries.find(e=>e.date===dateKey)?.happiness);
     } catch(err) {
         console.error('saveCellValue setDoc failed:', err);
     }
