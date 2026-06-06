@@ -741,9 +741,9 @@ const renderMatrix = () => {
             weekAcc = freshAcc();
         }
     }
-    // Emit summary for the most recent partial week
+    // Emit summary for any trailing partial week at the bottom
     if (weekAcc.days > 0) {
-        body.innerHTML = emitWeekSummary(weekAcc) + body.innerHTML;
+        body.innerHTML += emitWeekSummary(weekAcc);
     }
 };
 
