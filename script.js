@@ -686,7 +686,6 @@ const renderWeekCompare = (completed) => {
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-
     const d10 = new Date(today); d10.setDate(d10.getDate() - 9);
     const d20 = new Date(today); d20.setDate(d20.getDate() - 10);
     const d19 = new Date(today); d19.setDate(d19.getDate() - 19);
@@ -695,39 +694,64 @@ const renderWeekCompare = (completed) => {
     const prior10Start = d19.toISOString().split('T')[0];
     const prior10End   = d20.toISOString().split('T')[0];
 
-    const thisWeek = completed.filter(e => e.date >= last10Start && e.date <= todayStr);
-    const lastWeek = completed.filter(e => e.date >= prior10Start && e.date <= prior10End);
+    const p1 = completed.filter(e => e.date >= last10Start && e.date <= todayStr);
+    const p2 = completed.filter(e => e.date >= prior10Start && e.date <= prior10End);
 
     const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
-    const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
+    const sum = arr => arr.length ? arr.reduce((a,b)=>a+b,0) : null;
 
-    const weekWorkouts = w => w.filter(e => e.type && e.type !== 'NONE').length;
-    const weekMood = w => avg(w.filter(e => e.happiness).map(e => e.happiness));
-    const weekDist = w => w.filter(e => e.distance > 0).reduce((s,e) => s + e.distance, 0);
+    const rows = [];
 
-    const fmt = (val, type) => {
-        if (val === null || val === undefined) return '—';
-        if (type === 'mood') return val.toFixed(1);
-        if (type === 'dist') return val > 0 ? val.toFixed(1) : '—';
-        return String(val);
-    };
+    // Slider custom metrics
+    logData.customMetrics.filter(m => m.type === 'slider').forEach(m => {
+        const vals = w => w.filter(e => e.customMetricData?.[m.name] != null).map(e => e.customMetricData[m.name]);
+        rows.push({ label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), tw: avg(vals(p1)), lw: avg(vals(p2)), fmt: v => v.toFixed(1), suffix: '/10' });
+    });
 
-    const rows = [
-        { label: 'Avg Mood', tw: weekMood(thisWeek), lw: weekMood(lastWeek), type: 'mood' },
-        { label: `Distance (${distUnit})`, tw: weekDist(thisWeek), lw: weekDist(lastWeek), type: 'dist' },
-    ];
+    // Per exercise type
+    logData.types.forEach(type => {
+        const cat = getTypeCategory(type);
+        const forType = w => w.filter(e => e.type === type);
+        let tw, lw, fmtFn, suffix;
+        if (cat === 'cardio') {
+            const unit = completed.find(e => e.type === type && e.distanceUnit)?.distanceUnit || 'km';
+            tw = sum(forType(p1).filter(e => e.distance > 0).map(e => e.distance));
+            lw = sum(forType(p2).filter(e => e.distance > 0).map(e => e.distance));
+            fmtFn = v => v.toFixed(1); suffix = unit;
+        } else if (cat === 'gym') {
+            const unit = completed.find(e => e.type === type && e.weightUnit)?.weightUnit || 'kg';
+            tw = avg(forType(p1).filter(e => e.weight > 0).map(e => e.weight));
+            lw = avg(forType(p2).filter(e => e.weight > 0).map(e => e.weight));
+            fmtFn = v => v.toFixed(1); suffix = unit;
+        } else if (cat === 'bodyweight') {
+            tw = sum(forType(p1).filter(e => e.reps > 0).map(e => e.reps));
+            lw = sum(forType(p2).filter(e => e.reps > 0).map(e => e.reps));
+            fmtFn = v => Math.round(v).toString(); suffix = 'reps';
+        } else if (cat === 'time') {
+            tw = sum(forType(p1).filter(e => e.duration > 0).map(e => e.duration));
+            lw = sum(forType(p2).filter(e => e.duration > 0).map(e => e.duration));
+            fmtFn = v => Math.round(v).toString(); suffix = 'min';
+        } else if (cat === 'other') {
+            tw = avg(forType(p1).filter(e => e.otherRating > 0).map(e => e.otherRating));
+            lw = avg(forType(p2).filter(e => e.otherRating > 0).map(e => e.otherRating));
+            fmtFn = v => v.toFixed(1); suffix = '/10';
+        }
+        if (tw != null || lw != null) {
+            rows.push({ label: type, tw, lw, fmt: fmtFn, suffix });
+        }
+    });
 
-    const sleepMetric = logData.customMetrics.find(m => m.name === 'SLEEP' && m.type === 'slider');
-    if (sleepMetric) {
-        const weekSleep = w => avg(w.filter(e => e.customMetricData?.SLEEP != null).map(e => e.customMetricData.SLEEP));
-        rows.push({ label: 'Avg Sleep', tw: weekSleep(thisWeek), lw: weekSleep(lastWeek), type: 'mood' });
+    if (rows.length === 0) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">Log some data to see comparisons here.</p>`;
+        return;
     }
 
     el.innerHTML = `
         <div class="compare-header"><span></span><span>Last 10 days</span><span>Prior 10 days</span></div>
         ${rows.map(r => {
-            const twStr = fmt(r.tw, r.type);
-            const lwStr = fmt(r.lw, r.type);
+            const fmtVal = v => (v == null) ? '—' : `${r.fmt(v)}<span class="compare-unit"> ${r.suffix}</span>`;
+            const twStr = fmtVal(r.tw);
+            const lwStr = fmtVal(r.lw);
             const up = r.tw != null && r.lw != null && r.tw > r.lw;
             const dn = r.tw != null && r.lw != null && r.tw < r.lw;
             const arrow = up ? '<span class="compare-arrow up">↑</span>' : dn ? '<span class="compare-arrow down">↓</span>' : '';

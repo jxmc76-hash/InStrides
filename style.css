@@ -115,6 +115,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .compare-arrow { font-size: 0.9rem; margin-left: 4px; }
 .compare-arrow.up { color: var(--success); }
 .compare-arrow.down { color: #ef4444; }
+.compare-unit { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .activity-bars { display: flex; flex-direction: column; gap: 15px; }
 .bar-row { display: flex; align-items: center; gap: 15px; }
 .bar-label { width: 100px; font-size: 0.75rem; font-weight: 800; text-align: right; }
