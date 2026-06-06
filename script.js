@@ -225,8 +225,6 @@ window.showInputModal = () => {
     editingId = null;
     document.getElementById('deleteEntryBtn').style.display = "none";
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('modalHappiness').value = 5;
-    document.getElementById('happyVal').innerText = 5;
     document.getElementById('modalDetails').value = "";
     window.setStrategy(false);
     buildCustomMetricsFormUI();
@@ -249,8 +247,6 @@ window.editEntry = (id) => {
     editingId = id;
     document.getElementById('deleteEntryBtn').style.display = "block";
     document.getElementById('modalDate').value = entry.date;
-    document.getElementById('modalHappiness').value = entry.happiness || 5;
-    document.getElementById('happyVal').innerText = entry.happiness || 5;
     document.getElementById('modalDetails').value = entry.details || "";
     window.setStrategy(!!entry.isPlanned);
     buildCustomMetricsFormUI(entry.customMetricData || {});
