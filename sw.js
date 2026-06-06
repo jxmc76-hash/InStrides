@@ -1,4 +1,4 @@
-const CACHE = 'instrides-v1';
+const CACHE = 'traininglog-v1';
 const ASSETS = ['/', '/index.html', '/style.css', '/script.js', '/logo.png', '/favicon.ico', '/manifest.json'];
 
 self.addEventListener('install', e => {

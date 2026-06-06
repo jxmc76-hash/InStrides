@@ -939,7 +939,7 @@ const renderMatrix = () => {
 
 // --- STRAVA INTEGRATION ---
 const STRAVA_CLIENT_ID = '255843';
-const STRAVA_REDIRECT  = 'https://instrides.app/strava-callback.html';
+const STRAVA_REDIRECT  = 'https://traininglog.app/strava-callback.html';
 const STRAVA_SCOPE     = 'activity:read_all';
 
 const updateStravaButton = async () => {

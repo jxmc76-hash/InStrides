@@ -1,6 +1,6 @@
 {
-  "name": "InStrides",
-  "short_name": "InStrides",
+  "name": "TrainingLog",
+  "short_name": "TrainingLog",
   "description": "Your personal fitness and wellbeing tracker",
   "start_url": "/",
   "display": "standalone",
