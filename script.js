@@ -108,7 +108,6 @@ const attachRealtimeListener = () => {
         if (snap.exists()) {
             const data = snap.data();
             logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [] };
-            console.log('onSnapshot fired, entries count:', logData.entries.length, 'first entry mood:', logData.entries[0]?.happiness);
             renderMatrix();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
@@ -725,7 +724,7 @@ const renderMatrix = () => {
     logData.entries.forEach(e => {
         if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, customVals: {}, exercises: {} };
         if (e.happiness && !e.isPlanned) entriesByDate[e.date].happiness = e.happiness;
-        if (!e.isPlanned && e.customMetricData) entriesByDate[e.date].customVals = e.customMetricData;
+        if (!e.isPlanned && e.customMetricData) Object.assign(entriesByDate[e.date].customVals, e.customMetricData);
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
             entriesByDate[e.date].exercises[e.type].push(e);
@@ -1049,9 +1048,9 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
 };
 
 window.saveCellValue = async (dateKey, field, value) => {
-    console.log('saveCellValue called', dateKey, field, value);
     closeCellPopover();
-    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned);
+    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE')
+                  || logData.entries.find(e => e.date === dateKey && !e.isPlanned);
     if (field === 'mood') {
         if (existing) {
             existing.happiness = value;
@@ -1069,7 +1068,6 @@ window.saveCellValue = async (dateKey, field, value) => {
     }
     try {
         await setDoc(doc(db, 'logs', LOG_ID), logData);
-        console.log('setDoc done, saved mood for', dateKey, ':', logData.entries.find(e=>e.date===dateKey)?.happiness);
     } catch(err) {
         console.error('saveCellValue setDoc failed:', err);
     }
