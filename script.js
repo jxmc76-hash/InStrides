@@ -405,7 +405,7 @@ const renderVolumeChart = (completed) => {
     });
 };
 
-const renderCorrelationCharts = (completed) => {
+const _unused_renderCorrelationCharts = (completed) => {
     const section = document.getElementById('correlationChartsSection');
     const container = document.getElementById('correlationCharts');
     if (!section || !container) return;
@@ -463,7 +463,7 @@ const getWeekStart = (date) => {
     return d.toISOString().split('T')[0];
 };
 
-const renderWeeklySummary = (completed) => {
+const _unused_renderWeeklySummary = (completed) => {
     const container = document.getElementById('weeklySummaryCards');
     if (!container) return;
     const todayStr = new Date().toISOString().split('T')[0];
@@ -484,7 +484,7 @@ const renderWeeklySummary = (completed) => {
     ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
 };
 
-const renderStreaks = (completed) => {
+const _unused_renderStreaks = (completed) => {
     const container = document.getElementById('streakCards');
     if (!container) return;
 
@@ -553,7 +553,7 @@ const renderStreaks = (completed) => {
     ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
 };
 
-const renderPersonalRecords = (completed) => {
+const _unused_renderPersonalRecords = (completed) => {
     const container = document.getElementById('recordCards');
     if (!container) return;
     if (completed.length === 0) { container.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No data yet.</p>`; return; }
@@ -586,86 +586,78 @@ const renderPersonalRecords = (completed) => {
     ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val stat-val--sm">${c.val}</div></div>`).join('');
 };
 
-// --- ADVANCED CORRELATION INSIGHTS GENERATOR ---
+// --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
-    const storyContainer = document.getElementById('correlationStories');
-
-    renderWeeklySummary(completed);
-    renderStreaks(completed);
-    renderPersonalRecords(completed);
     renderHappinessChart(completed);
     renderVolumeChart(completed);
-    renderCorrelationCharts(completed);
 
-    if (completed.length < 3) {
-        storyContainer.innerHTML = `<p class="neutral-msg">Gathering a larger history baseline (minimum 3 logs) to process mathematical correlations.</p>`;
-        return;
-    }
+    // At a Glance
+    const glanceEl = document.getElementById('glanceCards');
+    if (glanceEl) {
+        const workCount = completed.filter(e => e.type && e.type !== 'NONE').length;
+        const happyEntries = completed.filter(e => e.happiness);
+        const avgHappy = happyEntries.length ? (happyEntries.reduce((s,e) => s+e.happiness, 0) / happyEntries.length).toFixed(1) : '-';
+        const typeCounts = {};
+        completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { typeCounts[e.type] = (typeCounts[e.type]||0)+1; });
+        const topType = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0];
 
-    let sumHappy = 0, countHappy = 0, workCount = 0;
-    const typeMap = {}; logData.types.forEach(t => typeMap[t] = 0);
-    
-    let happyOnWorkoutDay = [], happyOffWorkoutDay = [];
-    let customMetricCorrelations = {};
-    logData.customMetrics.forEach(m => customMetricCorrelations[m.name] = { high: [], low: [] });
-
-    completed.forEach(e => {
-        const happy = e.happiness;
-        if (happy) { sumHappy += happy; countHappy++; }
-        
-        const hasWorkout = e.type && e.type !== "NONE";
-        if (hasWorkout) { 
-            workCount++; 
-            typeMap[e.type] = (typeMap[e.type] || 0) + 1; 
-        }
-
-        if (happy) {
-            if (hasWorkout) happyOnWorkoutDay.push(happy); else happyOffWorkoutDay.push(happy);
-            
-            if (e.customMetricData) {
-                logData.customMetrics.forEach(m => {
-                    const mVal = e.customMetricData[m.name];
-                    if (mVal !== undefined) {
-                        if (m.type === 'slider' && mVal >= 7) customMetricCorrelations[m.name].high.push(happy);
-                        if (m.type === 'slider' && mVal <= 4) customMetricCorrelations[m.name].low.push(happy);
-                        if (m.type === 'binary' && mVal === true) customMetricCorrelations[m.name].high.push(happy);
-                        if (m.type === 'binary' && mVal === false) customMetricCorrelations[m.name].low.push(happy);
-                    }
-                });
+        // Current workout streak
+        const activeDates = [...new Set(completed.filter(e=>e.type&&e.type!=='NONE').map(e=>e.date))].sort();
+        let currentStreak = 0;
+        if (activeDates.length) {
+            const last = new Date(activeDates[activeDates.length-1]);
+            if (Math.floor((new Date()-last)/86400000) <= 1) {
+                currentStreak = 1;
+                for (let i = activeDates.length-2; i >= 0; i--) {
+                    if ((new Date(activeDates[i+1])-new Date(activeDates[i]))/86400000 === 1) currentStreak++;
+                    else break;
+                }
             }
         }
-    });
 
-    const calcAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
-    let storiesHTML = "";
-    
-    const exOn = calcAvg(happyOnWorkoutDay), exOff = calcAvg(happyOffWorkoutDay);
-    if(exOn && exOff && Math.abs(exOn - exOff) > 0.2) {
-        storiesHTML += `<div class="story-item">Days involving physical activity average a happiness level of <b>${exOn.toFixed(1)}</b> versus <b>${exOff.toFixed(1)}</b> on rest days.</div>`;
+        glanceEl.innerHTML = [
+            { label: 'Total Workouts', val: workCount || '-' },
+            { label: 'Current Streak', val: currentStreak ? `${currentStreak}d` : '-' },
+            { label: 'Avg Happiness', val: avgHappy },
+            { label: 'Top Activity', val: topType ? `${topType[0]}` : '-' },
+        ].map(c => `<div class="stat-card"><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
     }
 
-    logData.customMetrics.forEach(m => {
-        const hAvg = calcAvg(customMetricCorrelations[m.name].high);
-        const lAvg = calcAvg(customMetricCorrelations[m.name].low);
-        if (hAvg && lAvg && Math.abs(hAvg - lAvg) > 0.3) {
-            storiesHTML += `<div class="story-item">Your custom parameter <b>${m.name.replace(/-/g, ' ')}</b> signals a prominent correlation variance of <b>${Math.abs(hAvg - lAvg).toFixed(1)}</b> points to your happiness.</div>`;
+    // Correlation discoveries — plain language, only if slider metrics exist
+    const sliders = logData.customMetrics.filter(m => m.type === 'slider');
+    const corrSection = document.getElementById('correlationSection');
+    const corrStories = document.getElementById('correlationStories');
+    if (!corrSection || !corrStories) return;
+
+    if (sliders.length === 0 || completed.length < 5) { corrSection.style.display = 'none'; return; }
+
+    const calcAvg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+    let stories = [];
+
+    // Exercise vs no exercise
+    const happyOn = completed.filter(e=>e.happiness&&e.type&&e.type!=='NONE').map(e=>e.happiness);
+    const happyOff = completed.filter(e=>e.happiness&&(!e.type||e.type==='NONE')).map(e=>e.happiness);
+    const exOn = calcAvg(happyOn), exOff = calcAvg(happyOff);
+    if (exOn && exOff && Math.abs(exOn-exOff) > 0.3) {
+        const better = exOn > exOff ? 'higher' : 'lower';
+        stories.push(`On days you exercise, your happiness averages <b>${exOn.toFixed(1)}</b> — ${better} than rest days (<b>${exOff.toFixed(1)}</b>).`);
+    }
+
+    sliders.forEach(m => {
+        const high = completed.filter(e=>e.happiness&&e.customMetricData?.[m.name]>=7).map(e=>e.happiness);
+        const low  = completed.filter(e=>e.happiness&&e.customMetricData?.[m.name]<=4).map(e=>e.happiness);
+        const hAvg = calcAvg(high), lAvg = calcAvg(low);
+        if (hAvg && lAvg && Math.abs(hAvg-lAvg) > 0.3) {
+            const name = m.name.replace(/-/g,' ');
+            const dir = hAvg > lAvg ? 'higher' : 'lower';
+            stories.push(`When your <b>${name}</b> score is high, your happiness is ${dir} on average (<b>${hAvg.toFixed(1)}</b> vs <b>${lAvg.toFixed(1)}</b>).`);
         }
     });
 
-    storyContainer.innerHTML = storiesHTML || `<p class="neutral-msg">No sharp mathematical shifts identified yet. Keep logging to isolate correlations.</p>`;
-
-    document.getElementById('statHappy').innerText = countHappy ? (sumHappy/countHappy).toFixed(1) : '-';
-    document.getElementById('statTotal').innerText = workCount;
-
-    const chart = document.getElementById('activityChart');
-    const maxVal = Math.max(...Object.values(typeMap), 1);
-    chart.innerHTML = logData.types.map(t => `
-        <div class="bar-row">
-            <div class="bar-label">${t}</div>
-            <div class="bar-outer"><div class="bar-inner" style="width:${((typeMap[t] || 0)/maxVal)*100}%"></div></div>
-            <div style="width:20px; font-weight:800; font-size:0.7rem;">${typeMap[t] || 0}</div>
-        </div>`).join('');
+    if (stories.length === 0) { corrSection.style.display = 'none'; return; }
+    corrSection.style.display = 'block';
+    corrStories.innerHTML = stories.map(s => `<div class="story-item">${s}</div>`).join('');
 };
 
 // --- CORE RENDERING MATRIX ENGINE ---
