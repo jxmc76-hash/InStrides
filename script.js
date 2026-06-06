@@ -287,7 +287,7 @@ window.saveExercise = async () => {
     const otherRating = Math.min(10, Math.max(1, parseInt(document.getElementById('modalOtherRating').value) || 5));
     const entryData = {
         date: document.getElementById('modalDate').value,
-        happiness: isPlannedStrategy ? null : parseInt(document.getElementById('modalHappiness').value),
+        happiness: null,
         type,
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark,
@@ -827,15 +827,23 @@ const renderMatrix = () => {
 
         let row = `<tr class="week-day-row" data-week="${weekId}" style="display:none">
             <td class="col-date">${displayDate}</td>
-            <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>`;
+            <td class="col-stat editable-cell" onclick="window.openCellEdit(event,'${dateKey}','mood',${activeData.happiness || 'null'})">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : '<div class="cell-empty">+</div>'}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
             if (mVal !== undefined && mVal !== null) {
-                cellContent = m.type === 'slider' ? `<div class="happy-pill" style="background:#f1f5f9; color:#475569;">${mVal}</div>` : (mVal ? '✅' : '❌');
+                cellContent = m.type === 'slider'
+                    ? `<div class="happy-pill" style="background:#f1f5f9; color:#475569;">${mVal}</div>`
+                    : (mVal ? '✅' : '❌');
+            } else {
+                cellContent = `<div class="cell-empty">+</div>`;
             }
-            row += `<td class="col-stat">${cellContent}</td>`;
+            if (m.type === 'binary') {
+                row += `<td class="col-stat editable-cell" onclick="window.toggleBinaryCell('${dateKey}','${m.name}',${mVal === true})">${cellContent}</td>`;
+            } else {
+                row += `<td class="col-stat editable-cell" onclick="window.openCellEdit(event,'${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'})">${cellContent}</td>`;
+            }
         });
 
         sortedTypes.forEach(type => {
@@ -1016,6 +1024,64 @@ window.addEventListener('load', updateHeaderOffset);
 window.addEventListener('resize', updateHeaderOffset);
 
 window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+
+// --- CELL EDIT POPOVER ---
+const closeCellPopover = () => { document.getElementById('cellPopover').style.display = 'none'; };
+document.addEventListener('click', (e) => { if (!e.target.closest('.cell-popover') && !e.target.closest('.editable-cell')) closeCellPopover(); });
+
+window.openCellEdit = (e, dateKey, field, currentVal) => {
+    e.stopPropagation();
+    const popover = document.getElementById('cellPopover');
+    const content = document.getElementById('cellPopoverContent');
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const buttons = [1,2,3,4,5,6,7,8,9,10].map(n =>
+        `<button class="pop-btn ${n === currentVal ? 'pop-btn-active' : ''}" onclick="window.saveCellValue('${dateKey}','${field}',${n})">${n}</button>`
+    ).join('');
+
+    const label = field === 'mood' ? 'Mood' : field.replace('metric-','').replace(/-/g,' ');
+    content.innerHTML = `<div class="pop-label">${label}</div><div class="pop-btns">${buttons}</div>`;
+
+    popover.style.display = 'block';
+    const pw = popover.offsetWidth;
+    let left = rect.left + rect.width / 2 - pw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+    popover.style.left = left + 'px';
+    popover.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+};
+
+window.saveCellValue = async (dateKey, field, value) => {
+    closeCellPopover();
+    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned);
+    if (field === 'mood') {
+        if (existing) {
+            existing.happiness = value;
+        } else {
+            logData.entries.push({ id: Date.now(), date: dateKey, happiness: value, type: 'NONE', isPlanned: false, customMetricData: {} });
+        }
+    } else {
+        const metricName = field.replace('metric-', '');
+        if (existing) {
+            if (!existing.customMetricData) existing.customMetricData = {};
+            existing.customMetricData[metricName] = value;
+        } else {
+            logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: value } });
+        }
+    }
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
+    const newVal = !currentVal;
+    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned);
+    if (existing) {
+        if (!existing.customMetricData) existing.customMetricData = {};
+        existing.customMetricData[metricName] = newVal;
+    } else {
+        logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: newVal } });
+    }
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
 window.toggleSettings = () => { document.getElementById('settingsMenu').classList.toggle('open'); };
 window.closeSettings = () => { document.getElementById('settingsMenu').classList.remove('open'); };
 document.addEventListener('click', (e) => { if (!e.target.closest('.settings-dropdown')) window.closeSettings(); });
