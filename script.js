@@ -17,8 +17,17 @@ const auth = getAuth(app);
 
 setPersistence(auth, browserLocalPersistence);
 
-let LOG_ID = null; 
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], customMetrics: [], entries: [] };
+let LOG_ID = null;
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [] };
+
+const TYPE_CATEGORIES = [
+    { value: 'cardio',      label: 'Cardio' },
+    { value: 'bodyweight',  label: 'Body Weight' },
+    { value: 'gym',         label: 'Gym' },
+    { value: 'other',       label: 'Other' },
+];
+
+const getTypeCategory = (typeName) => logData.typeCategories?.[typeName] || 'other';
 let editingId = null;
 let unsubSnapshot = null;
 window.tempMark = 1;
@@ -94,11 +103,11 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], customMetrics: data.customMetrics || [], entries: data.entries || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [] };
             renderMatrix();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
-            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], customMetrics: [], entries: [] });
+            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [], entries: [] });
         }
     });
 };
@@ -195,8 +204,11 @@ window.setStrategy = (wantsPlanned) => {
 
 window.toggleDistanceRow = () => {
     const type = document.getElementById('modalType')?.value;
-    const show = type && type !== 'NONE' && !isPlannedStrategy;
-    document.getElementById('distanceRow').style.display = show ? 'block' : 'none';
+    const cat = (type && type !== 'NONE' && !isPlannedStrategy) ? getTypeCategory(type) : null;
+    document.getElementById('metricCardio').style.display     = cat === 'cardio'      ? 'block' : 'none';
+    document.getElementById('metricBodyweight').style.display = cat === 'bodyweight'  ? 'block' : 'none';
+    document.getElementById('metricGym').style.display        = cat === 'gym'         ? 'block' : 'none';
+    document.getElementById('metricOther').style.display      = cat === 'other'       ? 'block' : 'none';
 };
 
 window.showInputModal = () => {
@@ -211,6 +223,11 @@ window.showInputModal = () => {
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
     document.getElementById('modalDistance').value = '';
     document.getElementById('modalDistanceUnit').value = 'km';
+    document.getElementById('modalReps').value = '';
+    document.getElementById('modalWeight').value = '';
+    document.getElementById('modalWeightUnit').value = 'kg';
+    document.getElementById('modalOtherRating').value = 5;
+    document.getElementById('otherRatingVal').innerText = 5;
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
     window.toggleDistanceRow();
@@ -230,6 +247,12 @@ window.editEntry = (id) => {
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
     document.getElementById('modalDistance').value = entry.distance || '';
     document.getElementById('modalDistanceUnit').value = entry.distanceUnit || 'km';
+    document.getElementById('modalReps').value = entry.reps || '';
+    document.getElementById('modalWeight').value = entry.weight || '';
+    document.getElementById('modalWeightUnit').value = entry.weightUnit || 'kg';
+    const rating = entry.otherRating || 5;
+    document.getElementById('modalOtherRating').value = rating;
+    document.getElementById('otherRatingVal').innerText = rating;
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
     window.toggleDistanceRow();
@@ -246,17 +269,26 @@ window.quickCompletePlan = async (id) => {
 };
 
 window.saveExercise = async () => {
+    const type = document.getElementById('modalType').value;
+    const cat = getTypeCategory(type);
     const distVal = parseFloat(document.getElementById('modalDistance').value);
+    const repsVal = parseInt(document.getElementById('modalReps').value);
+    const weightVal = parseFloat(document.getElementById('modalWeight').value);
+    const otherRating = parseInt(document.getElementById('modalOtherRating').value);
     const entryData = {
         date: document.getElementById('modalDate').value,
         happiness: isPlannedStrategy ? null : parseInt(document.getElementById('modalHappiness').value),
-        type: document.getElementById('modalType').value,
+        type,
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark,
         isPlanned: isPlannedStrategy,
         customMetricData: isPlannedStrategy ? {} : { ...dynamicMetricValues },
-        distance: !isNaN(distVal) && distVal > 0 ? distVal : null,
+        distance: cat === 'cardio' && !isNaN(distVal) && distVal > 0 ? distVal : null,
         distanceUnit: document.getElementById('modalDistanceUnit').value,
+        reps: cat === 'bodyweight' && !isNaN(repsVal) && repsVal > 0 ? repsVal : null,
+        weight: cat === 'gym' && !isNaN(weightVal) && weightVal > 0 ? weightVal : null,
+        weightUnit: document.getElementById('modalWeightUnit').value,
+        otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
         id: editingId || Date.now()
     };
     if (editingId) {
@@ -682,9 +714,16 @@ const renderMatrix = () => {
 
         logData.types.forEach(type => {
             const count = acc.typeDays[type] || 0;
-            const dist = acc.typeDist?.[type];
+            const m = acc.typeMetric?.[type];
             let cell = count > 0 ? count + 'd' : '';
-            if (dist && dist.total > 0) cell += ` · ${dist.total % 1 === 0 ? dist.total : dist.total.toFixed(1)}${dist.unit}`;
+            if (m && m.values.length > 0) {
+                const cat = getTypeCategory(type);
+                const total = m.values.reduce((a,b)=>a+b,0);
+                const avg = total / m.values.length;
+                const fmt = (n) => n % 1 === 0 ? n : n.toFixed(1);
+                if (cat === 'other') cell += ` · ${fmt(avg)}${m.unit}`;
+                else cell += ` · ${fmt(total)}${m.unit}`;
+            }
             html += `<td>${cell}</td>`;
         });
 
@@ -697,7 +736,7 @@ const renderMatrix = () => {
         happiness: [],
         customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
         typeDays: Object.fromEntries(logData.types.map(t => [t, 0])),
-        typeDist: Object.fromEntries(logData.types.map(t => [t, { total: 0, unit: 'km' }])),
+        typeMetric: Object.fromEntries(logData.types.map(t => [t, { values: [], unit: '' }])),
     });
 
     body.innerHTML = "";
@@ -727,10 +766,13 @@ const renderMatrix = () => {
             const ex = activeData.exercises[type];
             if (ex && ex.some(e => !e.isPlanned)) {
                 weekAcc.typeDays[type]++;
-                const completed = ex.find(e => !e.isPlanned && e.distance);
-                if (completed) {
-                    weekAcc.typeDist[type].total += completed.distance;
-                    weekAcc.typeDist[type].unit = completed.distanceUnit || 'km';
+                const done = ex.find(e => !e.isPlanned);
+                if (done && weekAcc.typeMetric[type]) {
+                    const cat = getTypeCategory(type);
+                    if (cat === 'cardio' && done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
+                    else if (cat === 'bodyweight' && done.reps) { weekAcc.typeMetric[type].values.push(done.reps); weekAcc.typeMetric[type].unit = 'reps'; }
+                    else if (cat === 'gym' && done.weight) { weekAcc.typeMetric[type].values.push(done.weight); weekAcc.typeMetric[type].unit = done.weightUnit || 'kg'; }
+                    else if (cat === 'other' && done.otherRating) { weekAcc.typeMetric[type].values.push(done.otherRating); weekAcc.typeMetric[type].unit = '/10'; }
                 }
             }
         });
@@ -752,7 +794,13 @@ const renderMatrix = () => {
             const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
             let displaySymbol = '';
             if (exercise) {
-                const distLabel = exercise.distance ? `<div class="dist-label">${exercise.distance}${exercise.distanceUnit || 'km'}</div>` : '';
+                const cat = getTypeCategory(type);
+            let metricLabel = '';
+            if (cat === 'cardio' && exercise.distance) metricLabel = `${exercise.distance}${exercise.distanceUnit || 'km'}`;
+            else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
+            else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
+            else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
+            const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 displaySymbol = exercise.isPlanned ?
                     `<div class="tick-cell plan" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
                     `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
@@ -773,31 +821,43 @@ const renderMatrix = () => {
 };
 
 // --- GENERAL CLOSURES & UTILITIES ---
+const catOptions = (selected) => TYPE_CATEGORIES.map(c => `<option value="${c.value}" ${c.value === selected ? 'selected' : ''}>${c.label}</option>`).join('');
+
 window.showTypeModal = () => {
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
-        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
             <input type="text" value="${type}" id="type-input-${idx}" style="flex:1;">
-            <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.65rem; padding:4px 10px;">Rename</button>
+            <select id="type-cat-${idx}" style="width:110px; padding:6px; border-radius:8px; border:1px solid var(--border); font-size:0.75rem;">${catOptions(getTypeCategory(type))}</select>
+            <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.65rem; padding:4px 10px;">Save</button>
             <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:4px 10px;" class="nav-btn">✕</button>
         </div>`).join('');
     document.getElementById('typeModal').style.display = 'flex';
 };
 window.addType = async () => {
     const input = document.getElementById('newTypeInput');
+    const catSel = document.getElementById('newTypeCat');
     const val = input.value.toUpperCase().trim();
     if (val && !logData.types.includes(val)) {
         logData.types.push(val);
-        await updateDoc(doc(db, "logs", LOG_ID), { types: logData.types });
+        logData.typeCategories[val] = catSel.value;
+        await setDoc(doc(db, "logs", LOG_ID), logData);
         input.value = ""; window.showTypeModal();
     }
 };
 window.renameType = async (idx) => {
     const old = logData.types[idx];
     const n = document.getElementById(`type-input-${idx}`).value.toUpperCase().trim();
-    if (!n || n === old) return;
-    logData.types[idx] = n;
-    logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
+    const newCat = document.getElementById(`type-cat-${idx}`).value;
+    if (!n) return;
+    if (n !== old) {
+        logData.types[idx] = n;
+        logData.typeCategories[n] = newCat;
+        delete logData.typeCategories[old];
+        logData.entries = logData.entries.map(e => e.type === old ? { ...e, type: n } : e);
+    } else {
+        logData.typeCategories[n] = newCat;
+    }
     await setDoc(doc(db, "logs", LOG_ID), logData);
     window.showTypeModal();
 };

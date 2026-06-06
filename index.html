@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=58">
+    <link rel="stylesheet" href="style.css?v=59">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -157,7 +157,7 @@
                         <select id="modalType" onchange="window.toggleDistanceRow()"></select>
                     </div>
 
-                    <div class="input-row" id="distanceRow" style="display:none">
+                    <div class="input-row" id="metricCardio" style="display:none">
                         <label>Distance</label>
                         <div class="distance-input-row">
                             <input type="number" id="modalDistance" placeholder="0.0" min="0" step="0.1">
@@ -166,6 +166,27 @@
                                 <option value="mi">mi</option>
                                 <option value="m">m</option>
                             </select>
+                        </div>
+                    </div>
+                    <div class="input-row" id="metricBodyweight" style="display:none">
+                        <label>Reps</label>
+                        <input type="number" id="modalReps" placeholder="0" min="0" step="1">
+                    </div>
+                    <div class="input-row" id="metricGym" style="display:none">
+                        <label>Weight</label>
+                        <div class="distance-input-row">
+                            <input type="number" id="modalWeight" placeholder="0.0" min="0" step="0.5">
+                            <select id="modalWeightUnit">
+                                <option value="kg">kg</option>
+                                <option value="lbs">lbs</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row highlight-box" id="metricOther" style="display:none">
+                        <label>Session Rating (1-10)</label>
+                        <div class="slider-row">
+                            <input type="range" id="modalOtherRating" min="1" max="10" step="1" oninput="document.getElementById('otherRatingVal').innerText = this.value">
+                            <span id="otherRatingVal" class="score-display">5</span>
                         </div>
                     </div>
 
@@ -219,8 +240,16 @@
                 </div>
                 <div class="form-body">
                     <div id="typeList" class="type-editor-list"></div>
-                    <div class="add-type-footer">
-                        <input type="text" id="newTypeInput" placeholder="New Category">
+                    <div class="add-type-footer" style="flex-direction:column; gap:10px;">
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="newTypeInput" placeholder="Name (e.g. RUN)" style="flex:1;">
+                            <select id="newTypeCat" style="width:120px; padding:10px; border-radius:10px; border:1px solid var(--border); font-size:0.85rem;">
+                                <option value="cardio">Cardio</option>
+                                <option value="bodyweight">Body Weight</option>
+                                <option value="gym">Gym</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
                         <button onclick="window.addType()" class="btn-submit">Add</button>
                     </div>
                 </div>
@@ -228,6 +257,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=57"></script>
+    <script type="module" src="script.js?v=59"></script>
 </body>
 </html>
