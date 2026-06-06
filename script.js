@@ -603,18 +603,17 @@ const renderWeekCompare = (completed) => {
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-    const thisWeekStart = getWeekStart(todayStr);
 
-    const lastWeekStartDate = new Date(thisWeekStart);
-    lastWeekStartDate.setDate(lastWeekStartDate.getDate() - 7);
-    const lastWeekStart = lastWeekStartDate.toISOString().split('T')[0];
+    const d10 = new Date(today); d10.setDate(d10.getDate() - 9);
+    const d20 = new Date(today); d20.setDate(d20.getDate() - 10);
+    const d19 = new Date(today); d19.setDate(d19.getDate() - 19);
 
-    const lastWeekEndDate = new Date(thisWeekStart);
-    lastWeekEndDate.setDate(lastWeekEndDate.getDate() - 1);
-    const lastWeekEndStr = lastWeekEndDate.toISOString().split('T')[0];
+    const last10Start  = d10.toISOString().split('T')[0];
+    const prior10Start = d19.toISOString().split('T')[0];
+    const prior10End   = d20.toISOString().split('T')[0];
 
-    const thisWeek = completed.filter(e => e.date >= thisWeekStart && e.date <= todayStr);
-    const lastWeek = completed.filter(e => e.date >= lastWeekStart && e.date <= lastWeekEndStr);
+    const thisWeek = completed.filter(e => e.date >= last10Start && e.date <= todayStr);
+    const lastWeek = completed.filter(e => e.date >= prior10Start && e.date <= prior10End);
 
     const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
     const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
@@ -642,7 +641,7 @@ const renderWeekCompare = (completed) => {
     }
 
     el.innerHTML = `
-        <div class="compare-header"><span></span><span>This week</span><span>Last week</span></div>
+        <div class="compare-header"><span></span><span>Last 10 days</span><span>Prior 10 days</span></div>
         ${rows.map(r => {
             const twStr = fmt(r.tw, r.type);
             const lwStr = fmt(r.lw, r.type);
