@@ -1049,22 +1049,16 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
 
 window.saveCellValue = async (dateKey, field, value) => {
     closeCellPopover();
-    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE')
-                  || logData.entries.find(e => e.date === dateKey && !e.isPlanned);
+    let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
+    if (!record) {
+        record = { id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: {} };
+        logData.entries.push(record);
+    }
     if (field === 'mood') {
-        if (existing) {
-            existing.happiness = value;
-        } else {
-            logData.entries.push({ id: Date.now(), date: dateKey, happiness: value, type: 'NONE', isPlanned: false, customMetricData: {} });
-        }
+        record.happiness = value;
     } else {
-        const metricName = field.replace('metric-', '');
-        if (existing) {
-            if (!existing.customMetricData) existing.customMetricData = {};
-            existing.customMetricData[metricName] = value;
-        } else {
-            logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: value } });
-        }
+        if (!record.customMetricData) record.customMetricData = {};
+        record.customMetricData[field.replace('metric-', '')] = value;
     }
     renderMatrix();
     try {
@@ -1076,14 +1070,13 @@ window.saveCellValue = async (dateKey, field, value) => {
 
 window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     const newVal = !currentVal;
-    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE')
-                  || logData.entries.find(e => e.date === dateKey && !e.isPlanned);
-    if (existing) {
-        if (!existing.customMetricData) existing.customMetricData = {};
-        existing.customMetricData[metricName] = newVal;
-    } else {
-        logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: newVal } });
+    let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
+    if (!record) {
+        record = { id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: {} };
+        logData.entries.push(record);
     }
+    if (!record.customMetricData) record.customMetricData = {};
+    record.customMetricData[metricName] = newVal;
     renderMatrix();
     await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
