@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=71">
+    <link rel="stylesheet" href="style.css?v=74">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -48,6 +48,7 @@
                 </nav>
 
                 <div class="action-bar">
+                    <button id="stravaBtn" onclick="window.handleStravaConnect()" class="nav-btn btn-strava">Connect Strava</button>
                     <button onclick="window.showMetricModal()" class="nav-btn btn-secondary">Metrics</button>
                     <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Types</button>
                     <button onclick="window.showInputModal()" class="nav-btn btn-primary">Log / Plan</button>
@@ -229,6 +230,17 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=72"></script>
+    <!-- Strava Activity Modal -->
+    <div id="stravaModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Latest Strava Activity</h2>
+                <button onclick="window.closeModal('stravaModal')" class="close-btn">✕</button>
+            </div>
+            <div id="stravaModalBody" class="form-body"></div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js?v=73"></script>
 </body>
 </html>

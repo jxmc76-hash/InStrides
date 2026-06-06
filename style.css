@@ -138,4 +138,16 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .week-summary-row td:not(.week-summary-label) { color: var(--text-muted); font-weight: 700; }
 .week-toggle-icon { font-size: 0.6rem; margin-right: 6px; }
 
+.btn-strava { background: #fc4c02; color: white; }
+.btn-strava:hover { background: #e04000; }
+
+.strava-activity-card { background: #fff7f5; border: 1px solid #ffd5c0; border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; }
+.strava-type { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #ff5500; margin-bottom: 6px; }
+.strava-name { font-size: 1.1rem; font-weight: 900; color: #1a1a1a; margin-bottom: 4px; }
+.strava-date { font-size: 0.8rem; color: #8a8a8a; margin-bottom: 10px; }
+.strava-details { font-size: 0.9rem; font-weight: 700; color: #1a1a1a; }
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); }
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

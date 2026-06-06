@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, browserLocalPersistence, setPersistence, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -14,6 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const functions = getFunctions(app);
 
 setPersistence(auth, browserLocalPersistence);
 
@@ -41,6 +43,7 @@ onAuthStateChanged(auth, (user) => {
         LOG_ID = `log-${user.uid}`;
         document.getElementById('authOverlay').style.display = 'none';
         attachRealtimeListener();
+        updateStravaButton();
     } else {
         LOG_ID = null;
         if(unsubSnapshot) unsubSnapshot();
@@ -853,6 +856,96 @@ const renderMatrix = () => {
         allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML;
     }
     body.innerHTML = allHTML;
+};
+
+// --- STRAVA INTEGRATION ---
+const STRAVA_CLIENT_ID = '255843';
+const STRAVA_REDIRECT  = 'https://instrides.app/strava-callback.html';
+const STRAVA_SCOPE     = 'activity:read_all';
+
+const updateStravaButton = async () => {
+    const btn = document.getElementById('stravaBtn');
+    if (!btn || !auth.currentUser) return;
+    const snap = await getDoc(doc(db, 'strava', auth.currentUser.uid));
+    if (snap.exists()) {
+        btn.textContent = '✓ Strava';
+        btn.onclick = () => window.showStravaActivity();
+    } else {
+        btn.textContent = 'Connect Strava';
+        btn.onclick = () => window.handleStravaConnect();
+    }
+};
+
+window.handleStravaConnect = () => {
+    const url = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT)}&response_type=code&scope=${STRAVA_SCOPE}`;
+    window.location.href = url;
+};
+
+window.showStravaActivity = async () => {
+    const body = document.getElementById('stravaModalBody');
+    body.innerHTML = '<p class="neutral-msg" style="padding:20px 0; text-align:center">Fetching latest activity...</p>';
+    document.getElementById('stravaModal').style.display = 'flex';
+
+    try {
+        const fn = httpsCallable(functions, 'stravaLatestActivity');
+        const result = await fn();
+        const a = result.data.activity;
+
+        if (!a) {
+            body.innerHTML = '<p class="neutral-msg" style="padding:20px 0; text-align:center">No activities found on Strava.</p>';
+            return;
+        }
+
+        const duration = a.duration ? `${Math.floor(a.duration/60)}m` : '';
+        const dist     = a.distance ? `${a.distance} km` : '';
+        const elev     = a.elevation ? `${a.elevation}m elevation` : '';
+        const details  = [dist, duration, elev].filter(Boolean).join(' · ');
+
+        body.innerHTML = `
+            <div class="strava-activity-card">
+                <div class="strava-type">${a.type}</div>
+                <div class="strava-name">${a.name}</div>
+                <div class="strava-date">${new Date(a.date).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}</div>
+                <div class="strava-details">${details}</div>
+            </div>
+            <button class="btn-submit" onclick="window.logStravaActivity(${JSON.stringify(a).split('"').join('&quot;')})">Log this activity</button>
+            <button class="btn-delete" style="margin-top:8px" onclick="window.disconnectStrava()">Disconnect Strava</button>
+        `;
+    } catch (e) {
+        body.innerHTML = `<p class="neutral-msg" style="padding:20px 0; text-align:center">Error: ${e.message}</p>`;
+    }
+};
+
+window.logStravaActivity = (activity) => {
+    window.closeModal('stravaModal');
+    // Match Strava type to a local type if possible
+    const stravaTypeMap = { Run:'RUN', Ride:'CYCLE', Swim:'SWIM', Walk:'WALK', Yoga:'YOGA', WeightTraining:'GYM' };
+    const matchedType = stravaTypeMap[activity.type] || activity.type.toUpperCase();
+    const typeExists = logData.types.includes(matchedType);
+
+    document.getElementById('modalDate').value = activity.date;
+    document.getElementById('modalHappiness').value = 5;
+    document.getElementById('happyVal').innerText = 5;
+    document.getElementById('modalDetails').value = activity.name || '';
+    window.setStrategy(false);
+    buildCustomMetricsFormUI();
+    const typeSelect = document.getElementById('modalType');
+    typeSelect.innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}" ${t === matchedType ? 'selected' : ''}>${t}</option>`).join('');
+    if (activity.distance) {
+        document.getElementById('modalDistance').value = activity.distance;
+        document.getElementById('modalDistanceUnit').value = 'km';
+    }
+    window.selectMark(2);
+    document.getElementById('inputModal').style.display = 'flex';
+    window.toggleDistanceRow();
+};
+
+window.disconnectStrava = async () => {
+    if (!confirm('Disconnect Strava?')) return;
+    const fn = httpsCallable(functions, 'stravaDisconnect');
+    await fn();
+    updateStravaButton();
+    window.closeModal('stravaModal');
 };
 
 // --- GENERAL CLOSURES & UTILITIES ---
