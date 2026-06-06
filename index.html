@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=69">
+    <link rel="stylesheet" href="style.css?v=70">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -76,27 +76,17 @@
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
 
-                    <!-- At a Glance -->
-                    <div class="insights-section-title">At a Glance</div>
-                    <div class="insights-grid" id="glanceCards"></div>
+                    <!-- This week vs last week -->
+                    <div class="insights-section-title">This week vs last week</div>
+                    <div id="weekCompare" class="week-compare-grid"></div>
 
-                    <!-- Charts -->
-                    <div class="insights-charts-row">
-                        <div>
-                            <div class="insights-section-title">Mood Over Time</div>
-                            <div class="chart-container"><canvas id="chartHappiness"></canvas></div>
-                        </div>
-                        <div>
-                            <div class="insights-section-title">Weekly Workout Volume</div>
-                            <div class="chart-container"><canvas id="chartVolume"></canvas></div>
-                        </div>
-                    </div>
+                    <!-- Distance per week -->
+                    <div class="insights-section-title">Distance covered per week</div>
+                    <div class="chart-container"><canvas id="chartDistance"></canvas></div>
 
-                    <!-- Correlation Discoveries (only shown if custom slider metrics exist) -->
-                    <div id="correlationSection" style="display:none">
-                        <div class="insights-section-title">What affects your mood</div>
-                        <div id="correlationStories" class="story-stack"></div>
-                    </div>
+                    <!-- Mood over time -->
+                    <div class="insights-section-title">Mood score over time</div>
+                    <div class="chart-container"><canvas id="chartHappiness"></canvas></div>
 
                 </div>
             </div>

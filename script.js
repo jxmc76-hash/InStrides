@@ -589,75 +589,93 @@ const _unused_renderPersonalRecords = (completed) => {
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
+    renderWeekCompare(completed);
+    renderDistanceChart(completed);
     renderHappinessChart(completed);
-    renderVolumeChart(completed);
+};
 
-    // At a Glance
-    const glanceEl = document.getElementById('glanceCards');
-    if (glanceEl) {
-        const workCount = completed.filter(e => e.type && e.type !== 'NONE').length;
-        const happyEntries = completed.filter(e => e.happiness);
-        const avgHappy = happyEntries.length ? (happyEntries.reduce((s,e) => s+e.happiness, 0) / happyEntries.length).toFixed(1) : '-';
-        const typeCounts = {};
-        completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { typeCounts[e.type] = (typeCounts[e.type]||0)+1; });
-        const topType = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0];
+const renderWeekCompare = (completed) => {
+    const el = document.getElementById('weekCompare');
+    if (!el) return;
 
-        // Current workout streak
-        const activeDates = [...new Set(completed.filter(e=>e.type&&e.type!=='NONE').map(e=>e.date))].sort();
-        let currentStreak = 0;
-        if (activeDates.length) {
-            const last = new Date(activeDates[activeDates.length-1]);
-            if (Math.floor((new Date()-last)/86400000) <= 1) {
-                currentStreak = 1;
-                for (let i = activeDates.length-2; i >= 0; i--) {
-                    if ((new Date(activeDates[i+1])-new Date(activeDates[i]))/86400000 === 1) currentStreak++;
-                    else break;
-                }
+    const todayStr = new Date().toISOString().split('T')[0];
+    const thisWeekStart = getWeekStart(todayStr);
+    const lastWeekDate = new Date(thisWeekStart); lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+    const lastWeekStart = lastWeekDate.toISOString().split('T')[0];
+    const lastWeekEnd = new Date(thisWeekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+    const lastWeekEndStr = lastWeekEnd.toISOString().split('T')[0];
+
+    const thisWeek = completed.filter(e => e.date >= thisWeekStart && e.date <= todayStr);
+    const lastWeek = completed.filter(e => e.date >= lastWeekStart && e.date <= lastWeekEndStr);
+
+    const calcAvg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+    const totalDist = entries => entries.filter(e => e.distance).reduce((s,e) => s + e.distance, 0);
+    const workouts = entries => entries.filter(e => e.type && e.type !== 'NONE').length;
+    const avgMood = entries => calcAvg(entries.filter(e=>e.happiness).map(e=>e.happiness));
+    const distUnit = completed.find(e=>e.distanceUnit)?.distanceUnit || 'km';
+
+    const metrics = [
+        { label: 'Workouts', thisVal: workouts(thisWeek), lastVal: workouts(lastWeek), fmt: v => v },
+        { label: 'Avg Mood', thisVal: avgMood(thisWeek), lastVal: avgMood(lastWeek), fmt: v => v != null ? v.toFixed(1) : '-' },
+        { label: `Distance (${distUnit})`, thisVal: totalDist(thisWeek), lastVal: totalDist(lastWeek), fmt: v => v > 0 ? v.toFixed(1) : '-' },
+    ];
+
+    el.innerHTML = `
+        <div class="compare-header"><span></span><span>This week</span><span>Last week</span></div>
+        ${metrics.map(m => {
+            const tw = m.fmt(m.thisVal);
+            const lw = m.fmt(m.lastVal);
+            const up = m.thisVal != null && m.lastVal != null && m.thisVal > m.lastVal;
+            const down = m.thisVal != null && m.lastVal != null && m.thisVal < m.lastVal;
+            const arrow = up ? '<span class="compare-arrow up">↑</span>' : down ? '<span class="compare-arrow down">↓</span>' : '';
+            return `<div class="compare-row">
+                <span class="compare-label">${m.label}</span>
+                <span class="compare-this">${tw}${arrow}</span>
+                <span class="compare-last">${lw}</span>
+            </div>`;
+        }).join('')}
+    `;
+};
+
+const renderDistanceChart = (completed) => {
+    destroyChart('distance');
+    const canvas = document.getElementById('chartDistance');
+    if (!canvas) return;
+
+    const weeks = {};
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 84);
+    completed
+        .filter(e => e.distance && new Date(e.date) >= cutoff)
+        .forEach(e => {
+            const w = getWeekStart(e.date);
+            weeks[w] = (weeks[w] || 0) + e.distance;
+        });
+
+    const sorted = Object.keys(weeks).sort();
+    if (sorted.length < 1) {
+        canvas.parentElement.innerHTML = '<p class="neutral-msg" style="padding:10px 0">Log distance for cardio activities to see this chart.</p>';
+        return;
+    }
+
+    const distUnit = completed.find(e=>e.distanceUnit)?.distanceUnit || 'km';
+    const labels = sorted.map(w => new Date(w).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+    const data = sorted.map(w => +weeks[w].toFixed(1));
+
+    chartInstances['distance'] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{ label: `Distance (${distUnit})`, data, backgroundColor: 'rgba(255,85,0,0.75)', borderRadius: 8, borderSkipped: false }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
             }
         }
-
-        glanceEl.innerHTML = [
-            { label: 'Total Workouts', val: workCount || '-' },
-            { label: 'Current Streak', val: currentStreak ? `${currentStreak}d` : '-' },
-            { label: 'Avg Mood', val: avgHappy },
-            { label: 'Top Activity', val: topType ? `${topType[0]}` : '-' },
-        ].map(c => `<div class="stat-card"><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
-    }
-
-    // Correlation discoveries — plain language, only if slider metrics exist
-    const sliders = logData.customMetrics.filter(m => m.type === 'slider');
-    const corrSection = document.getElementById('correlationSection');
-    const corrStories = document.getElementById('correlationStories');
-    if (!corrSection || !corrStories) return;
-
-    if (sliders.length === 0 || completed.length < 5) { corrSection.style.display = 'none'; return; }
-
-    const calcAvg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
-    let stories = [];
-
-    // Exercise vs no exercise
-    const happyOn = completed.filter(e=>e.happiness&&e.type&&e.type!=='NONE').map(e=>e.happiness);
-    const happyOff = completed.filter(e=>e.happiness&&(!e.type||e.type==='NONE')).map(e=>e.happiness);
-    const exOn = calcAvg(happyOn), exOff = calcAvg(happyOff);
-    if (exOn && exOff && Math.abs(exOn-exOff) > 0.3) {
-        const better = exOn > exOff ? 'higher' : 'lower';
-        stories.push(`On days you exercise, your mood averages <b>${exOn.toFixed(1)}</b> — ${better} than rest days (<b>${exOff.toFixed(1)}</b>).`);
-    }
-
-    sliders.forEach(m => {
-        const high = completed.filter(e=>e.happiness&&e.customMetricData?.[m.name]>=7).map(e=>e.happiness);
-        const low  = completed.filter(e=>e.happiness&&e.customMetricData?.[m.name]<=4).map(e=>e.happiness);
-        const hAvg = calcAvg(high), lAvg = calcAvg(low);
-        if (hAvg && lAvg && Math.abs(hAvg-lAvg) > 0.3) {
-            const name = m.name.replace(/-/g,' ');
-            const dir = hAvg > lAvg ? 'higher' : 'lower';
-            stories.push(`When your <b>${name}</b> score is high, your mood is ${dir} on average (<b>${hAvg.toFixed(1)}</b> vs <b>${lAvg.toFixed(1)}</b>).`);
-        }
     });
-
-    if (stories.length === 0) { corrSection.style.display = 'none'; return; }
-    corrSection.style.display = 'block';
-    corrStories.innerHTML = stories.map(s => `<div class="story-item">${s}</div>`).join('');
 };
 
 // --- CORE RENDERING MATRIX ENGINE ---
