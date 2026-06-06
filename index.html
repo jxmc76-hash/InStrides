@@ -48,8 +48,7 @@
                 </nav>
 
                 <div class="action-bar">
-                    <button id="stravaBtn" onclick="window.handleStravaConnect()" class="nav-btn btn-strava">Connect Strava</button>
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">+ Log</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Entry</button>
                     <div class="settings-dropdown">
                         <button class="nav-btn btn-secondary settings-toggle" onclick="window.toggleSettings()">⚙ Settings</button>
                         <div class="settings-menu" id="settingsMenu">
@@ -60,6 +59,7 @@
                             <button onclick="window.handleSignOut()" style="color:#ef4444">Sign Out</button>
                         </div>
                     </div>
+                    <button id="stravaBtn" onclick="window.handleStravaConnect()" class="nav-btn btn-strava">Connect Strava</button>
                 </div>
             </div>
         </header>
