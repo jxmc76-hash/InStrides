@@ -648,8 +648,10 @@ const renderMatrix = () => {
     const emitWeekSummary = (acc, weekId) => {
         if (acc.days === 0) return '';
         const happyAvg = acc.happiness.length ? (acc.happiness.reduce((a,b)=>a+b,0)/acc.happiness.length).toFixed(1) : '';
+        const monDate = new Date(getWeekStart(weekId));
+        const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
-            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> Week Total</td>
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> w/c ${weekLabel}</td>
             <td class="col-stat">${happyAvg}</td>`;
 
         logData.customMetrics.forEach(m => {
@@ -778,6 +780,13 @@ window.removeType = async (idx) => {
         window.showTypeModal();
     }
 };
+const updateHeaderOffset = () => {
+    const h = document.querySelector('.app-header')?.offsetHeight || 65;
+    document.documentElement.style.setProperty('--header-h', h + 'px');
+};
+window.addEventListener('load', updateHeaderOffset);
+window.addEventListener('resize', updateHeaderOffset);
+
 window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
 window.toggleWeek = (weekId) => {
     const rows = document.querySelectorAll(`.week-day-row[data-week="${weekId}"]`);
