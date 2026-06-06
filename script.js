@@ -1048,6 +1048,7 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
 };
 
 window.saveCellValue = async (dateKey, field, value) => {
+    console.log('saveCellValue called', dateKey, field, value);
     closeCellPopover();
     const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned);
     if (field === 'mood') {
