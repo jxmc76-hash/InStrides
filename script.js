@@ -205,6 +205,11 @@ window.setStrategy = (wantsPlanned) => {
 window.toggleDistanceRow = () => {
     const type = document.getElementById('modalType')?.value;
     const cat = (type && type !== 'NONE' && !isPlannedStrategy) ? getTypeCategory(type) : null;
+    const catLabel = TYPE_CATEGORIES.find(c => c.value === cat)?.label || '';
+    const section = document.getElementById('typeCategorySection');
+    const badge = document.getElementById('typeCategoryBadge');
+    section.style.display = cat ? 'block' : 'none';
+    if (badge) badge.textContent = catLabel;
     document.getElementById('metricCardio').style.display     = cat === 'cardio'      ? 'block' : 'none';
     document.getElementById('metricBodyweight').style.display = cat === 'bodyweight'  ? 'block' : 'none';
     document.getElementById('metricGym').style.display        = cat === 'gym'         ? 'block' : 'none';
@@ -226,8 +231,7 @@ window.showInputModal = () => {
     document.getElementById('modalReps').value = '';
     document.getElementById('modalWeight').value = '';
     document.getElementById('modalWeightUnit').value = 'kg';
-    document.getElementById('modalOtherRating').value = 5;
-    document.getElementById('otherRatingVal').innerText = 5;
+    document.getElementById('modalOtherRating').value = '';
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
     window.toggleDistanceRow();
@@ -250,9 +254,7 @@ window.editEntry = (id) => {
     document.getElementById('modalReps').value = entry.reps || '';
     document.getElementById('modalWeight').value = entry.weight || '';
     document.getElementById('modalWeightUnit').value = entry.weightUnit || 'kg';
-    const rating = entry.otherRating || 5;
-    document.getElementById('modalOtherRating').value = rating;
-    document.getElementById('otherRatingVal').innerText = rating;
+    document.getElementById('modalOtherRating').value = entry.otherRating || '';
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
     window.toggleDistanceRow();
@@ -274,7 +276,7 @@ window.saveExercise = async () => {
     const distVal = parseFloat(document.getElementById('modalDistance').value);
     const repsVal = parseInt(document.getElementById('modalReps').value);
     const weightVal = parseFloat(document.getElementById('modalWeight').value);
-    const otherRating = parseInt(document.getElementById('modalOtherRating').value);
+    const otherRating = Math.min(10, Math.max(1, parseInt(document.getElementById('modalOtherRating').value) || 5));
     const entryData = {
         date: document.getElementById('modalDate').value,
         happiness: isPlannedStrategy ? null : parseInt(document.getElementById('modalHappiness').value),
