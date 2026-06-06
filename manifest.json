@@ -1,0 +1,14 @@
+{
+  "name": "InStrides",
+  "short_name": "InStrides",
+  "description": "Your personal fitness and wellbeing tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f7f5",
+  "theme_color": "#ff5500",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
