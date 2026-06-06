@@ -190,6 +190,13 @@ window.setStrategy = (wantsPlanned) => {
     document.getElementById('stratDone').classList.toggle('active', !wantsPlanned);
     document.getElementById('performanceMetrics').style.display = wantsPlanned ? 'none' : 'block';
     document.getElementById('intensityRow').style.display = wantsPlanned ? 'none' : 'flex';
+    window.toggleDistanceRow();
+};
+
+window.toggleDistanceRow = () => {
+    const type = document.getElementById('modalType')?.value;
+    const show = type && type !== 'NONE' && !isPlannedStrategy;
+    document.getElementById('distanceRow').style.display = show ? 'block' : 'none';
 };
 
 window.showInputModal = () => {
@@ -202,8 +209,11 @@ window.showInputModal = () => {
     window.setStrategy(false);
     buildCustomMetricsFormUI();
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
+    document.getElementById('modalDistance').value = '';
+    document.getElementById('modalDistanceUnit').value = 'km';
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
+    window.toggleDistanceRow();
 };
 
 window.editEntry = (id) => {
@@ -218,8 +228,11 @@ window.editEntry = (id) => {
     window.setStrategy(!!entry.isPlanned);
     buildCustomMetricsFormUI(entry.customMetricData || {});
     document.getElementById('modalType').innerHTML = `<option value="NONE">No Category Allocation</option>` + logData.types.map(t => `<option value="${t}" ${t === entry.type ? 'selected' : ''}>${t}</option>`).join('');
+    document.getElementById('modalDistance').value = entry.distance || '';
+    document.getElementById('modalDistanceUnit').value = entry.distanceUnit || 'km';
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
+    window.toggleDistanceRow();
 };
 
 window.quickCompletePlan = async (id) => {
@@ -233,14 +246,17 @@ window.quickCompletePlan = async (id) => {
 };
 
 window.saveExercise = async () => {
+    const distVal = parseFloat(document.getElementById('modalDistance').value);
     const entryData = {
         date: document.getElementById('modalDate').value,
         happiness: isPlannedStrategy ? null : parseInt(document.getElementById('modalHappiness').value),
         type: document.getElementById('modalType').value,
         details: document.getElementById('modalDetails').value,
-        mark: isPlannedStrategy ? null : window.tempMark, 
+        mark: isPlannedStrategy ? null : window.tempMark,
         isPlanned: isPlannedStrategy,
         customMetricData: isPlannedStrategy ? {} : { ...dynamicMetricValues },
+        distance: !isNaN(distVal) && distVal > 0 ? distVal : null,
+        distanceUnit: document.getElementById('modalDistanceUnit').value,
         id: editingId || Date.now()
     };
     if (editingId) {
@@ -666,7 +682,10 @@ const renderMatrix = () => {
 
         logData.types.forEach(type => {
             const count = acc.typeDays[type] || 0;
-            html += `<td>${count > 0 ? count + 'd' : ''}</td>`;
+            const dist = acc.typeDist?.[type];
+            let cell = count > 0 ? count + 'd' : '';
+            if (dist && dist.total > 0) cell += ` · ${dist.total % 1 === 0 ? dist.total : dist.total.toFixed(1)}${dist.unit}`;
+            html += `<td>${cell}</td>`;
         });
 
         html += `</tr>`;
@@ -678,6 +697,7 @@ const renderMatrix = () => {
         happiness: [],
         customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
         typeDays: Object.fromEntries(logData.types.map(t => [t, 0])),
+        typeDist: Object.fromEntries(logData.types.map(t => [t, { total: 0, unit: 'km' }])),
     });
 
     body.innerHTML = "";
@@ -705,7 +725,14 @@ const renderMatrix = () => {
         });
         logData.types.forEach(type => {
             const ex = activeData.exercises[type];
-            if (ex && ex.some(e => !e.isPlanned)) weekAcc.typeDays[type]++;
+            if (ex && ex.some(e => !e.isPlanned)) {
+                weekAcc.typeDays[type]++;
+                const completed = ex.find(e => !e.isPlanned && e.distance);
+                if (completed) {
+                    weekAcc.typeDist[type].total += completed.distance;
+                    weekAcc.typeDist[type].unit = completed.distanceUnit || 'km';
+                }
+            }
         });
 
         let row = `<tr class="week-day-row" data-week="${weekId}" style="display:none">
@@ -725,9 +752,10 @@ const renderMatrix = () => {
             const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
             let displaySymbol = '';
             if (exercise) {
+                const distLabel = exercise.distance ? `<div class="dist-label">${exercise.distance}${exercise.distanceUnit || 'km'}</div>` : '';
                 displaySymbol = exercise.isPlanned ?
                     `<div class="tick-cell plan" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
-                    `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>`;
+                    `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
             }
             row += `<td>${displaySymbol}</td>`;
         });
