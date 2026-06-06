@@ -633,6 +633,12 @@ const renderWeekCompare = (completed) => {
         { label: `Distance (${distUnit})`, tw: weekDist(thisWeek), lw: weekDist(lastWeek), type: 'dist' },
     ];
 
+    const sleepMetric = logData.customMetrics.find(m => m.name === 'SLEEP' && m.type === 'slider');
+    if (sleepMetric) {
+        const weekSleep = w => avg(w.filter(e => e.customMetricData?.SLEEP != null).map(e => e.customMetricData.SLEEP));
+        rows.push({ label: 'Avg Sleep', tw: weekSleep(thisWeek), lw: weekSleep(lastWeek), type: 'mood' });
+    }
+
     el.innerHTML = `
         <div class="compare-header"><span></span><span>This week</span><span>Last week</span></div>
         ${rows.map(r => {
