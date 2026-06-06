@@ -261,11 +261,146 @@ window.deleteEntry = async () => {
     }
 };
 
+const getWeekStart = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split('T')[0];
+};
+
+const renderWeeklySummary = (completed) => {
+    const container = document.getElementById('weeklySummaryCards');
+    if (!container) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const weekStart = getWeekStart(todayStr);
+
+    const thisWeek = completed.filter(e => e.date >= weekStart && e.date <= todayStr);
+    const workouts = thisWeek.filter(e => e.type && e.type !== 'NONE').length;
+    const happyEntries = thisWeek.filter(e => e.happiness);
+    const avgHappy = happyEntries.length ? (happyEntries.reduce((s,e) => s + e.happiness, 0) / happyEntries.length).toFixed(1) : '-';
+    const typeSet = new Set(thisWeek.filter(e => e.type && e.type !== 'NONE').map(e => e.type));
+    const days = new Set(thisWeek.map(e => e.date)).size;
+
+    container.innerHTML = [
+        { label: 'Workouts This Week', val: workouts, icon: '🏃' },
+        { label: 'Active Days', val: days, icon: '📅' },
+        { label: 'Avg Happiness', val: avgHappy, icon: '😊' },
+        { label: 'Activity Types', val: typeSet.size || '-', icon: '🎯' },
+    ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
+};
+
+const renderStreaks = (completed) => {
+    const container = document.getElementById('streakCards');
+    if (!container) return;
+
+    const activeDates = new Set(
+        completed.filter(e => e.type && e.type !== 'NONE').map(e => e.date)
+    );
+    const sorted = [...activeDates].sort();
+
+    let currentStreak = 0, bestStreak = 0, streak = 0;
+    const today = new Date();
+
+    for (let i = 0; i < sorted.length; i++) {
+        if (i === 0) { streak = 1; }
+        else {
+            const prev = new Date(sorted[i-1]);
+            const curr = new Date(sorted[i]);
+            const diff = (curr - prev) / 86400000;
+            streak = diff === 1 ? streak + 1 : 1;
+        }
+        if (streak > bestStreak) bestStreak = streak;
+    }
+
+    if (sorted.length > 0) {
+        const last = new Date(sorted[sorted.length - 1]);
+        const diffFromToday = Math.floor((today - last) / 86400000);
+        if (diffFromToday <= 1) {
+            let s = 1;
+            for (let i = sorted.length - 2; i >= 0; i--) {
+                const curr = new Date(sorted[i+1]);
+                const prev = new Date(sorted[i]);
+                if ((curr - prev) / 86400000 === 1) s++;
+                else break;
+            }
+            currentStreak = s;
+        }
+    }
+
+    const loggingDates = new Set(completed.map(e => e.date));
+    const loggingSorted = [...loggingDates].sort();
+    let logStreak = 0, bestLogStreak = 0, ls = 0;
+    for (let i = 0; i < loggingSorted.length; i++) {
+        if (i === 0) { ls = 1; }
+        else {
+            const diff = (new Date(loggingSorted[i]) - new Date(loggingSorted[i-1])) / 86400000;
+            ls = diff === 1 ? ls + 1 : 1;
+        }
+        if (ls > bestLogStreak) bestLogStreak = ls;
+    }
+    if (loggingSorted.length > 0) {
+        const last = new Date(loggingSorted[loggingSorted.length - 1]);
+        if (Math.floor((today - last) / 86400000) <= 1) {
+            let s = 1;
+            for (let i = loggingSorted.length - 2; i >= 0; i--) {
+                if ((new Date(loggingSorted[i+1]) - new Date(loggingSorted[i])) / 86400000 === 1) s++;
+                else break;
+            }
+            logStreak = s;
+        }
+    }
+
+    container.innerHTML = [
+        { label: 'Workout Streak', val: `${currentStreak}d`, icon: '🔥' },
+        { label: 'Best Workout Streak', val: `${bestStreak}d`, icon: '🏆' },
+        { label: 'Logging Streak', val: `${logStreak}d`, icon: '✍️' },
+        { label: 'Best Logging Streak', val: `${bestLogStreak}d`, icon: '📈' },
+    ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
+};
+
+const renderPersonalRecords = (completed) => {
+    const container = document.getElementById('recordCards');
+    if (!container) return;
+    if (completed.length === 0) { container.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No data yet.</p>`; return; }
+
+    // Most active week
+    const weekCounts = {};
+    completed.filter(e => e.type && e.type !== 'NONE').forEach(e => {
+        const w = getWeekStart(e.date);
+        weekCounts[w] = (weekCounts[w] || 0) + 1;
+    });
+    const bestWeekCount = weekCounts && Object.values(weekCounts).length ? Math.max(...Object.values(weekCounts)) : 0;
+
+    // Best happiness
+    const happyEntries = completed.filter(e => e.happiness);
+    const bestHappy = happyEntries.length ? Math.max(...happyEntries.map(e => e.happiness)) : '-';
+
+    // Most used type
+    const typeCounts = {};
+    completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    const topType = Object.entries(typeCounts).sort((a,b) => b[1]-a[1])[0];
+
+    // Total logged days
+    const totalDays = new Set(completed.map(e => e.date)).size;
+
+    container.innerHTML = [
+        { label: 'Best Week (workouts)', val: bestWeekCount || '-', icon: '⚡' },
+        { label: 'Peak Happiness', val: bestHappy, icon: '🌟' },
+        { label: 'Favourite Activity', val: topType ? topType[0] : '-', icon: '❤️' },
+        { label: 'Total Days Logged', val: totalDays, icon: '📓' },
+    ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val stat-val--sm">${c.val}</div></div>`).join('');
+};
+
 // --- ADVANCED CORRELATION INSIGHTS GENERATOR ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
     const storyContainer = document.getElementById('correlationStories');
-    
+
+    renderWeeklySummary(completed);
+    renderStreaks(completed);
+    renderPersonalRecords(completed);
+
     if (completed.length < 3) {
         storyContainer.innerHTML = `<p class="neutral-msg">Gathering a larger history baseline (minimum 3 logs) to process mathematical correlations.</p>`;
         return;

@@ -60,6 +60,14 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .tick-cell.plan { color: var(--text-muted); background: white; border: 2.5px dashed var(--text-muted); border-radius: 6px; width: 28px; height: 28px; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .happy-pill { background: #f1f5f9; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; margin: 0 auto; font-size: 0.8rem; }
 
+/* Insights Section Titles */
+.insights-section-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin: 30px 0 12px 0; }
+.insights-container > .insights-section-title:first-child { margin-top: 0; }
+
+/* Stat card icon */
+.stat-icon { font-size: 1.4rem; margin-bottom: 8px; }
+.stat-val--sm { font-size: 1.4rem; }
+
 /* Advanced Insights Styling */
 .advanced-story-banner { background: #fff7ed; border: 1px solid #ffedd5; border-radius: 24px; padding: 30px; margin-bottom: 30px; }
 .advanced-story-banner h3 { font-size: 1rem; color: #c2410c; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; }

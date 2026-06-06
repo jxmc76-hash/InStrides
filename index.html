@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
-    <link rel="stylesheet" href="style.css?v=46">
+    <link rel="stylesheet" href="style.css?v=47">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -68,13 +68,28 @@
 
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
+
+                    <!-- Weekly Summary -->
+                    <div class="insights-section-title">This Week</div>
+                    <div class="insights-grid" id="weeklySummaryCards"></div>
+
+                    <!-- Streak Tracker -->
+                    <div class="insights-section-title">Streaks</div>
+                    <div class="insights-grid" id="streakCards"></div>
+
+                    <!-- Personal Records -->
+                    <div class="insights-section-title">Personal Records</div>
+                    <div class="insights-grid" id="recordCards"></div>
+
+                    <!-- Correlation Stories -->
+                    <div class="insights-section-title">Correlation Discoveries</div>
                     <div class="advanced-story-banner">
-                        <h3>Correlation Discoveries</h3>
                         <div id="correlationStories" class="story-stack">
                             <p class="neutral-msg">Logging data to synthesize statistical matches...</p>
                         </div>
                     </div>
 
+                    <!-- All-time Stats + Chart -->
                     <div class="insights-grid">
                         <div class="stat-card">
                             <label>Avg Happiness</label>
@@ -188,6 +203,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=46"></script>
+    <script type="module" src="script.js?v=47"></script>
 </body>
 </html>
