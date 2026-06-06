@@ -153,6 +153,7 @@ window.updateLocalCustomMetricVal = (name, val) => { dynamicMetricValues[name] =
 
 const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
     const container = document.getElementById('customMetricsFormContainer');
+    if (!container) { dynamicMetricValues = {}; return; }
     container.innerHTML = "";
     dynamicMetricValues = {};
 
@@ -940,8 +941,6 @@ window.logStravaActivity = (activity) => {
     const typeExists = logData.types.includes(matchedType);
 
     document.getElementById('modalDate').value = activity.date;
-    document.getElementById('modalHappiness').value = 5;
-    document.getElementById('happyVal').innerText = 5;
     document.getElementById('modalDetails').value = activity.name || '';
     window.setStrategy(false);
     buildCustomMetricsFormUI();
