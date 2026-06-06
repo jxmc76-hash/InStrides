@@ -1066,6 +1066,7 @@ window.saveCellValue = async (dateKey, field, value) => {
             logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: value } });
         }
     }
+    renderMatrix();
     try {
         await setDoc(doc(db, 'logs', LOG_ID), logData);
     } catch(err) {
@@ -1075,13 +1076,15 @@ window.saveCellValue = async (dateKey, field, value) => {
 
 window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     const newVal = !currentVal;
-    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned);
+    const existing = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE')
+                  || logData.entries.find(e => e.date === dateKey && !e.isPlanned);
     if (existing) {
         if (!existing.customMetricData) existing.customMetricData = {};
         existing.customMetricData[metricName] = newVal;
     } else {
         logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: newVal } });
     }
+    renderMatrix();
     await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
 window.toggleSettings = () => { document.getElementById('settingsMenu').classList.toggle('open'); };
