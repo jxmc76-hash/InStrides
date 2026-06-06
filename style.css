@@ -150,4 +150,16 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); }
 
+.help-container { max-width: 960px; margin: 0 auto; }
+.help-hero { text-align: center; padding: 40px 20px 50px; }
+.help-logo { height: 52px; margin-bottom: 16px; }
+.help-hero h2 { font-size: 1.8rem; font-weight: 900; margin-bottom: 10px; }
+.help-hero p { color: var(--text-muted); font-size: 0.95rem; }
+.help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.help-card { background: white; border-radius: 20px; border: 1px solid var(--border); padding: 28px; }
+.help-icon { font-size: 1.6rem; margin-bottom: 12px; }
+.help-card h3 { font-size: 0.9rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; color: var(--text-main); }
+.help-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+.help-card p b { color: var(--text-main); }
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

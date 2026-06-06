@@ -189,10 +189,10 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    document.getElementById('viewLog').classList.toggle('active', tab === 'log');
-    document.getElementById('viewInsights').classList.toggle('active', tab === 'insights');
-    document.getElementById('tabLog').classList.toggle('active', tab === 'log');
-    document.getElementById('tabInsights').classList.toggle('active', tab === 'insights');
+    ['log', 'insights', 'help'].forEach(t => {
+        document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
+        document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
+    });
     if (tab === 'insights') renderInsights();
 };
 

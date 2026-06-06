@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=74">
+    <link rel="stylesheet" href="style.css?v=75">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -45,6 +45,7 @@
                 <nav class="tab-nav">
                     <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Log</button>
                     <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
+                    <button id="tabHelp" class="tab-btn" onclick="window.switchTab('help')">Help</button>
                 </nav>
 
                 <div class="action-bar">
@@ -71,6 +72,69 @@
                         <tbody id="matrixBody"></tbody>
                     </table>
                   </div>
+                </div>
+            </div>
+
+            <div id="viewHelp" class="view-pane">
+                <div class="help-container">
+
+                    <div class="help-hero">
+                        <img src="logo.png" alt="InStrides" class="help-logo">
+                        <h2>Welcome to InStrides</h2>
+                        <p>Your personal fitness and wellbeing tracker. Here's everything you need to know.</p>
+                    </div>
+
+                    <div class="help-grid">
+
+                        <div class="help-card">
+                            <div class="help-icon">📋</div>
+                            <h3>Daily Log</h3>
+                            <p>The main view of your activity history, organised by week. Each row is a day. Click any tick (✓) to edit an entry, or click the week label to expand or collapse that week.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">➕</div>
+                            <h3>Log / Plan</h3>
+                            <p>Use the orange button to log a completed workout or plan a future one. Select a date, your mood, any custom metrics, the exercise type, and intensity. Planned entries show as <b>?</b> in the log — click them to mark as done.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">🏃</div>
+                            <h3>Exercise Types</h3>
+                            <p>Each exercise belongs to a category: <b>Distance</b> (e.g. Run, Swim), <b>Weight</b> (e.g. Gym), <b>Reps</b> (e.g. bodyweight), or <b>Other</b>. When logging, the relevant metric input appears automatically — distance in km, weight in kg, reps, or a 1–10 effort score.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">⚙️</div>
+                            <h3>Types</h3>
+                            <p>Manage your exercise types — add, rename, or delete them, and set their category. Your types appear as columns in the Daily Log.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">📊</div>
+                            <h3>Custom Metrics</h3>
+                            <p>Track anything beyond mood — sleep quality, nutrition, stress. Add a metric as a <b>Yes/No toggle</b> or a <b>1–10 slider</b>. These appear as extra columns in the log and feed into the Insights page. If you add one named <b>SLEEP</b>, it will appear automatically in the 10-day comparison.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">💡</div>
+                            <h3>Insights</h3>
+                            <p>Automatically generated from your data. See how your last 10 days compare to the prior 10, track distance covered over time, and watch your mood trend. The more you log, the more useful this becomes.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">🟠</div>
+                            <h3>Strava</h3>
+                            <p>Connect your Strava account once using the <b>Connect Strava</b> button. After that, click <b>✓ Strava</b> to pull in your latest activity and log it with one tap — date, distance and activity name are pre-filled for you.</p>
+                        </div>
+
+                        <div class="help-card">
+                            <div class="help-icon">😊</div>
+                            <h3>Mood Score</h3>
+                            <p>A daily 1–10 rating of how you feel. Logged alongside each workout entry. Tracked over time in Insights to help you spot patterns between exercise, sleep, and wellbeing.</p>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
