@@ -143,6 +143,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .rate-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 .btn-submit { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 15px; }
 .btn-delete { width: 100%; padding: 10px; background: #fee2e2; color: #ef4444; border: none; border-radius: 10px; font-weight: 700; font-size: 0.8rem; margin-bottom: 10px; cursor: pointer; }
+.btn-done { width: 100%; padding: 12px; background: #dcfce7; color: #16a34a; border: none; border-radius: 10px; font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; cursor: pointer; }
 .add-type-footer { display: flex; gap: 10px; margin-top: 15px; }
 .type-editor-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
 

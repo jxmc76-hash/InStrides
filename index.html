@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=89">
+    <link rel="stylesheet" href="style.css?v=90">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -247,6 +247,7 @@
 
                     <div class="modal-footer">
                         <button id="deleteEntryBtn" onclick="window.deleteEntry()" class="btn-delete" style="display:none;">Delete</button>
+                        <button id="markDoneBtn" onclick="window.markPlanDone()" class="btn-done" style="display:none;">✓ Mark as Done</button>
                         <button id="submitEntryBtn" onclick="window.saveExercise()" class="btn-submit">Save Entry</button>
                     </div>
                 </div>
@@ -315,7 +316,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=104"></script>
+    <script type="module" src="script.js?v=105"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

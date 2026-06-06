@@ -240,6 +240,7 @@ window.toggleDistanceRow = () => {
 window.showInputModal = () => {
     editingId = null;
     document.getElementById('deleteEntryBtn').style.display = "none";
+    document.getElementById('markDoneBtn').style.display = "none";
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalDetails').value = "";
     window.setStrategy(false);
@@ -272,6 +273,7 @@ window.editEntry = (id) => {
     if (!entry) return;
     editingId = id;
     document.getElementById('deleteEntryBtn').style.display = "block";
+    document.getElementById('markDoneBtn').style.display = entry.isPlanned ? "block" : "none";
     document.getElementById('modalDate').value = entry.date;
     document.getElementById('modalDetails').value = entry.details || "";
     window.setStrategy(!!entry.isPlanned);
@@ -296,6 +298,16 @@ window.quickCompletePlan = async (id) => {
     logData.entries[idx].happiness = 5;
     logData.entries[idx].mark = 2;
     logData.entries[idx].customMetricData = {};
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+};
+
+window.markPlanDone = async () => {
+    if (editingId === null) return;
+    const idx = logData.entries.findIndex(e => e.id === editingId);
+    if (idx === -1) return;
+    logData.entries[idx].isPlanned = false;
+    renderMatrix();
+    window.closeModal('inputModal');
     await setDoc(doc(db, "logs", LOG_ID), logData);
 };
 
@@ -956,7 +968,7 @@ const renderMatrix = () => {
             else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
             const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 displaySymbol = exercise.isPlanned ?
-                    `<div class="tick-cell plan cat-${cat}" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
+                    `<div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>` :
                     `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
             }
             row += `<td class="${exercise ? '' : 'empty-type-cell'}" ${exercise ? '' : `data-quick-date="${dateKey}" data-quick-type="${type}"`}>${displaySymbol}</td>`;
