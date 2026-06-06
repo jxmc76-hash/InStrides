@@ -21,9 +21,9 @@ let LOG_ID = null;
 let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [] };
 
 const TYPE_CATEGORIES = [
-    { value: 'cardio',      label: 'Cardio' },
-    { value: 'bodyweight',  label: 'Body Weight' },
-    { value: 'gym',         label: 'Gym' },
+    { value: 'cardio',      label: 'Distance' },
+    { value: 'bodyweight',  label: 'Reps' },
+    { value: 'gym',         label: 'Weight' },
     { value: 'other',       label: 'Other' },
 ];
 
