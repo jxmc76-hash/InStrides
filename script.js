@@ -700,12 +700,14 @@ const renderWeekCompare = (completed) => {
     const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
     const sum = arr => arr.length ? arr.reduce((a,b)=>a+b,0) : null;
 
+    const toTitle = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
     const rows = [];
 
     // Slider custom metrics
     logData.customMetrics.filter(m => m.type === 'slider').forEach(m => {
         const vals = w => w.filter(e => e.customMetricData?.[m.name] != null).map(e => e.customMetricData[m.name]);
-        rows.push({ label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), tw: avg(vals(p1)), lw: avg(vals(p2)), fmt: v => v.toFixed(1), suffix: '/10' });
+        rows.push({ label: toTitle(m.name), tw: avg(vals(p1)), lw: avg(vals(p2)), fmt: v => v.toFixed(1), suffix: '/10' });
     });
 
     // Per exercise type
@@ -737,7 +739,7 @@ const renderWeekCompare = (completed) => {
             fmtFn = v => v.toFixed(1); suffix = '/10';
         }
         if (tw != null || lw != null) {
-            rows.push({ label: type, tw, lw, fmt: fmtFn, suffix });
+            rows.push({ label: toTitle(type), tw, lw, fmt: fmtFn, suffix });
         }
     });
 
