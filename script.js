@@ -21,7 +21,7 @@ enableIndexedDbPersistence(db).catch(err => {
 const auth = getAuth(app);
 const functions = getFunctions(app);
 
-setPersistence(auth, browserLocalPersistence);
+setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
 let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [] };
