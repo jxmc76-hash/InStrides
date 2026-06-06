@@ -1065,7 +1065,11 @@ window.saveCellValue = async (dateKey, field, value) => {
             logData.entries.push({ id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: { [metricName]: value } });
         }
     }
-    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    try {
+        await setDoc(doc(db, 'logs', LOG_ID), logData);
+    } catch(err) {
+        console.error('saveCellValue setDoc failed:', err);
+    }
 };
 
 window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
