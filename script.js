@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, enableIndexedDbPersistence, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"; // v96
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, browserLocalPersistence, setPersistence, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, browserLocalPersistence, setPersistence, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 const firebaseConfig = {
@@ -71,6 +71,17 @@ window.toggleResetView = (wantsReset) => {
         document.getElementById('btnMainAuth').innerText = "Sign In";
         document.getElementById('btnSubAuth').style.display = 'block';
         document.getElementById('btnResetLink').innerText = "Forgot Password?";
+    }
+};
+
+window.handleGoogleSignIn = async () => {
+    const errorEl = document.getElementById('authError');
+    errorEl.innerText = "";
+    try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err) {
+        errorEl.style.color = "#ef4444";
+        errorEl.innerText = err.message.replace("Firebase: ", "");
     }
 };
 
