@@ -397,7 +397,7 @@ const renderTrailingCharts = (completed) => {
                     borderWidth: 2.5,
                     pointRadius: 3,
                     pointBackgroundColor: color,
-                    fill: true,
+                    fill: false,
                     tension: 0.4,
                 }]
             },
