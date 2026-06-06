@@ -257,6 +257,16 @@ window.showInputModal = () => {
     window.toggleDistanceRow();
 };
 
+window.quickAddEntry = (dateKey, type) => {
+    window.showInputModal();
+    document.getElementById('modalDate').value = dateKey;
+    const typeSelect = document.getElementById('modalType');
+    if (type && [...typeSelect.options].some(o => o.value === type)) {
+        typeSelect.value = type;
+    }
+    window.toggleDistanceRow();
+};
+
 window.editEntry = (id) => {
     const entry = logData.entries.find(e => e.id === id);
     if (!entry) return;
@@ -932,7 +942,7 @@ const renderMatrix = () => {
                     `<div class="tick-cell plan cat-${cat}" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
                     `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
             }
-            row += `<td>${displaySymbol}</td>`;
+            row += `<td class="${exercise ? '' : 'empty-type-cell'}" ${exercise ? '' : `onclick="window.quickAddEntry('${dateKey}','${type}')"`}>${displaySymbol}</td>`;
         });
         weekRowsHTML += row + `</tr>`;
 
