@@ -710,10 +710,12 @@ const renderMatrix = () => {
     const header = document.getElementById('headerRow');
     if (!body || !header) return;
     
+    const catOrder = { cardio: 0, gym: 1, bodyweight: 2, other: 3 };
+    const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
+
     let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Mood</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
-    // Injected .dynamic-type-th class identifier on exercise rows
-    logData.types.forEach(t => { headerHTML += `<th class="dynamic-type-th">${t}</th>`; });
+    sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th">${t}</th>`; });
     header.innerHTML = headerHTML;
 
     const entriesByDate = {};
@@ -750,7 +752,7 @@ const renderMatrix = () => {
             html += `<td class="col-stat">${cell}</td>`;
         });
 
-        logData.types.forEach(type => {
+        sortedTypes.forEach(type => {
             const count = acc.typeDays[type] || 0;
             const m = acc.typeMetric?.[type];
             let cell = count > 0 ? count + 'd' : '';
@@ -773,8 +775,8 @@ const renderMatrix = () => {
         days: 0,
         happiness: [],
         customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
-        typeDays: Object.fromEntries(logData.types.map(t => [t, 0])),
-        typeMetric: Object.fromEntries(logData.types.map(t => [t, { values: [], unit: '' }])),
+        typeDays: Object.fromEntries(sortedTypes.map(t => [t, 0])),
+        typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '' }])),
     });
 
     body.innerHTML = "";
@@ -800,7 +802,7 @@ const renderMatrix = () => {
             const v = activeData.customVals[m.name];
             if (v !== undefined && v !== null) weekAcc.customVals[m.name].push(v);
         });
-        logData.types.forEach(type => {
+        sortedTypes.forEach(type => {
             const ex = activeData.exercises[type];
             if (ex && ex.some(e => !e.isPlanned)) {
                 weekAcc.typeDays[type]++;
@@ -828,7 +830,7 @@ const renderMatrix = () => {
             row += `<td class="col-stat">${cellContent}</td>`;
         });
 
-        logData.types.forEach(type => {
+        sortedTypes.forEach(type => {
             const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
             let displaySymbol = '';
             if (exercise) {
