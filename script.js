@@ -320,48 +320,96 @@ window.deleteEntry = async () => {
 const chartInstances = {};
 const destroyChart = (id) => { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } };
 
-const renderHappinessChart = (completed) => {
-    destroyChart('happiness');
-    const canvas = document.getElementById('chartHappiness');
-    if (!canvas) return;
+const renderTrailingCharts = (completed) => {
+    const container = document.getElementById('trailingChartsContainer');
+    if (!container) return;
 
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 60);
-    const entries = completed
-        .filter(e => e.happiness && new Date(e.date) >= cutoff)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Destroy any previous trailing charts
+    Object.keys(chartInstances).filter(k => k.startsWith('trailing-')).forEach(k => destroyChart(k));
+    container.innerHTML = '';
 
-    if (entries.length < 2) {
-        canvas.parentElement.innerHTML = '<p class="neutral-msg" style="padding:10px 0">Log at least 2 days to see the trend.</p>';
-        return;
+    // Build daily lookup: date → { happiness, customMetricData }
+    const byDate = {};
+    completed.forEach(e => {
+        if (!byDate[e.date]) byDate[e.date] = { happiness: null, customVals: {} };
+        if (e.happiness) byDate[e.date].happiness = e.happiness;
+        if (e.customMetricData) Object.assign(byDate[e.date].customVals, e.customMetricData);
+    });
+
+    // Collect all dates in range (last 90 days)
+    const allDates = [];
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 89);
+    const today = new Date();
+    for (let d = new Date(cutoff); d <= today; d.setDate(d.getDate() + 1)) {
+        allDates.push(d.toISOString().split('T')[0]);
     }
 
-    const labels = entries.map(e => new Date(e.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
-    const data = entries.map(e => e.happiness);
-
-    chartInstances['happiness'] = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Mood',
-                data,
-                borderColor: '#ff5500',
-                backgroundColor: 'rgba(255,85,0,0.08)',
-                borderWidth: 2.5,
-                pointRadius: 4,
-                pointBackgroundColor: '#ff5500',
-                fill: true,
-                tension: 0.4,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
-                x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
+    // Build 10-day trailing average series for a value accessor
+    const trailingSeries = (accessor) => {
+        const points = { labels: [], data: [] };
+        allDates.forEach((dateStr, i) => {
+            const window = allDates.slice(Math.max(0, i - 9), i + 1);
+            const vals = window.map(d => accessor(byDate[d])).filter(v => v != null && v > 0);
+            if (vals.length >= 3) {
+                points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+                points.data.push(+(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
             }
-        }
+        });
+        return points;
+    };
+
+    const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
+
+    // Build list of slider metrics to chart: Mood first, then custom slider metrics
+    const sliders = [
+        { key: 'trailing-mood', label: 'Mood', accessor: d => d?.happiness },
+        ...logData.customMetrics
+            .filter(m => m.type === 'slider')
+            .map(m => ({ key: `trailing-${m.name}`, label: m.name.replace(/-/g, ' '), accessor: d => d?.customVals[m.name] }))
+    ];
+
+    sliders.forEach(({ key, label, accessor }, idx) => {
+        const { labels, data } = trailingSeries(accessor);
+        if (data.length < 2) return;
+
+        const color = colors[idx % colors.length];
+        const titleEl = document.createElement('div');
+        titleEl.className = 'insights-section-title';
+        titleEl.textContent = `${label} — 10-day trailing average`;
+        container.appendChild(titleEl);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-container';
+        const canvas = document.createElement('canvas');
+        canvas.id = key;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        chartInstances[key] = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label,
+                    data,
+                    borderColor: color,
+                    backgroundColor: color.replace(')', ',0.08)').replace('rgb', 'rgba'),
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: color,
+                    fill: true,
+                    tension: 0.4,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
+                }
+            }
+        });
     });
 };
 
@@ -597,7 +645,7 @@ const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
     renderWeekCompare(completed);
     renderDistanceChart(completed);
-    renderHappinessChart(completed);
+    renderTrailingCharts(completed);
 };
 
 const renderWeekCompare = (completed) => {
