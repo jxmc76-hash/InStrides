@@ -261,6 +261,150 @@ window.deleteEntry = async () => {
     }
 };
 
+const chartInstances = {};
+const destroyChart = (id) => { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } };
+
+const renderHappinessChart = (completed) => {
+    destroyChart('happiness');
+    const canvas = document.getElementById('chartHappiness');
+    if (!canvas) return;
+
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 60);
+    const entries = completed
+        .filter(e => e.happiness && new Date(e.date) >= cutoff)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (entries.length < 2) {
+        canvas.parentElement.innerHTML = '<p class="neutral-msg" style="padding:10px 0">Log at least 2 days to see the trend.</p>';
+        return;
+    }
+
+    const labels = entries.map(e => new Date(e.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+    const data = entries.map(e => e.happiness);
+
+    chartInstances['happiness'] = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Happiness',
+                data,
+                borderColor: '#ff5500',
+                backgroundColor: 'rgba(255,85,0,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#ff5500',
+                fill: true,
+                tension: 0.4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
+            }
+        }
+    });
+};
+
+const renderVolumeChart = (completed) => {
+    destroyChart('volume');
+    const canvas = document.getElementById('chartVolume');
+    if (!canvas) return;
+
+    const weeks = {};
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 84);
+    completed
+        .filter(e => e.type && e.type !== 'NONE' && new Date(e.date) >= cutoff)
+        .forEach(e => {
+            const w = getWeekStart(e.date);
+            weeks[w] = (weeks[w] || 0) + 1;
+        });
+
+    const sorted = Object.keys(weeks).sort();
+    if (sorted.length < 2) {
+        canvas.parentElement.innerHTML = '<p class="neutral-msg" style="padding:10px 0">Log workouts across multiple weeks to see volume trends.</p>';
+        return;
+    }
+
+    const labels = sorted.map(w => new Date(w).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+    const data = sorted.map(w => weeks[w]);
+
+    chartInstances['volume'] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Workouts',
+                data,
+                backgroundColor: 'rgba(255,85,0,0.75)',
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+};
+
+const renderCorrelationCharts = (completed) => {
+    const section = document.getElementById('correlationChartsSection');
+    const container = document.getElementById('correlationCharts');
+    if (!section || !container) return;
+
+    const sliders = logData.customMetrics.filter(m => m.type === 'slider');
+    if (sliders.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    Object.keys(chartInstances).filter(k => k.startsWith('corr-')).forEach(k => destroyChart(k));
+    container.innerHTML = '';
+
+    sliders.forEach(m => {
+        const points = completed.filter(e => e.happiness && e.customMetricData && e.customMetricData[m.name] !== undefined)
+            .map(e => ({ x: e.customMetricData[m.name], y: e.happiness }));
+        if (points.length < 3) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chart-container';
+        wrapper.style.marginBottom = '20px';
+        const title = document.createElement('h3');
+        title.textContent = m.name.replace(/-/g, ' ') + ' vs Happiness';
+        const canvas = document.createElement('canvas');
+        canvas.id = `corr-canvas-${m.name}`;
+        wrapper.appendChild(title);
+        wrapper.appendChild(canvas);
+        container.appendChild(wrapper);
+
+        chartInstances[`corr-${m.name}`] = new Chart(canvas, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: m.name,
+                    data: points,
+                    backgroundColor: 'rgba(255,85,0,0.6)',
+                    pointRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: m.name.replace(/-/g, ' '), font: { size: 11 } }, min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                    y: { title: { display: true, text: 'Happiness', font: { size: 11 } }, min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }
+                }
+            }
+        });
+    });
+};
+
 const getWeekStart = (date) => {
     const d = new Date(date);
     const day = d.getDay();
@@ -400,6 +544,9 @@ const renderInsights = () => {
     renderWeeklySummary(completed);
     renderStreaks(completed);
     renderPersonalRecords(completed);
+    renderHappinessChart(completed);
+    renderVolumeChart(completed);
+    renderCorrelationCharts(completed);
 
     if (completed.length < 3) {
         storyContainer.innerHTML = `<p class="neutral-msg">Gathering a larger history baseline (minimum 3 logs) to process mathematical correlations.</p>`;
