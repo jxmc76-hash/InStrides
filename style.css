@@ -144,8 +144,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .week-summary-row td:not(.week-summary-label) { color: var(--text-muted); font-weight: 700; }
 .week-toggle-icon { font-size: 0.6rem; margin-right: 6px; }
 
-.btn-strava { background: #fc4c02; color: white; }
-.btn-strava:hover { background: #e04000; }
+.btn-strava { background: #242428; color: white; }
+.btn-strava:hover { background: #3a3a3f; }
 
 .strava-activity-card { background: #fff7f5; border: 1px solid #ffd5c0; border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; }
 .strava-type { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #ff5500; margin-bottom: 6px; }
