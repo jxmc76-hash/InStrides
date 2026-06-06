@@ -385,13 +385,9 @@ const renderTrailingCharts = (completed) => {
 
     const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
 
-    // Build list of slider metrics to chart: Mood first, then custom slider metrics
-    const sliders = [
-        { key: 'trailing-mood', label: 'Mood', accessor: d => d?.happiness },
-        ...logData.customMetrics
-            .filter(m => m.type === 'slider')
-            .map(m => ({ key: `trailing-${m.name}`, label: m.name.replace(/-/g, ' '), accessor: d => d?.customVals[m.name] }))
-    ];
+    const sliders = logData.customMetrics
+        .filter(m => m.type === 'slider')
+        .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name] }));
 
     sliders.forEach(({ key, label, accessor }, idx) => {
         const { labels, data } = trailingSeries(accessor);
