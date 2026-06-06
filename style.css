@@ -173,7 +173,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .cell-empty { color: #d0d0d0; font-size: 1rem; font-weight: 700; }
 .editable-cell:hover .cell-empty { color: var(--primary); }
 
-.cell-popover { position: absolute; background: white; border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 500; min-width: 240px; }
+.cell-popover { position: fixed; background: white; border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 500; min-width: 240px; }
 .pop-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
 .pop-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .pop-btn { width: 34px; height: 34px; border: 1.5px solid var(--border); border-radius: 8px; background: white; font-weight: 800; font-size: 0.8rem; cursor: pointer; color: var(--text-main); }

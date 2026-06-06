@@ -1041,8 +1041,10 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
     const pw = popover.offsetWidth;
     let left = rect.left + rect.width / 2 - pw / 2;
     left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+    let top = rect.bottom + 6;
+    if (top + popover.offsetHeight > window.innerHeight - 8) top = rect.top - popover.offsetHeight - 6;
     popover.style.left = left + 'px';
-    popover.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+    popover.style.top = top + 'px';
 };
 
 window.saveCellValue = async (dateKey, field, value) => {
