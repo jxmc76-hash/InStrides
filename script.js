@@ -598,40 +598,53 @@ const renderWeekCompare = (completed) => {
     const el = document.getElementById('weekCompare');
     if (!el) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
     const thisWeekStart = getWeekStart(todayStr);
-    const lastWeekDate = new Date(thisWeekStart); lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-    const lastWeekStart = lastWeekDate.toISOString().split('T')[0];
-    const lastWeekEnd = new Date(thisWeekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
-    const lastWeekEndStr = lastWeekEnd.toISOString().split('T')[0];
+
+    const lastWeekStartDate = new Date(thisWeekStart);
+    lastWeekStartDate.setDate(lastWeekStartDate.getDate() - 7);
+    const lastWeekStart = lastWeekStartDate.toISOString().split('T')[0];
+
+    const lastWeekEndDate = new Date(thisWeekStart);
+    lastWeekEndDate.setDate(lastWeekEndDate.getDate() - 1);
+    const lastWeekEndStr = lastWeekEndDate.toISOString().split('T')[0];
 
     const thisWeek = completed.filter(e => e.date >= thisWeekStart && e.date <= todayStr);
     const lastWeek = completed.filter(e => e.date >= lastWeekStart && e.date <= lastWeekEndStr);
 
-    const calcAvg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
-    const totalDist = entries => entries.filter(e => e.distance).reduce((s,e) => s + e.distance, 0);
-    const workouts = entries => entries.filter(e => e.type && e.type !== 'NONE').length;
-    const avgMood = entries => calcAvg(entries.filter(e=>e.happiness).map(e=>e.happiness));
-    const distUnit = completed.find(e=>e.distanceUnit)?.distanceUnit || 'km';
+    const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+    const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
 
-    const metrics = [
-        { label: 'Workouts', thisVal: workouts(thisWeek), lastVal: workouts(lastWeek), fmt: v => v },
-        { label: 'Avg Mood', thisVal: avgMood(thisWeek), lastVal: avgMood(lastWeek), fmt: v => v != null ? v.toFixed(1) : '-' },
-        { label: `Distance (${distUnit})`, thisVal: totalDist(thisWeek), lastVal: totalDist(lastWeek), fmt: v => v > 0 ? v.toFixed(1) : '-' },
+    const weekWorkouts = w => w.filter(e => e.type && e.type !== 'NONE').length;
+    const weekMood = w => avg(w.filter(e => e.happiness).map(e => e.happiness));
+    const weekDist = w => w.filter(e => e.distance > 0).reduce((s,e) => s + e.distance, 0);
+
+    const fmt = (val, type) => {
+        if (val === null || val === undefined) return '—';
+        if (type === 'mood') return val.toFixed(1);
+        if (type === 'dist') return val > 0 ? val.toFixed(1) : '—';
+        return String(val);
+    };
+
+    const rows = [
+        { label: 'Workouts', tw: weekWorkouts(thisWeek), lw: weekWorkouts(lastWeek), type: 'count' },
+        { label: 'Avg Mood', tw: weekMood(thisWeek), lw: weekMood(lastWeek), type: 'mood' },
+        { label: `Distance (${distUnit})`, tw: weekDist(thisWeek), lw: weekDist(lastWeek), type: 'dist' },
     ];
 
     el.innerHTML = `
         <div class="compare-header"><span></span><span>This week</span><span>Last week</span></div>
-        ${metrics.map(m => {
-            const tw = m.fmt(m.thisVal);
-            const lw = m.fmt(m.lastVal);
-            const up = m.thisVal != null && m.lastVal != null && m.thisVal > m.lastVal;
-            const down = m.thisVal != null && m.lastVal != null && m.thisVal < m.lastVal;
-            const arrow = up ? '<span class="compare-arrow up">↑</span>' : down ? '<span class="compare-arrow down">↓</span>' : '';
+        ${rows.map(r => {
+            const twStr = fmt(r.tw, r.type);
+            const lwStr = fmt(r.lw, r.type);
+            const up = r.tw != null && r.lw != null && r.tw > r.lw;
+            const dn = r.tw != null && r.lw != null && r.tw < r.lw;
+            const arrow = up ? '<span class="compare-arrow up">↑</span>' : dn ? '<span class="compare-arrow down">↓</span>' : '';
             return `<div class="compare-row">
-                <span class="compare-label">${m.label}</span>
-                <span class="compare-this">${tw}${arrow}</span>
-                <span class="compare-last">${lw}</span>
+                <span class="compare-label">${r.label}</span>
+                <span class="compare-this">${twStr}${arrow}</span>
+                <span class="compare-last">${lwStr}</span>
             </div>`;
         }).join('')}
     `;
@@ -653,7 +666,12 @@ const renderDistanceChart = (completed) => {
 
     const sorted = Object.keys(weeks).sort();
     if (sorted.length < 1) {
-        canvas.parentElement.innerHTML = '<p class="neutral-msg" style="padding:10px 0">Log distance for cardio activities to see this chart.</p>';
+        canvas.style.display = 'none';
+        const msg = document.createElement('p');
+        msg.className = 'neutral-msg';
+        msg.style.padding = '10px 0';
+        msg.textContent = 'Log distance for Distance-type activities to see this chart.';
+        canvas.parentElement.appendChild(msg);
         return;
     }
 
