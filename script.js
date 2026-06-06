@@ -737,7 +737,7 @@ const renderMatrix = () => {
 
         if (dayOfWeek === 1) {
             body.innerHTML += emitWeekSummary(weekAcc);
-            body.innerHTML += `<tr style="background:#f8f7f5; height:6px;"><td colspan="100"></td></tr>`;
+            body.innerHTML += `<tr style="height:16px;"><td colspan="100"></td></tr>`;
             weekAcc = freshAcc();
         }
     }
