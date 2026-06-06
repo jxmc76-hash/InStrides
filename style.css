@@ -113,8 +113,10 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .add-type-footer { display: flex; gap: 10px; margin-top: 15px; }
 .type-editor-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
 
-.week-summary-row td { background: #fafafa; border-top: 2px solid var(--border); border-bottom: none; }
-.week-summary-label { color: var(--text-muted) !important; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-.week-summary-pill { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; display: inline-block; margin: 0 auto; }
+.week-summary-row td { background: #fafafa; border-top: 2px solid var(--border); border-bottom: none; cursor: pointer; }
+.week-summary-row:hover td { background: #f3f3f3; }
+.week-summary-label { color: var(--text-muted) !important; font-weight: 700; }
+.week-summary-row td:not(.week-summary-label) { color: var(--text-muted); font-weight: 700; }
+.week-toggle-icon { font-size: 0.6rem; margin-right: 6px; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

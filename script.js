@@ -645,34 +645,26 @@ const renderMatrix = () => {
     const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
     const futureBuffer = new Date(); futureBuffer.setDate(futureBuffer.getDate() + 5);
 
-    const emitWeekSummary = (acc) => {
+    const emitWeekSummary = (acc, weekId) => {
         if (acc.days === 0) return '';
-        let html = `<tr class="week-summary-row"><td class="col-date week-summary-label">Week Total</td>`;
-
-        // Happiness avg
         const happyAvg = acc.happiness.length ? (acc.happiness.reduce((a,b)=>a+b,0)/acc.happiness.length).toFixed(1) : '';
-        html += `<td class="col-stat"><div class="week-summary-pill">${happyAvg}</div></td>`;
+        let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> Week Total</td>
+            <td class="col-stat">${happyAvg}</td>`;
 
-        // Custom metrics
         logData.customMetrics.forEach(m => {
             const vals = acc.customVals[m.name] || [];
             let cell = '';
             if (vals.length) {
-                if (m.type === 'slider') {
-                    const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
-                    cell = `<div class="week-summary-pill">${avg}</div>`;
-                } else {
-                    const count = vals.filter(v=>v===true).length;
-                    cell = count > 0 ? `<div class="week-summary-pill">${count}d</div>` : '';
-                }
+                if (m.type === 'slider') cell = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+                else { const count = vals.filter(v=>v===true).length; cell = count > 0 ? `${count}d` : ''; }
             }
             html += `<td class="col-stat">${cell}</td>`;
         });
 
-        // Types: active days count
         logData.types.forEach(type => {
             const count = acc.typeDays[type] || 0;
-            html += `<td>${count > 0 ? `<div class="week-summary-pill">${count}d</div>` : ''}</td>`;
+            html += `<td>${count > 0 ? count + 'd' : ''}</td>`;
         });
 
         html += `</tr>`;
@@ -688,6 +680,9 @@ const renderMatrix = () => {
 
     body.innerHTML = "";
     let weekAcc = freshAcc();
+    let weekId = null;
+    let weekRowsHTML = '';
+    let allHTML = '';
 
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
@@ -695,10 +690,11 @@ const renderMatrix = () => {
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
 
+        if (!weekId) weekId = dateKey;
+
         const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
 
-        // Accumulate for weekly summary
         weekAcc.days++;
         if (activeData.happiness) weekAcc.happiness.push(activeData.happiness);
         logData.customMetrics.forEach(m => {
@@ -710,7 +706,7 @@ const renderMatrix = () => {
             if (ex && ex.some(e => !e.isPlanned)) weekAcc.typeDays[type]++;
         });
 
-        let row = `<tr>
+        let row = `<tr class="week-day-row" data-week="${weekId}" style="display:none">
             <td class="col-date">${displayDate}</td>
             <td class="col-stat">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : ''}</td>`;
 
@@ -733,18 +729,17 @@ const renderMatrix = () => {
             }
             row += `<td>${displaySymbol}</td>`;
         });
-        body.innerHTML += row + `</tr>`;
+        weekRowsHTML += row + `</tr>`;
 
         if (dayOfWeek === 1) {
-            body.innerHTML += emitWeekSummary(weekAcc);
-            body.innerHTML += `<tr style="height:16px;"><td colspan="100"></td></tr>`;
-            weekAcc = freshAcc();
+            allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML + `<tr style="height:16px;"><td colspan="100"></td></tr>`;
+            weekAcc = freshAcc(); weekId = null; weekRowsHTML = '';
         }
     }
-    // Emit summary for any trailing partial week at the bottom
     if (weekAcc.days > 0) {
-        body.innerHTML += emitWeekSummary(weekAcc);
+        allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML;
     }
+    body.innerHTML = allHTML;
 };
 
 // --- GENERAL CLOSURES & UTILITIES ---
@@ -784,4 +779,11 @@ window.removeType = async (idx) => {
     }
 };
 window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+window.toggleWeek = (weekId) => {
+    const rows = document.querySelectorAll(`.week-day-row[data-week="${weekId}"]`);
+    const icon = document.getElementById(`icon-${weekId}`);
+    const isHidden = rows.length > 0 && rows[0].style.display === 'none';
+    rows.forEach(r => r.style.display = isHidden ? '' : 'none');
+    if (icon) icon.textContent = isHidden ? '▼' : '▶';
+};
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
