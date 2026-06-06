@@ -784,6 +784,7 @@ const renderMatrix = () => {
     let weekId = null;
     let weekRowsHTML = '';
     let allHTML = '';
+    let firstWeekId = null;
 
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
@@ -791,7 +792,7 @@ const renderMatrix = () => {
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
 
-        if (!weekId) weekId = dateKey;
+        if (!weekId) { weekId = dateKey; if (!firstWeekId) firstWeekId = weekId; }
 
         const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
@@ -858,6 +859,7 @@ const renderMatrix = () => {
         allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML;
     }
     body.innerHTML = allHTML;
+    if (firstWeekId) window.toggleWeek(firstWeekId);
 };
 
 // --- STRAVA INTEGRATION ---
