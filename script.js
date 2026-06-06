@@ -337,7 +337,7 @@ const renderHappinessChart = (completed) => {
         data: {
             labels,
             datasets: [{
-                label: 'Happiness',
+                label: 'Mood',
                 data,
                 borderColor: '#ff5500',
                 backgroundColor: 'rgba(255,85,0,0.08)',
@@ -619,7 +619,7 @@ const renderInsights = () => {
         glanceEl.innerHTML = [
             { label: 'Total Workouts', val: workCount || '-' },
             { label: 'Current Streak', val: currentStreak ? `${currentStreak}d` : '-' },
-            { label: 'Avg Happiness', val: avgHappy },
+            { label: 'Avg Mood', val: avgHappy },
             { label: 'Top Activity', val: topType ? `${topType[0]}` : '-' },
         ].map(c => `<div class="stat-card"><label>${c.label}</label><div class="stat-val">${c.val}</div></div>`).join('');
     }
@@ -641,7 +641,7 @@ const renderInsights = () => {
     const exOn = calcAvg(happyOn), exOff = calcAvg(happyOff);
     if (exOn && exOff && Math.abs(exOn-exOff) > 0.3) {
         const better = exOn > exOff ? 'higher' : 'lower';
-        stories.push(`On days you exercise, your happiness averages <b>${exOn.toFixed(1)}</b> — ${better} than rest days (<b>${exOff.toFixed(1)}</b>).`);
+        stories.push(`On days you exercise, your mood averages <b>${exOn.toFixed(1)}</b> — ${better} than rest days (<b>${exOff.toFixed(1)}</b>).`);
     }
 
     sliders.forEach(m => {
@@ -651,7 +651,7 @@ const renderInsights = () => {
         if (hAvg && lAvg && Math.abs(hAvg-lAvg) > 0.3) {
             const name = m.name.replace(/-/g,' ');
             const dir = hAvg > lAvg ? 'higher' : 'lower';
-            stories.push(`When your <b>${name}</b> score is high, your happiness is ${dir} on average (<b>${hAvg.toFixed(1)}</b> vs <b>${lAvg.toFixed(1)}</b>).`);
+            stories.push(`When your <b>${name}</b> score is high, your mood is ${dir} on average (<b>${hAvg.toFixed(1)}</b> vs <b>${lAvg.toFixed(1)}</b>).`);
         }
     });
 
@@ -666,7 +666,7 @@ const renderMatrix = () => {
     const header = document.getElementById('headerRow');
     if (!body || !header) return;
     
-    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Happiness</th>`;
+    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Mood</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
     // Injected .dynamic-type-th class identifier on exercise rows
     logData.types.forEach(t => { headerHTML += `<th class="dynamic-type-th">${t}</th>`; });

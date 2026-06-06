@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=68">
+    <link rel="stylesheet" href="style.css?v=69">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -64,7 +64,7 @@
                         <thead>
                             <tr id="headerRow">
                                 <th class="col-date">Date</th>
-                                <th class="col-stat">Happiness</th>
+                                <th class="col-stat">Mood</th>
                             </tr>
                         </thead>
                         <tbody id="matrixBody"></tbody>
@@ -83,7 +83,7 @@
                     <!-- Charts -->
                     <div class="insights-charts-row">
                         <div>
-                            <div class="insights-section-title">Happiness Over Time</div>
+                            <div class="insights-section-title">Mood Over Time</div>
                             <div class="chart-container"><canvas id="chartHappiness"></canvas></div>
                         </div>
                         <div>
@@ -94,7 +94,7 @@
 
                     <!-- Correlation Discoveries (only shown if custom slider metrics exist) -->
                     <div id="correlationSection" style="display:none">
-                        <div class="insights-section-title">What affects your happiness</div>
+                        <div class="insights-section-title">What affects your mood</div>
                         <div id="correlationStories" class="story-stack"></div>
                     </div>
 
@@ -124,7 +124,7 @@
                     
                     <div id="performanceMetrics">
                         <div class="input-row highlight-box">
-                            <label>Daily Happiness (1-10)</label>
+                            <label>Daily Mood (1-10)</label>
                             <div class="slider-row">
                                 <input type="range" id="modalHappiness" min="1" max="10" step="1" oninput="document.getElementById('happyVal').innerText = this.value">
                                 <span id="happyVal" class="score-display">5</span>
