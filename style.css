@@ -61,12 +61,17 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 
 /* Distinct Font Color for Exercise Type Headings */
 .dynamic-type-th { color: var(--primary); }
+.dynamic-type-th.cat-cardio,  .tick-cell.cat-cardio  { color: #ff5500; }
+.dynamic-type-th.cat-gym,     .tick-cell.cat-gym     { color: #6366f1; }
+.dynamic-type-th.cat-bodyweight, .tick-cell.cat-bodyweight { color: #10b981; }
+.dynamic-type-th.cat-time,    .tick-cell.cat-time    { color: #3b82f6; }
+.dynamic-type-th.cat-other,   .tick-cell.cat-other   { color: #8a8a8a; }
 
 /* Interactive Cells */
 .tick-cell { font-size: 1.4rem; font-weight: 900; cursor: pointer; transition: transform 0.1s ease; margin: 0 auto; width: max-content; }
 .tick-cell.done { color: var(--primary); }
 .tick-cell.plan { color: var(--text-muted); background: white; border: 2.5px dashed var(--text-muted); border-radius: 6px; width: 28px; height: 28px; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.happy-pill { background: #f1f5f9; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; margin: 0 auto; font-size: 0.8rem; }
+.happy-pill { background: #f1f5f9; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; margin: 0 auto; font-size: 0.9rem; }
 
 /* Insights Section Titles */
 .insights-section-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin: 30px 0 12px 0; }
@@ -138,11 +143,13 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .distance-input-row input { flex: 1; }
 .distance-input-row select { width: 70px; }
 
-.week-summary-row td { background: #fafafa; border-top: 2px solid var(--border); border-bottom: none; cursor: pointer; }
-.week-summary-row:hover td { background: #f3f3f3; }
-.week-summary-label { color: var(--text-muted) !important; font-weight: 700; }
+.week-summary-row td { background: #fef6f2; border-top: 3px solid var(--primary); border-bottom: 2px solid #fde8df; cursor: pointer; }
+.week-summary-row td:first-child { border-left: 4px solid var(--primary); }
+.week-summary-row:hover td { background: #fdeee7; }
+.week-summary-label { color: var(--primary) !important; font-weight: 800; }
 .week-summary-row td:not(.week-summary-label) { color: var(--text-muted); font-weight: 700; }
 .week-toggle-icon { font-size: 0.6rem; margin-right: 6px; }
+.alt-row td { background: #fafcff; }
 
 .btn-strava { background: #242428; color: white; }
 .btn-strava:hover { background: #3a3a3f; }
@@ -179,5 +186,21 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .pop-btn { width: 34px; height: 34px; border: 1.5px solid var(--border); border-radius: 8px; background: white; font-weight: 800; font-size: 0.8rem; cursor: pointer; color: var(--text-main); }
 .pop-btn:hover { border-color: var(--primary); color: var(--primary); }
 .pop-btn-active { background: var(--primary); color: white; border-color: var(--primary); }
+
+.chart-empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.chart-empty-state .chart-empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.chart-empty-state p { font-size: 0.85rem; font-weight: 600; }
+
+@media (max-width: 768px) {
+    .app-header { padding: 12px 16px; }
+    .header-main { flex-wrap: wrap; gap: 8px; }
+    .logo-lockup { flex: 1; min-width: 0; }
+    .logo-text { font-size: 1rem; }
+    .logo-img { height: 28px; }
+    .header-main > div:nth-child(2) { order: 3; width: 100%; justify-content: center; }
+    .tab-nav { margin: 0; }
+    .action-bar { order: 2; }
+    .content-area { padding: 16px; }
+}
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

@@ -370,14 +370,21 @@ const renderTrailingCharts = (completed) => {
 
     sliders.forEach(({ key, label, accessor }, idx) => {
         const { labels, data } = trailingSeries(accessor);
-        if (data.length < 2) return;
 
-        const color = colors[idx % colors.length];
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
         titleEl.textContent = `${label} — 10-day trailing average`;
         container.appendChild(titleEl);
 
+        if (data.length < 2) {
+            const wrap = document.createElement('div');
+            wrap.className = 'chart-container chart-empty-state';
+            wrap.innerHTML = `<div class="chart-empty-icon">📈</div><p>Log more ${label.toLowerCase()} entries to see the trend</p>`;
+            container.appendChild(wrap);
+            return;
+        }
+
+        const color = colors[idx % colors.length];
         const wrap = document.createElement('div');
         wrap.className = 'chart-container';
         const canvas = document.createElement('canvas');
@@ -405,7 +412,7 @@ const renderTrailingCharts = (completed) => {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                    y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' }, title: { display: true, text: 'Score (1–10)', font: { size: 11 }, color: '#8a8a8a' } },
                     x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
                 }
             }
@@ -765,7 +772,7 @@ const renderMatrix = () => {
 
     let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Mood</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
-    sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th">${t}</th>`; });
+    sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th cat-${getTypeCategory(t)}">${t}</th>`; });
     header.innerHTML = headerHTML;
 
     const entriesByDate = {};
@@ -836,6 +843,7 @@ const renderMatrix = () => {
     let weekRowsHTML = '';
     let allHTML = '';
     let firstWeekId = null;
+    let dayCounter = 0;
 
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
@@ -870,7 +878,9 @@ const renderMatrix = () => {
             }
         });
 
-        let row = `<tr class="week-day-row" data-week="${weekId}" style="display:none">
+        dayCounter++;
+        const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
+        let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
             <td class="col-date">${displayDate}</td>
             <td class="col-stat editable-cell" onclick="window.openCellEdit(event,'${dateKey}','mood',${activeData.happiness || 'null'})">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : '<div class="cell-empty">+</div>'}</td>`;
 
@@ -904,8 +914,8 @@ const renderMatrix = () => {
             else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
             const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 displaySymbol = exercise.isPlanned ?
-                    `<div class="tick-cell plan" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
-                    `<div class="tick-cell done" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
+                    `<div class="tick-cell plan cat-${cat}" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
+                    `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
             }
             row += `<td>${displaySymbol}</td>`;
         });
