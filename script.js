@@ -1004,6 +1004,9 @@ window.addEventListener('load', updateHeaderOffset);
 window.addEventListener('resize', updateHeaderOffset);
 
 window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+window.toggleSettings = () => { document.getElementById('settingsMenu').classList.toggle('open'); };
+window.closeSettings = () => { document.getElementById('settingsMenu').classList.remove('open'); };
+document.addEventListener('click', (e) => { if (!e.target.closest('.settings-dropdown')) window.closeSettings(); });
 window.toggleWeek = (weekId) => {
     const rows = document.querySelectorAll(`.week-day-row[data-week="${weekId}"]`);
     const icon = document.getElementById(`icon-${weekId}`);

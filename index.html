@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>In Strides</title>
     <link rel="icon" type="image/png" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=75">
+    <link rel="stylesheet" href="style.css?v=77">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -49,11 +49,17 @@
 
                 <div class="action-bar">
                     <button id="stravaBtn" onclick="window.handleStravaConnect()" class="nav-btn btn-strava">Connect Strava</button>
-                    <button onclick="window.showMetricModal()" class="nav-btn btn-secondary">Metrics</button>
-                    <button onclick="window.showTypeModal()" class="nav-btn btn-secondary">Types</button>
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Log / Plan</button>
-                    <button id="tabHelp" onclick="window.switchTab('help')" class="nav-btn btn-secondary">Help</button>
-                    <button onclick="window.handleSignOut()" class="nav-btn btn-secondary" style="color: var(--text-muted);">Sign Out</button>
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">+ Log</button>
+                    <div class="settings-dropdown">
+                        <button class="nav-btn btn-secondary settings-toggle" onclick="window.toggleSettings()">⚙ Settings</button>
+                        <div class="settings-menu" id="settingsMenu">
+                            <button onclick="window.showMetricModal(); window.closeSettings()">Custom Metrics</button>
+                            <button onclick="window.showTypeModal(); window.closeSettings()">Manage Types</button>
+                            <button onclick="window.switchTab('help'); window.closeSettings()">Help</button>
+                            <div class="settings-divider"></div>
+                            <button onclick="window.handleSignOut()" style="color:#ef4444">Sign Out</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -305,6 +311,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=76"></script>
+    <script type="module" src="script.js?v=77"></script>
 </body>
 </html>
