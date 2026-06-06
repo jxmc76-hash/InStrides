@@ -42,13 +42,15 @@
                     <h1 class="logo-text">INSTRIDES<span>.APP</span></h1>
                 </div>
                 
-                <nav class="tab-nav">
-                    <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Log</button>
-                    <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
-                </nav>
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Entry</button>
+                    <nav class="tab-nav">
+                        <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Log</button>
+                        <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
+                    </nav>
+                </div>
 
                 <div class="action-bar">
-                    <button onclick="window.showInputModal()" class="nav-btn btn-primary">Add Entry</button>
                     <div class="settings-dropdown">
                         <button class="nav-btn btn-secondary settings-toggle" onclick="window.toggleSettings()">⚙ Settings</button>
                         <div class="settings-menu" id="settingsMenu">
