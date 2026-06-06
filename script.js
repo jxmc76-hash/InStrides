@@ -191,8 +191,9 @@ window.setLocalBinMetric = (name, val) => {
 window.switchTab = (tab) => {
     ['log', 'insights', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
-        document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
+    document.getElementById('tabLog')?.classList.toggle('active', tab === 'log');
+    document.getElementById('tabInsights')?.classList.toggle('active', tab === 'insights');
     if (tab === 'insights') renderInsights();
 };
 
