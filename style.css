@@ -46,7 +46,7 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var
 th, td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
 
 /* Base header layout settings */
-th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; min-width: 115px; position: sticky; top: var(--header-h, 65px); z-index: 20; box-shadow: 0 1px 0 #f1f5f9; }
+th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; min-width: 115px; position: sticky; top: var(--header-h, 65px); z-index: 50; box-shadow: 0 2px 0 #f1f5f9; }
 
 /* Font Color for Metrics Headings */
 .col-stat, th:not(.dynamic-type-th) { color: var(--text-muted); }
@@ -120,7 +120,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .distance-input-row input { flex: 1; }
 .distance-input-row select { width: 70px; }
 
-.week-summary-row td { background: #fafafa; border-top: 2px solid var(--border); border-bottom: none; cursor: pointer; z-index: 1; position: relative; }
+.week-summary-row td { background: #fafafa; border-top: 2px solid var(--border); border-bottom: none; cursor: pointer; }
 .week-summary-row:hover td { background: #f3f3f3; }
 .week-summary-label { color: var(--text-muted) !important; font-weight: 700; }
 .week-summary-row td:not(.week-summary-label) { color: var(--text-muted); font-weight: 700; }
