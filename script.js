@@ -628,7 +628,6 @@ const renderWeekCompare = (completed) => {
     };
 
     const rows = [
-        { label: 'Workouts', tw: weekWorkouts(thisWeek), lw: weekWorkouts(lastWeek), type: 'count' },
         { label: 'Avg Mood', tw: weekMood(thisWeek), lw: weekMood(lastWeek), type: 'mood' },
         { label: `Distance (${distUnit})`, tw: weekDist(thisWeek), lw: weekDist(lastWeek), type: 'dist' },
     ];
