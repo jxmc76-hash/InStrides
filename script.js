@@ -203,7 +203,6 @@ window.setStrategy = (wantsPlanned) => {
     document.getElementById('stratPlan').classList.toggle('active', wantsPlanned);
     document.getElementById('stratDone').classList.toggle('active', !wantsPlanned);
     document.getElementById('performanceMetrics').style.display = wantsPlanned ? 'none' : 'block';
-    document.getElementById('intensityRow').style.display = wantsPlanned ? 'none' : 'flex';
     window.toggleDistanceRow();
 };
 
