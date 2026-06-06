@@ -126,7 +126,7 @@ const attachRealtimeListener = () => {
             renderMatrix();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
-            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [], entries: [] });
+            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [] });
         }
     });
 };
@@ -795,7 +795,7 @@ const renderMatrix = () => {
     const catOrder = { cardio: 0, gym: 1, bodyweight: 2, time: 3, other: 4 };
     const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
 
-    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Mood</th>`;
+    let headerHTML = `<th class="col-date">Date</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
     sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th cat-${getTypeCategory(t)}">${t}</th>`; });
     header.innerHTML = headerHTML;
@@ -817,12 +817,10 @@ const renderMatrix = () => {
 
     const emitWeekSummary = (acc, weekId) => {
         if (acc.days === 0) return '';
-        const happyAvg = acc.happiness.length ? (acc.happiness.reduce((a,b)=>a+b,0)/acc.happiness.length).toFixed(1) : '';
         const monDate = new Date(getWeekStart(weekId));
         const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
-            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>
-            <td class="col-stat">${happyAvg}</td>`;
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>`;
 
         logData.customMetrics.forEach(m => {
             const vals = acc.customVals[m.name] || [];
@@ -856,7 +854,6 @@ const renderMatrix = () => {
 
     const freshAcc = () => ({
         days: 0,
-        happiness: [],
         customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
         typeDays: Object.fromEntries(sortedTypes.map(t => [t, 0])),
         typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '' }])),
@@ -882,7 +879,6 @@ const renderMatrix = () => {
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
 
         weekAcc.days++;
-        if (activeData.happiness) weekAcc.happiness.push(activeData.happiness);
         logData.customMetrics.forEach(m => {
             const v = activeData.customVals[m.name];
             if (v !== undefined && v !== null) weekAcc.customVals[m.name].push(v);
@@ -906,8 +902,7 @@ const renderMatrix = () => {
         dayCounter++;
         const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date">${displayDate}</td>
-            <td class="col-stat editable-cell" onclick="window.openCellEdit(event,'${dateKey}','mood',${activeData.happiness || 'null'})">${activeData.happiness ? `<div class="happy-pill">${activeData.happiness}</div>` : '<div class="cell-empty">+</div>'}</td>`;
+            <td class="col-date">${displayDate}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
@@ -942,7 +937,7 @@ const renderMatrix = () => {
                     `<div class="tick-cell plan cat-${cat}" title="Planned item. Click to verify execution." onclick="window.quickCompletePlan(${exercise.id})">?</div>` :
                     `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
             }
-            row += `<td class="${exercise ? '' : 'empty-type-cell'}" ${exercise ? '' : `onclick="window.quickAddEntry('${dateKey}','${type}')"`}>${displaySymbol}</td>`;
+            row += `<td class="${exercise ? '' : 'empty-type-cell'}" ${exercise ? '' : `data-quick-date="${dateKey}" data-quick-type="${type}"`}>${displaySymbol}</td>`;
         });
         weekRowsHTML += row + `</tr>`;
 
@@ -956,6 +951,12 @@ const renderMatrix = () => {
     }
     body.innerHTML = allHTML;
     if (firstWeekId) window.toggleWeek(firstWeekId);
+
+    body.onclick = (e) => {
+        const td = e.target.closest('td[data-quick-date]');
+        if (!td) return;
+        window.quickAddEntry(td.dataset.quickDate, td.dataset.quickType);
+    };
 };
 
 // --- STRAVA INTEGRATION ---
