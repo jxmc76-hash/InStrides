@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=94">
+    <link rel="stylesheet" href="style.css?v=95">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -160,6 +160,14 @@
 
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
+
+                    <!-- Weekly recap -->
+                    <div class="insights-section-title">Weekly Recap</div>
+                    <div id="weeklyRecap" class="recap-card"></div>
+
+                    <!-- Achievements -->
+                    <div class="insights-section-title">Achievements</div>
+                    <div id="achievementsGrid" class="achievements-grid"></div>
 
                     <!-- This week vs last week -->
                     <div class="insights-section-title">Current Form</div>
@@ -317,7 +325,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=109"></script>
+    <script type="module" src="script.js?v=110"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

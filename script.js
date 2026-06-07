@@ -711,9 +711,105 @@ const _unused_renderPersonalRecords = (completed) => {
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
+    renderWeeklyRecap(completed);
+    renderAchievements(completed);
     renderWeekCompare(completed);
     renderDistanceChart(completed);
     renderTrailingCharts(completed);
+};
+
+const computeLongestStreak = (loggedDates) => {
+    const sorted = [...loggedDates].sort();
+    let longest = 0, current = 0, prev = null;
+    sorted.forEach(dateStr => {
+        if (prev) {
+            const diffDays = Math.round((new Date(dateStr) - new Date(prev)) / 86400000);
+            current = (diffDays === 1) ? current + 1 : 1;
+        } else {
+            current = 1;
+        }
+        longest = Math.max(longest, current);
+        prev = dateStr;
+    });
+    return longest;
+};
+
+const renderWeeklyRecap = (completed) => {
+    const el = document.getElementById('weeklyRecap');
+    if (!el) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const thisWeekStart = new Date(getWeekStart(todayStr));
+    const lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(thisWeekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+    const lwStartKey = lastWeekStart.toISOString().split('T')[0];
+    const lwEndKey = lastWeekEnd.toISOString().split('T')[0];
+
+    const weekEntries = completed.filter(e => e.date >= lwStartKey && e.date <= lwEndKey);
+    if (weekEntries.length === 0) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No data logged for last week yet.</p>`;
+        return;
+    }
+
+    const workouts = weekEntries.filter(e => e.type && e.type !== 'NONE');
+    const totalDistance = weekEntries.filter(e => e.distance > 0).reduce((s,e) => s + e.distance, 0);
+    const distUnit = weekEntries.find(e => e.distanceUnit)?.distanceUnit || 'km';
+    const daysLogged = new Set(weekEntries.map(e => e.date)).size;
+
+    const sliderAvgs = logData.customMetrics.filter(m => m.type === 'slider').map(m => {
+        const vals = weekEntries.filter(e => e.customMetricData?.[m.name] != null).map(e => e.customMetricData[m.name]);
+        if (!vals.length) return null;
+        const name = m.name.charAt(0) + m.name.slice(1).toLowerCase();
+        return { name, avg: (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) };
+    }).filter(Boolean);
+
+    const weekLabel = lastWeekStart.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+    el.innerHTML = `
+        <div class="recap-header">Week of ${weekLabel}</div>
+        <div class="recap-stats">
+            <div class="recap-stat"><span class="recap-num">${daysLogged}</span><span class="recap-label">days logged</span></div>
+            <div class="recap-stat"><span class="recap-num">${workouts.length}</span><span class="recap-label">workouts</span></div>
+            ${totalDistance > 0 ? `<div class="recap-stat"><span class="recap-num">${totalDistance.toFixed(1)}</span><span class="recap-label">${distUnit} covered</span></div>` : ''}
+            ${sliderAvgs.map(s => `<div class="recap-stat"><span class="recap-num">${s.avg}</span><span class="recap-label">avg ${s.name}</span></div>`).join('')}
+        </div>
+    `;
+};
+
+const ACHIEVEMENTS = [
+    { icon: '🏁', name: 'First Steps',     desc: 'Log your first workout',  check: s => s.totalWorkouts >= 1 },
+    { icon: '🔥', name: 'On a Roll',       desc: '7-day logging streak',    check: s => s.longestStreak >= 7 },
+    { icon: '💪', name: 'Iron Will',       desc: '30-day logging streak',   check: s => s.longestStreak >= 30 },
+    { icon: '📅', name: 'Regular',         desc: 'Log 25 different days',   check: s => s.totalDays >= 25 },
+    { icon: '🏃', name: 'Distance Runner', desc: 'Cover 50km total',        check: s => s.totalDistance >= 50 },
+    { icon: '🚀', name: 'Century',         desc: 'Cover 100km total',       check: s => s.totalDistance >= 100 },
+    { icon: '🎯', name: 'Half Century',    desc: 'Log 50 workouts',         check: s => s.totalWorkouts >= 50 },
+    { icon: '🏆', name: 'Centurion',       desc: 'Log 100 workouts',        check: s => s.totalWorkouts >= 100 },
+];
+
+const renderAchievements = (completed) => {
+    const el = document.getElementById('achievementsGrid');
+    if (!el) return;
+
+    const loggedDates = new Set(completed.map(e => e.date));
+    const workouts = completed.filter(e => e.type && e.type !== 'NONE');
+    const totalDistance = completed.filter(e => e.distance > 0).reduce((s,e) => s + e.distance, 0);
+
+    const stats = {
+        totalWorkouts: workouts.length,
+        totalDays: loggedDates.size,
+        totalDistance,
+        longestStreak: computeLongestStreak(loggedDates),
+    };
+
+    el.innerHTML = ACHIEVEMENTS.map(a => {
+        const unlocked = a.check(stats);
+        return `<div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">${a.icon}</div>
+            <div class="achievement-name">${a.name}</div>
+            <div class="achievement-desc">${a.desc}</div>
+        </div>`;
+    }).join('');
 };
 
 const renderWeekCompare = (completed) => {
