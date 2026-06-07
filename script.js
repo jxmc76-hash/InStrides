@@ -900,6 +900,8 @@ const renderMatrix = () => {
     let allHTML = '';
     let firstWeekId = null;
     let dayCounter = 0;
+    const currentWeekStart = getWeekStart(new Date().toISOString().split('T')[0]);
+    const expandWeekIds = new Set();
 
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
@@ -907,7 +909,11 @@ const renderMatrix = () => {
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
 
-        if (!weekId) { weekId = dateKey; if (!firstWeekId) firstWeekId = weekId; }
+        if (!weekId) {
+            weekId = dateKey;
+            if (!firstWeekId) firstWeekId = weekId;
+            if (getWeekStart(weekId) >= currentWeekStart) expandWeekIds.add(weekId);
+        }
 
         const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
@@ -967,9 +973,13 @@ const renderMatrix = () => {
             else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
             else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
             const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
-                displaySymbol = exercise.isPlanned ?
-                    `<div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>` :
-                    `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
+                if (exercise.isPlanned) {
+                    const noteText = (exercise.details || '').trim();
+                    const noteLabel = noteText ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>` : '';
+                    displaySymbol = `<div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>${noteLabel}`;
+                } else {
+                    displaySymbol = `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
+                }
             }
             row += `<td class="${exercise ? '' : 'empty-type-cell'}" ${exercise ? '' : `data-quick-date="${dateKey}" data-quick-type="${type}"`}>${displaySymbol}</td>`;
         });
@@ -984,7 +994,8 @@ const renderMatrix = () => {
         allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML;
     }
     body.innerHTML = allHTML;
-    if (firstWeekId) window.toggleWeek(firstWeekId);
+    expandWeekIds.forEach(wid => window.toggleWeek(wid));
+    if (expandWeekIds.size === 0 && firstWeekId) window.toggleWeek(firstWeekId);
 
     body.onclick = (e) => {
         const td = e.target.closest('td[data-quick-date]');

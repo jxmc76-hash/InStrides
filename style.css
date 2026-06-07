@@ -148,6 +148,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .type-editor-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
 
 .dist-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-top: 3px; }
+.plan-note { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); margin-top: 4px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: auto; margin-right: auto; cursor: default; }
 .type-category-badge { display: inline-block; background: #fff4ee; color: var(--primary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; margin: 8px 0 12px 0; border: 1px solid #ffd5c0; }
 .distance-input-row { display: flex; gap: 8px; }
 .distance-input-row input { flex: 1; }
