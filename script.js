@@ -972,6 +972,8 @@ const renderMatrix = () => {
     const dates = Object.keys(entriesByDate).sort((a,b) => new Date(b) - new Date(a));
     const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
     const futureBuffer = new Date(); futureBuffer.setDate(futureBuffer.getDate() + 5);
+    const latestEntryDate = dates.length > 0 ? new Date(dates[0]) : null;
+    if (latestEntryDate && latestEntryDate > futureBuffer) futureBuffer.setTime(latestEntryDate.getTime());
 
     const emitWeekSummary = (acc, weekId) => {
         if (acc.days === 0) return '';
