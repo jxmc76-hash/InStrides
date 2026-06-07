@@ -124,11 +124,37 @@ const attachRealtimeListener = () => {
             const data = snap.data();
             logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [] };
             renderMatrix();
+            renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
             setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [] });
         }
     });
+};
+
+// --- STREAK TRACKING ---
+const renderStreak = () => {
+    const badge = document.getElementById('streakBadge');
+    if (!badge) return;
+
+    const loggedDates = new Set();
+    logData.entries.forEach(e => { if (!e.isPlanned) loggedDates.add(e.date); });
+
+    let streak = 0;
+    const d = new Date();
+    const todayKey = d.toISOString().split('T')[0];
+    if (!loggedDates.has(todayKey)) d.setDate(d.getDate() - 1);
+    while (loggedDates.has(d.toISOString().split('T')[0])) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+    }
+
+    if (streak >= 2) {
+        badge.style.display = 'flex';
+        badge.innerHTML = `🔥 <span>${streak} day streak</span>`;
+    } else {
+        badge.style.display = 'none';
+    }
 };
 
 // --- DYNAMIC CUSTOM METRIC IMPLEMENTATIONS ---
