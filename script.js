@@ -977,7 +977,7 @@ const renderMatrix = () => {
             let cellContent = "";
             if (mVal !== undefined && mVal !== null) {
                 cellContent = m.type === 'slider'
-                    ? `<div class="happy-pill" style="background:#f1f5f9; color:#475569;">${mVal}</div>`
+                    ? `<div class="happy-pill">${mVal}</div>`
                     : (mVal ? '✅' : '❌');
             } else {
                 cellContent = `<div class="cell-empty">+</div>`;
