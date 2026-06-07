@@ -324,6 +324,7 @@ window.quickCompletePlan = async (id) => {
     logData.entries[idx].happiness = 5;
     logData.entries[idx].mark = 2;
     logData.entries[idx].customMetricData = {};
+    celebrate();
     await setDoc(doc(db, "logs", LOG_ID), logData);
 };
 
@@ -334,6 +335,7 @@ window.markPlanDone = async () => {
     logData.entries[idx].isPlanned = false;
     renderMatrix();
     window.closeModal('inputModal');
+    celebrate();
     await setDoc(doc(db, "logs", LOG_ID), logData);
 };
 
@@ -1242,7 +1244,22 @@ window.toggleWeek = (weekId) => {
     const rows = document.querySelectorAll(`.week-day-row[data-week="${weekId}"]`);
     const icon = document.getElementById(`icon-${weekId}`);
     const isHidden = rows.length > 0 && rows[0].style.display === 'none';
-    rows.forEach(r => r.style.display = isHidden ? '' : 'none');
+    rows.forEach(r => {
+        r.style.display = isHidden ? '' : 'none';
+        if (isHidden) {
+            r.classList.remove('row-reveal');
+            void r.offsetWidth;
+            r.classList.add('row-reveal');
+        }
+    });
     if (icon) icon.textContent = isHidden ? '▼' : '▶';
+};
+
+const celebrate = () => {
+    const el = document.createElement('div');
+    el.className = 'celebrate-burst';
+    el.textContent = '🎉';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
 };
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
