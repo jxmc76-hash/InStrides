@@ -24,7 +24,7 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {} };
 
 const TYPE_CATEGORIES = [
     { value: 'cardio',      label: 'Distance' },
@@ -122,12 +122,12 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {} };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
         } else {
-            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [] });
+            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [], dailyNotes: {} });
         }
     });
 };
@@ -953,7 +953,7 @@ const renderMatrix = () => {
     const catOrder = { cardio: 0, gym: 1, bodyweight: 2, time: 3, other: 4 };
     const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
 
-    let headerHTML = `<th class="col-date">Date</th>`;
+    let headerHTML = `<th class="col-date">Date</th><th class="col-note">Notes</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
     sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th cat-${getTypeCategory(t)}">${t}</th>`; });
     header.innerHTML = headerHTML;
@@ -980,7 +980,8 @@ const renderMatrix = () => {
         const monDate = new Date(getWeekStart(weekId));
         const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
-            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>`;
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>
+            <td class="col-note"></td>`;
 
         logData.customMetrics.forEach(m => {
             const vals = acc.customVals[m.name] || [];
@@ -1067,8 +1068,13 @@ const renderMatrix = () => {
 
         dayCounter++;
         const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
+        const dayNote = (logData.dailyNotes || {})[dateKey] || '';
+        const noteDisplay = dayNote
+            ? `<span class="note-text">${dayNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`
+            : `<span class="cell-empty">+</span>`;
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date">${displayDate}</td>`;
+            <td class="col-date">${displayDate}</td>
+            <td class="col-note editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteDisplay}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
@@ -1335,6 +1341,59 @@ window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     renderMatrix();
     await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
+window.openNoteEdit = (e, dateKey) => {
+    e.stopPropagation();
+    const popover = document.getElementById('cellPopover');
+    const content = document.getElementById('cellPopoverContent');
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentNote = (logData.dailyNotes || {})[dateKey] || '';
+
+    const safeNote = currentNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const clearBtn = currentNote ? `<button class="pop-btn note-clear-btn" onclick="window.saveNote('${dateKey}','')">Clear</button>` : '';
+    content.innerHTML = `
+        <div class="pop-label">Daily Note</div>
+        <textarea id="noteEditInput" maxlength="140" placeholder="What's on your mind? (140 chars)" rows="3" class="note-edit-textarea">${safeNote}</textarea>
+        <div class="note-edit-footer">
+            <span id="noteCharCount" class="note-char-count">${currentNote.length}/140</span>
+            <div style="display:flex;gap:6px;">${clearBtn}<button class="pop-btn pop-btn-active" onclick="window.saveNote('${dateKey}',document.getElementById('noteEditInput').value)">Save</button></div>
+        </div>`;
+
+    popover.style.display = 'block';
+    const pw = popover.offsetWidth;
+    let left = rect.left + rect.width / 2 - pw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+    let top = rect.bottom + 6;
+    if (top + popover.offsetHeight > window.innerHeight - 8) top = rect.top - popover.offsetHeight - 6;
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+
+    const textarea = document.getElementById('noteEditInput');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    textarea.addEventListener('input', () => {
+        document.getElementById('noteCharCount').textContent = `${textarea.value.length}/140`;
+    });
+    textarea.addEventListener('keydown', (ke) => {
+        if (ke.key === 'Enter' && !ke.shiftKey) {
+            ke.preventDefault();
+            window.saveNote(dateKey, textarea.value);
+        }
+    });
+};
+
+window.saveNote = async (dateKey, text) => {
+    closeCellPopover();
+    if (!logData.dailyNotes) logData.dailyNotes = {};
+    const note = text.trim().slice(0, 140);
+    if (note) {
+        logData.dailyNotes[dateKey] = note;
+    } else {
+        delete logData.dailyNotes[dateKey];
+    }
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
 window.toggleSettings = () => { document.getElementById('settingsMenu').classList.toggle('open'); };
 window.closeSettings = () => { document.getElementById('settingsMenu').classList.remove('open'); };
 document.addEventListener('click', (e) => { if (!e.target.closest('.settings-dropdown')) window.closeSettings(); });

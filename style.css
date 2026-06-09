@@ -255,6 +255,14 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .pop-btn:hover { border-color: var(--primary); color: var(--primary); }
 .pop-btn-active { background: var(--primary); color: white; border-color: var(--primary); }
 
+.col-note { width: 180px; min-width: 90px; max-width: 220px; text-align: left; }
+.note-text { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 180px; }
+.note-edit-textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.85rem; resize: none; font-family: inherit; color: var(--text-main); line-height: 1.4; min-width: 220px; }
+.note-edit-textarea:focus { outline: none; border-color: var(--primary); }
+.note-edit-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.note-char-count { font-size: 0.7rem; color: var(--text-muted); }
+.note-clear-btn { width: auto; padding: 0 10px; background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+
 .chart-empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
 .chart-empty-state .chart-empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
 .chart-empty-state p { font-size: 0.85rem; font-weight: 600; }
