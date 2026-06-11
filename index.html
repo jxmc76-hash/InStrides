@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=95">
+    <link rel="stylesheet" href="style.css?v=96">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -69,6 +69,9 @@
                         <div class="settings-menu" id="settingsMenu">
                             <button onclick="window.showMetricModal(); window.closeSettings()">Custom Metrics</button>
                             <button onclick="window.showTypeModal(); window.closeSettings()">Manage Types</button>
+                            <button id="darkModeToggleBtn" onclick="window.toggleDarkMode()">🌙 Dark Mode</button>
+                            <button id="hideFutureToggleBtn" onclick="window.toggleHideFuture()">🙈 Hide Future Plans</button>
+                            <button onclick="window.exportData()">⬇ Export Data</button>
                             <button onclick="window.switchTab('help'); window.closeSettings()">Help</button>
                             <div class="settings-divider"></div>
                             <button onclick="window.handleSignOut()" style="color:#ef4444">Sign Out</button>
@@ -325,7 +328,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=111"></script>
+    <script type="module" src="script.js?v=113"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

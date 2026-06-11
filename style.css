@@ -272,3 +272,56 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Settings menu toggle states */
+#darkModeToggleBtn.active, #hideFutureToggleBtn.active { color: var(--primary); }
+
+/* Dark Mode */
+[data-theme="dark"] {
+    --bg: #14161c;
+    --text-main: #f1f1f3;
+    --text-muted: #9499a3;
+    --border: #2c2f38;
+    color-scheme: dark;
+}
+[data-theme="dark"] body { background-color: var(--bg); color: var(--text-main); }
+[data-theme="dark"] .app-header { background: rgba(20,22,28,0.9); }
+[data-theme="dark"] .matrix-container,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .modal-card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .chart-container,
+[data-theme="dark"] .week-compare-grid,
+[data-theme="dark"] .recap-card,
+[data-theme="dark"] .achievement-card,
+[data-theme="dark"] .help-card,
+[data-theme="dark"] .settings-menu,
+[data-theme="dark"] .cell-popover,
+[data-theme="dark"] .strava-activity-card,
+[data-theme="dark"] .pop-btn,
+[data-theme="dark"] .btn-google,
+[data-theme="dark"] .auth-buttons #btnSubAuth,
+[data-theme="dark"] .rate-btn {
+    background: #1d2027;
+    color: var(--text-main);
+}
+[data-theme="dark"] th { background: #1a1c23; }
+[data-theme="dark"] .col-date { background: #191b21; }
+[data-theme="dark"] th, [data-theme="dark"] td { border-color: #2c2f38; }
+[data-theme="dark"] .week-summary-row td { background: #221d1a; border-bottom-color: #3a2c25; }
+[data-theme="dark"] .week-summary-row:hover td { background: #2a221d; }
+[data-theme="dark"] .alt-row td { background: #191b21; }
+[data-theme="dark"] .happy-pill { background: linear-gradient(135deg, #2a2d36, #23262e); color: #e2e2e4; }
+[data-theme="dark"] .tab-nav { background: #1d2027; }
+[data-theme="dark"] .tab-btn.active { background: linear-gradient(135deg, #2a2d36, #2a201c); color: var(--text-main); }
+[data-theme="dark"] .btn-secondary { background: #2a2d36; color: var(--text-muted); }
+[data-theme="dark"] .bin-btn.active, [data-theme="dark"] .rate-btn.active { background: #2a2d36; color: var(--text-main); }
+[data-theme="dark"] .highlight-box { background: #1a1c23; }
+[data-theme="dark"] .input-row input[type="date"], [data-theme="dark"] .input-row textarea, [data-theme="dark"] .input-row select, [data-theme="dark"] .input-row input[type="email"], [data-theme="dark"] .input-row input[type="password"], [data-theme="dark"] .input-row input[type="text"], [data-theme="dark"] .input-row input[type="number"] {
+    background: #14161c; color: var(--text-main); border-color: #2c2f38;
+}
+[data-theme="dark"] .achievement-card.locked { background: #1a1c23; }
+[data-theme="dark"] .achievement-card.unlocked { background: linear-gradient(135deg, #241d18, #2a201a); border-color: #3a2c25; }
+[data-theme="dark"] .chart-empty-state, [data-theme="dark"] .chart-container h3 { color: var(--text-muted); }
+[data-theme="dark"] .settings-menu button:hover { background: #2a2d36; }
+[data-theme="dark"] .editable-cell:hover, [data-theme="dark"] .empty-type-cell:hover { background: #221d1a !important; }

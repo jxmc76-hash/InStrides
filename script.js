@@ -126,7 +126,10 @@ const attachRealtimeListener = () => {
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
-        } else {
+        } else if (!snap.metadata.fromCache) {
+            // Only create a fresh log if the server has confirmed no document exists.
+            // A cache-only "not found" can happen before the server responds, and must
+            // never trigger an overwrite of real data.
             setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [] });
         }
     });
@@ -1029,11 +1032,15 @@ const renderMatrix = () => {
     const currentWeekStart = getWeekStart(new Date().toISOString().split('T')[0]);
     const expandWeekIds = new Set();
 
+    const hideFuture = localStorage.getItem('hideFuturePlans') === '1';
+    const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
         const dayOfWeek = d.getDay();
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
+        if (hideFuture && d > todayMidnight) continue;
 
         if (!weekId) {
             weekId = dateKey;
@@ -1361,3 +1368,41 @@ const celebrate = () => {
     setTimeout(() => el.remove(), 900);
 };
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
+
+// --- DARK MODE ---
+const applyDarkMode = (on) => {
+    document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+    document.getElementById('darkModeToggleBtn')?.classList.toggle('active', on);
+};
+window.toggleDarkMode = () => {
+    const on = document.documentElement.getAttribute('data-theme') !== 'dark';
+    localStorage.setItem('darkMode', on ? '1' : '0');
+    applyDarkMode(on);
+};
+applyDarkMode(localStorage.getItem('darkMode') === '1');
+
+// --- HIDE FUTURE PLANS ---
+const applyHideFuture = (on) => {
+    document.getElementById('hideFutureToggleBtn')?.classList.toggle('active', on);
+};
+window.toggleHideFuture = () => {
+    const on = localStorage.getItem('hideFuturePlans') !== '1';
+    localStorage.setItem('hideFuturePlans', on ? '1' : '0');
+    applyHideFuture(on);
+    renderMatrix();
+};
+applyHideFuture(localStorage.getItem('hideFuturePlans') === '1');
+
+// --- EXPORT DATA ---
+window.exportData = () => {
+    const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `traininglog-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    window.closeSettings();
+};
