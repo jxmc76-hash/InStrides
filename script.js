@@ -330,7 +330,6 @@ window.quickCompletePlan = async (id) => {
     const idx = logData.entries.findIndex(e => e.id === id);
     if(idx === -1) return;
     logData.entries[idx].isPlanned = false;
-    logData.entries[idx].happiness = 5;
     logData.entries[idx].mark = 2;
     logData.entries[idx].customMetricData = {};
     celebrate();
@@ -358,7 +357,6 @@ window.saveExercise = async () => {
     const otherRating = Math.min(10, Math.max(1, parseInt(document.getElementById('modalOtherRating').value) || 5));
     const entryData = {
         date: document.getElementById('modalDate').value,
-        happiness: null,
         type,
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark,
@@ -402,11 +400,10 @@ const renderTrailingCharts = (completed) => {
     Object.keys(chartInstances).filter(k => k.startsWith('trailing-')).forEach(k => destroyChart(k));
     container.innerHTML = '';
 
-    // Build daily lookup: date → { happiness, customMetricData }
+    // Build daily lookup: date → { customMetricData }
     const byDate = {};
     completed.forEach(e => {
-        if (!byDate[e.date]) byDate[e.date] = { happiness: null, customVals: {} };
-        if (e.happiness) byDate[e.date].happiness = e.happiness;
+        if (!byDate[e.date]) byDate[e.date] = { customVals: {} };
         if (e.customMetricData) Object.assign(byDate[e.date].customVals, e.customMetricData);
     });
 
@@ -1088,8 +1085,7 @@ const renderMatrix = () => {
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, customVals: {}, exercises: {} };
-        if (e.happiness && !e.isPlanned) entriesByDate[e.date].happiness = e.happiness;
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { customVals: {}, exercises: {} };
         if (!e.isPlanned && e.customMetricData) Object.assign(entriesByDate[e.date].customVals, e.customMetricData);
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
@@ -1173,7 +1169,7 @@ const renderMatrix = () => {
             if (getWeekStart(weekId) >= currentWeekStart) expandWeekIds.add(weekId);
         }
 
-        const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
+        const activeData = dayData || { customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
 
         weekAcc.days++;
@@ -1425,7 +1421,7 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
         `<button class="pop-btn ${n === currentVal ? 'pop-btn-active' : ''}" onclick="window.saveCellValue('${dateKey}','${field}',${n})">${n}</button>`
     ).join('');
 
-    const label = field === 'mood' ? 'Mood' : field.replace('metric-','').replace(/-/g,' ');
+    const label = field.replace('metric-','').replace(/-/g,' ');
     content.innerHTML = `<div class="pop-label">${label}</div><div class="pop-btns">${buttons}</div>`;
 
     popover.style.display = 'block';
@@ -1450,15 +1446,11 @@ window.saveCellValue = async (dateKey, field, value) => {
     closeCellPopover();
     let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
     if (!record) {
-        record = { id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: {} };
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
         logData.entries.push(record);
     }
-    if (field === 'mood') {
-        record.happiness = value;
-    } else {
-        if (!record.customMetricData) record.customMetricData = {};
-        record.customMetricData[field.replace('metric-', '')] = value;
-    }
+    if (!record.customMetricData) record.customMetricData = {};
+    record.customMetricData[field.replace('metric-', '')] = value;
     renderMatrix();
     try {
         await setDoc(doc(db, 'logs', LOG_ID), logData);
@@ -1471,7 +1463,7 @@ window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     const newVal = !currentVal;
     let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
     if (!record) {
-        record = { id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: {} };
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
         logData.entries.push(record);
     }
     if (!record.customMetricData) record.customMetricData = {};

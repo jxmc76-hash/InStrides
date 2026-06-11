@@ -89,7 +89,6 @@
                         <thead>
                             <tr id="headerRow">
                                 <th class="col-date">Date</th>
-                                <th class="col-stat">Mood</th>
                             </tr>
                         </thead>
                         <tbody id="matrixBody"></tbody>
@@ -149,12 +148,6 @@
                             <div class="help-icon">🟠</div>
                             <h3>Strava</h3>
                             <p>Connect your Strava account once using the <b>Connect Strava</b> button. After that, click <b>✓ Strava</b> to pull in your latest activity and log it with one tap — date, distance and activity name are pre-filled for you.</p>
-                        </div>
-
-                        <div class="help-card">
-                            <div class="help-icon">😊</div>
-                            <h3>Mood Score</h3>
-                            <p>A daily 1–10 rating of how you feel. Logged alongside each workout entry. Tracked over time in Insights to help you spot patterns between exercise, sleep, and wellbeing.</p>
                         </div>
 
                     </div>
@@ -369,7 +362,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=119"></script>
+    <script type="module" src="script.js?v=120"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
