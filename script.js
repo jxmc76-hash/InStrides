@@ -24,7 +24,7 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {} };
 
 const TYPE_CATEGORIES = [
     { value: 'cardio',      label: 'Distance' },
@@ -122,7 +122,7 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {} };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
@@ -1116,8 +1116,10 @@ const renderMatrix = () => {
 
         dayCounter++;
         const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
+        const noteText = (logData.dailyNotes && logData.dailyNotes[dateKey]) || '';
+        const noteIcon = noteText ? ' 📝' : '';
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date">${displayDate}</td>`;
+            <td class="col-date editable-cell" title="${noteText.replace(/"/g, '&quot;')}" onclick="window.editDailyNote('${dateKey}')">${displayDate}${noteIcon}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
@@ -1410,6 +1412,21 @@ const celebrate = () => {
     setTimeout(() => el.remove(), 900);
 };
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
+
+// --- DAILY NOTES ---
+window.editDailyNote = async (dateKey) => {
+    if (!logData.dailyNotes) logData.dailyNotes = {};
+    const current = logData.dailyNotes[dateKey] || '';
+    const note = prompt(`Daily note for ${dateKey}:`, current);
+    if (note === null) return; // cancelled
+    if (note.trim() === '') {
+        delete logData.dailyNotes[dateKey];
+    } else {
+        logData.dailyNotes[dateKey] = note.trim();
+    }
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
 
 // --- DARK MODE ---
 const applyDarkMode = (on) => {
