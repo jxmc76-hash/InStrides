@@ -412,13 +412,14 @@ const renderTrailingCharts = (completed) => {
         allDates.push(d.toISOString().split('T')[0]);
     }
 
-    // Build 10-day trailing average series for a value accessor
+    // Build 5-day trailing average series for a value accessor
+    const TRAILING_WINDOW = 5;
     const trailingSeries = (accessor) => {
         const points = { labels: [], data: [] };
         allDates.forEach((dateStr, i) => {
-            const window = allDates.slice(Math.max(0, i - 9), i + 1);
+            const window = allDates.slice(Math.max(0, i - (TRAILING_WINDOW - 1)), i + 1);
             const vals = window.map(d => accessor(byDate[d])).filter(v => v != null && v > 0);
-            if (vals.length >= 3) {
+            if (vals.length >= 2) {
                 points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
                 points.data.push(+(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
             }
@@ -426,18 +427,42 @@ const renderTrailingCharts = (completed) => {
         return points;
     };
 
+    // Simple linear regression trend line over the data points
+    const trendLine = (data) => {
+        const n = data.length;
+        if (n < 2) return { line: [], slope: 0 };
+        const xs = data.map((_, i) => i);
+        const meanX = xs.reduce((a,b)=>a+b,0) / n;
+        const meanY = data.reduce((a,b)=>a+b,0) / n;
+        let num = 0, den = 0;
+        for (let i = 0; i < n; i++) { num += (xs[i]-meanX)*(data[i]-meanY); den += (xs[i]-meanX)**2; }
+        const slope = den === 0 ? 0 : num / den;
+        const intercept = meanY - slope * meanX;
+        return { line: xs.map(x => +(slope*x + intercept).toFixed(2)), slope };
+    };
+
+    const trendDescription = (label, slope) => {
+        const threshold = 0.01;
+        if (slope > threshold) return `Your ${label.toLowerCase()} has been trending upward recently. 📈`;
+        if (slope < -threshold) return `Your ${label.toLowerCase()} has been trending downward recently. 📉`;
+        return `Your ${label.toLowerCase()} has been holding fairly steady recently. ➡️`;
+    };
+
     const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
 
-    const sliders = logData.customMetrics
-        .filter(m => m.type === 'slider')
-        .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name] }));
+    const series = [
+        { key: 'trailing-MOOD', label: 'Mood', accessor: d => d?.happiness },
+        ...logData.customMetrics
+            .filter(m => m.type === 'slider')
+            .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name] }))
+    ];
 
-    sliders.forEach(({ key, label, accessor }, idx) => {
+    series.forEach(({ key, label, accessor }, idx) => {
         const { labels, data } = trailingSeries(accessor);
 
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
-        titleEl.textContent = `${label} — 10-day trailing average`;
+        titleEl.textContent = `${label} — ${TRAILING_WINDOW}-day moving average`;
         container.appendChild(titleEl);
 
         if (data.length < 2) {
@@ -448,7 +473,15 @@ const renderTrailingCharts = (completed) => {
             return;
         }
 
+        const { line, slope } = trendLine(data);
         const color = colors[idx % colors.length];
+
+        const desc = document.createElement('p');
+        desc.className = 'neutral-msg';
+        desc.style.marginBottom = '12px';
+        desc.textContent = trendDescription(label, slope);
+        container.appendChild(desc);
+
         const wrap = document.createElement('div');
         wrap.className = 'chart-container';
         const canvas = document.createElement('canvas');
@@ -470,6 +503,15 @@ const renderTrailingCharts = (completed) => {
                     pointBackgroundColor: color,
                     fill: false,
                     tension: 0.4,
+                }, {
+                    label: 'Trend',
+                    data: line,
+                    borderColor: '#9499a3',
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
                 }]
             },
             options: {
