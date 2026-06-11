@@ -457,7 +457,6 @@ const renderTrailingCharts = (completed) => {
     const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
 
     const series = [
-        { key: 'trailing-MOOD', label: 'Mood', accessor: d => d?.happiness, scale: 10 },
         ...logData.customMetrics
             .filter(m => m.type === 'slider')
             .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name], scale: m.scale || 10 }))
