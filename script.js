@@ -1212,8 +1212,10 @@ const renderMatrix = () => {
         if (acc.days === 0) return '';
         const monDate = new Date(getWeekStart(weekId));
         const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const weekTheme = getThemeForDate(weekId);
+        const themeLabel = weekTheme ? `<div class="plan-note">${weekTheme.title}</div>` : '';
         let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
-            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →${themeLabel}</td>
             <td class="col-stat"></td>`;
 
         logData.customMetrics.forEach(m => {
@@ -1318,10 +1320,8 @@ const renderMatrix = () => {
         const noteCell = noteText
             ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
             : `<div class="cell-empty">+</div>`;
-        const activeTheme = getThemeForDate(dateKey);
-        const themeLabel = activeTheme ? `<div class="plan-note" title="Training theme: ${activeTheme.title.replace(/"/g, '&quot;')}">🎯 ${activeTheme.title}</div>` : '';
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date">${displayDate}${themeLabel}</td>
+            <td class="col-date">${displayDate}</td>
             <td class="col-stat editable-cell" onclick="window.editDailyNote('${dateKey}')">${noteCell}</td>`;
 
         logData.customMetrics.forEach(m => {
