@@ -199,6 +199,10 @@ window.deleteCustomMetric = async (idx) => {
 };
 
 window.updateLocalCustomMetricVal = (name, val) => { dynamicMetricValues[name] = val; };
+window.updateTimeDistanceVal = (name, field, val) => {
+    const current = (dynamicMetricValues[name] && typeof dynamicMetricValues[name] === 'object') ? dynamicMetricValues[name] : { time: '', distance: '' };
+    dynamicMetricValues[name] = { ...current, [field]: val };
+};
 
 const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
     const container = document.getElementById('customMetricsFormContainer');
@@ -208,12 +212,22 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
 
     logData.customMetrics.forEach(m => {
         const scale = m.scale || 10;
-        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : (m.type === 'slider' ? Math.round(scale/2) : false);
+        const defaultVal = m.type === 'slider' ? Math.round(scale/2) : (m.type === 'timedistance' ? { time: '', distance: '' } : false);
+        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : defaultVal;
         dynamicMetricValues[m.name] = val;
 
         const div = document.createElement('div');
         div.className = "input-row";
-        if (m.type === 'slider') {
+        if (m.type === 'timedistance') {
+            const time = (val && val.time) || '';
+            const dist = (val && val.distance) || '';
+            div.innerHTML = `
+                <label>${m.name.replace(/-/g, ' ')} (time &amp; distance)</label>
+                <div class="distance-input-row">
+                    <input type="number" min="0" step="1" placeholder="Minutes" value="${time}" oninput="window.updateTimeDistanceVal('${m.name}','time',this.value)">
+                    <input type="number" min="0" step="0.01" placeholder="Distance (km)" value="${dist}" oninput="window.updateTimeDistanceVal('${m.name}','distance',this.value)">
+                </div>`;
+        } else if (m.type === 'slider') {
             div.className = "input-row highlight-box";
             div.innerHTML = `
                 <label>${m.name.replace(/-/g, ' ')} (1-${scale})</label>
@@ -1121,6 +1135,7 @@ const renderMatrix = () => {
             let cell = '';
             if (vals.length) {
                 if (m.type === 'slider') cell = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+                else if (m.type === 'timedistance') { const count = vals.filter(v => v && (v.time || v.distance)).length; cell = count > 0 ? `${count}d` : ''; }
                 else { const count = vals.filter(v=>v===true).length; cell = count > 0 ? `${count}d` : ''; }
             }
             html += `<td class="col-stat">${cell}</td>`;
@@ -1216,7 +1231,9 @@ const renderMatrix = () => {
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
-            if (mVal !== undefined && mVal !== null) {
+            if (m.type === 'timedistance' && mVal && (mVal.time || mVal.distance)) {
+                cellContent = `<div class="dist-label">${mVal.time ? mVal.time + 'min' : ''}${mVal.time && mVal.distance ? ' / ' : ''}${mVal.distance ? mVal.distance + 'km' : ''}</div>`;
+            } else if (mVal !== undefined && mVal !== null) {
                 cellContent = m.type === 'slider'
                     ? `<div class="happy-pill">${mVal}</div>`
                     : (mVal ? '✅' : '❌');
@@ -1225,6 +1242,8 @@ const renderMatrix = () => {
             }
             if (m.type === 'binary') {
                 row += `<td class="col-stat editable-cell" onclick="window.toggleBinaryCell('${dateKey}','${m.name}',${mVal === true})">${cellContent}</td>`;
+            } else if (m.type === 'timedistance') {
+                row += `<td class="col-stat editable-cell" onclick="window.promptTimeDistance('${dateKey}','${m.name}',${mVal && mVal.time != null ? `'${mVal.time}'` : 'null'},${mVal && mVal.distance != null ? `'${mVal.distance}'` : 'null'})">${cellContent}</td>`;
             } else if (m.scale === 100) {
                 row += `<td class="col-stat editable-cell" onclick="window.promptCellValue('${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'},100)">${cellContent}</td>`;
             } else {
@@ -1445,6 +1464,29 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
     if (top + popover.offsetHeight > window.innerHeight - 8) top = rect.top - popover.offsetHeight - 6;
     popover.style.left = left + 'px';
     popover.style.top = top + 'px';
+};
+
+window.promptTimeDistance = async (dateKey, metricName, currentTime, currentDist) => {
+    const timeInput = prompt(`${metricName.replace(/-/g,' ')} — time (minutes):`, currentTime !== null ? currentTime : '');
+    if (timeInput === null) return;
+    const distInput = prompt(`${metricName.replace(/-/g,' ')} — distance (km):`, currentDist !== null ? currentDist : '');
+    if (distInput === null) return;
+
+    let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
+    if (!record) {
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
+        logData.entries.push(record);
+    }
+    if (!record.customMetricData) record.customMetricData = {};
+    const time = timeInput.trim() === '' ? null : parseFloat(timeInput);
+    const distance = distInput.trim() === '' ? null : parseFloat(distInput);
+    if (time === null && distance === null) {
+        delete record.customMetricData[metricName];
+    } else {
+        record.customMetricData[metricName] = { time, distance };
+    }
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
 
 window.promptCellValue = (dateKey, field, currentVal, max) => {

@@ -278,6 +278,7 @@
                             <option value="binary">Yes / No Toggle</option>
                             <option value="slider">1 - 10 Scale Slider</option>
                             <option value="slider100">1 - 100 Scale Rating</option>
+                            <option value="timedistance">Time + Distance</option>
                         </select>
                         <button onclick="window.addCustomMetric()" class="btn-submit">Add Custom Metric</button>
                     </div>
@@ -368,7 +369,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=122"></script>
+    <script type="module" src="script.js?v=123"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
