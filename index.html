@@ -162,6 +162,11 @@
                     <div id="goalsGrid" class="achievements-grid"></div>
                     <button onclick="window.showGoalModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Goal</button>
 
+                    <!-- Training Themes -->
+                    <div class="insights-section-title">Training Themes</div>
+                    <div id="themesGrid" class="achievements-grid"></div>
+                    <button onclick="window.showThemeModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Theme</button>
+
                     <!-- Weekly recap -->
                     <div class="insights-section-title">Weekly Recap</div>
                     <div id="weeklyRecap" class="recap-card"></div>
@@ -313,6 +318,40 @@
         </div>
     </div>
 
+    <!-- Theme Modal -->
+    <div id="themeModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="themeModalTitle">Add Theme</h2>
+                <button onclick="window.closeModal('themeModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body">
+                <div class="input-row">
+                    <label>Theme Title</label>
+                    <input type="text" id="themeTitle" placeholder="e.g. Base Building">
+                </div>
+                <div class="input-row">
+                    <label>Description / Notes</label>
+                    <textarea id="themeDesc" rows="2" placeholder="Optional details..."></textarea>
+                </div>
+                <div class="input-row" style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>Start Date</label>
+                        <input type="date" id="themeStartDate">
+                    </div>
+                    <div style="flex:1;">
+                        <label>End Date</label>
+                        <input type="date" id="themeEndDate">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="deleteThemeBtn" onclick="window.deleteTheme()" class="btn-delete" style="display:none;">Delete</button>
+                    <button onclick="window.saveTheme()" class="btn-submit">Save Theme</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Goal Modal -->
     <div id="goalModal" class="modal-overlay">
         <div class="modal-card">
@@ -370,7 +409,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=124"></script>
+    <script type="module" src="script.js?v=125"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

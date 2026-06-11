@@ -24,8 +24,9 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [] };
 let editingGoalId = null;
+let editingThemeId = null;
 
 const TYPE_CATEGORIES = [
     { value: 'cardio',      label: 'Distance' },
@@ -124,7 +125,7 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [] };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
@@ -856,10 +857,94 @@ window.deleteGoal = async () => {
     await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
 
+// --- TRAINING THEMES ---
+const renderThemes = () => {
+    const el = document.getElementById('themesGrid');
+    if (!el) return;
+    if (!logData.themes || logData.themes.length === 0) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No themes yet — add one to mark a training focus period.</p>`;
+        return;
+    }
+    const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    el.innerHTML = logData.themes.slice().sort((a,b) => (b.startDate || '').localeCompare(a.startDate || '')).map(t => {
+        const startLabel = t.startDate ? fmtDate(t.startDate) : '';
+        const endLabel = t.endDate ? fmtDate(t.endDate) : '';
+        let dateLabel = '';
+        if (startLabel && endLabel) dateLabel = `${startLabel} → ${endLabel}`;
+        else if (endLabel) dateLabel = `Until: ${endLabel}`;
+        else if (startLabel) dateLabel = `From: ${startLabel}`;
+        return `<div class="achievement-card unlocked goal-card" onclick="window.editTheme(${t.id})">
+            <div class="goal-title">${t.title}</div>
+            ${t.description ? `<div class="goal-desc">${t.description}</div>` : ''}
+            ${dateLabel ? `<div class="goal-date">${dateLabel}</div>` : ''}
+        </div>`;
+    }).join('');
+};
+
+window.showThemeModal = () => {
+    editingThemeId = null;
+    document.getElementById('themeModalTitle').textContent = 'Add Theme';
+    document.getElementById('deleteThemeBtn').style.display = 'none';
+    document.getElementById('themeTitle').value = '';
+    document.getElementById('themeDesc').value = '';
+    document.getElementById('themeStartDate').value = '';
+    document.getElementById('themeEndDate').value = '';
+    document.getElementById('themeModal').style.display = 'flex';
+};
+
+window.editTheme = (id) => {
+    const theme = logData.themes.find(t => t.id === id);
+    if (!theme) return;
+    editingThemeId = id;
+    document.getElementById('themeModalTitle').textContent = 'Edit Theme';
+    document.getElementById('deleteThemeBtn').style.display = 'block';
+    document.getElementById('themeTitle').value = theme.title || '';
+    document.getElementById('themeDesc').value = theme.description || '';
+    document.getElementById('themeStartDate').value = theme.startDate || '';
+    document.getElementById('themeEndDate').value = theme.endDate || '';
+    document.getElementById('themeModal').style.display = 'flex';
+};
+
+window.saveTheme = async () => {
+    const title = document.getElementById('themeTitle').value.trim();
+    if (!title) return alert('Please enter a theme title.');
+    const themeData = {
+        id: editingThemeId || Date.now(),
+        title,
+        description: document.getElementById('themeDesc').value.trim(),
+        startDate: document.getElementById('themeStartDate').value,
+        endDate: document.getElementById('themeEndDate').value,
+    };
+    if (!logData.themes) logData.themes = [];
+    if (editingThemeId) {
+        const idx = logData.themes.findIndex(t => t.id === editingThemeId);
+        logData.themes[idx] = themeData;
+    } else {
+        logData.themes.push(themeData);
+    }
+    renderThemes();
+    window.closeModal('themeModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+window.deleteTheme = async () => {
+    if (!confirm('Delete this theme?')) return;
+    logData.themes = logData.themes.filter(t => t.id !== editingThemeId);
+    renderThemes();
+    window.closeModal('themeModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+const getThemeForDate = (dateKey) => {
+    if (!logData.themes) return null;
+    return logData.themes.find(t => t.startDate && dateKey >= t.startDate && (!t.endDate || dateKey <= t.endDate));
+};
+
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
     renderGoals();
+    renderThemes();
     renderWeeklyRecap(completed);
     renderAchievements(completed);
     renderWeekCompare(completed);
@@ -1233,8 +1318,10 @@ const renderMatrix = () => {
         const noteCell = noteText
             ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
             : `<div class="cell-empty">+</div>`;
+        const activeTheme = getThemeForDate(dateKey);
+        const themeLabel = activeTheme ? `<div class="plan-note" title="Training theme: ${activeTheme.title.replace(/"/g, '&quot;')}">🎯 ${activeTheme.title}</div>` : '';
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date">${displayDate}</td>
+            <td class="col-date">${displayDate}${themeLabel}</td>
             <td class="col-stat editable-cell" onclick="window.editDailyNote('${dateKey}')">${noteCell}</td>`;
 
         logData.customMetrics.forEach(m => {
