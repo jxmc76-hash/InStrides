@@ -1078,7 +1078,7 @@ const renderMatrix = () => {
     const catOrder = { cardio: 0, gym: 1, bodyweight: 2, time: 3, other: 4 };
     const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
 
-    let headerHTML = `<th class="col-date">Date</th>`;
+    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Notes</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
     sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th cat-${getTypeCategory(t)}">${t}</th>`; });
     header.innerHTML = headerHTML;
@@ -1104,7 +1104,8 @@ const renderMatrix = () => {
         const monDate = new Date(getWeekStart(weekId));
         const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
-            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>`;
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>
+            <td class="col-stat"></td>`;
 
         logData.customMetrics.forEach(m => {
             const vals = acc.customVals[m.name] || [];
@@ -1196,9 +1197,12 @@ const renderMatrix = () => {
         dayCounter++;
         const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
         const noteText = (logData.dailyNotes && logData.dailyNotes[dateKey]) || '';
-        const noteIcon = noteText ? ' 📝' : '';
+        const noteCell = noteText
+            ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
+            : `<div class="cell-empty">+</div>`;
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date editable-cell" title="${noteText.replace(/"/g, '&quot;')}" onclick="window.editDailyNote('${dateKey}')">${displayDate}${noteIcon}</td>`;
+            <td class="col-date">${displayDate}</td>
+            <td class="col-stat editable-cell" onclick="window.editDailyNote('${dateKey}')">${noteCell}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
