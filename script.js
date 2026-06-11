@@ -180,7 +180,11 @@ window.addCustomMetric = async () => {
     if(!name) return;
     
     if(logData.customMetrics.some(m => m.name === name)) return alert('Metric name already active.');
-    logData.customMetrics.push({ name: name, type: typeSelect.value });
+    if (typeSelect.value === 'slider100') {
+        logData.customMetrics.push({ name: name, type: 'slider', scale: 100 });
+    } else {
+        logData.customMetrics.push({ name: name, type: typeSelect.value });
+    }
     await setDoc(doc(db, "logs", LOG_ID), logData);
     nameInput.value = "";
     window.showMetricModal();
@@ -203,7 +207,8 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
     dynamicMetricValues = {};
 
     logData.customMetrics.forEach(m => {
-        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : (m.type === 'slider' ? 5 : false);
+        const scale = m.scale || 10;
+        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : (m.type === 'slider' ? Math.round(scale/2) : false);
         dynamicMetricValues[m.name] = val;
 
         const div = document.createElement('div');
@@ -211,9 +216,9 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
         if (m.type === 'slider') {
             div.className = "input-row highlight-box";
             div.innerHTML = `
-                <label>${m.name.replace(/-/g, ' ')} (1-10)</label>
+                <label>${m.name.replace(/-/g, ' ')} (1-${scale})</label>
                 <div class="slider-row">
-                    <input type="range" min="1" max="10" value="${val}" oninput="document.getElementById('lbl-${m.name}').innerText = this.value; window.updateLocalCustomMetricVal('${m.name}', parseInt(this.value))">
+                    <input type="range" min="1" max="${scale}" value="${val}" oninput="document.getElementById('lbl-${m.name}').innerText = this.value; window.updateLocalCustomMetricVal('${m.name}', parseInt(this.value))">
                     <span id="lbl-${m.name}" class="score-display">${val}</span>
                 </div>`;
         } else {
@@ -452,13 +457,13 @@ const renderTrailingCharts = (completed) => {
     const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
 
     const series = [
-        { key: 'trailing-MOOD', label: 'Mood', accessor: d => d?.happiness },
+        { key: 'trailing-MOOD', label: 'Mood', accessor: d => d?.happiness, scale: 10 },
         ...logData.customMetrics
             .filter(m => m.type === 'slider')
-            .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name] }))
+            .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name], scale: m.scale || 10 }))
     ];
 
-    series.forEach(({ key, label, accessor }, idx) => {
+    series.forEach(({ key, label, accessor, scale }, idx) => {
         const { labels, data } = trailingSeries(accessor);
 
         const titleEl = document.createElement('div');
@@ -519,7 +524,7 @@ const renderTrailingCharts = (completed) => {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' }, title: { display: true, text: 'Score (1–10)', font: { size: 11 }, color: '#8a8a8a' } },
+                    y: { min: 1, max: scale, ticks: { stepSize: scale === 100 ? 10 : 1 }, grid: { color: '#f1f5f9' }, title: { display: true, text: `Score (1–${scale})`, font: { size: 11 }, color: '#8a8a8a' } },
                     x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
                 }
             }
@@ -1212,6 +1217,8 @@ const renderMatrix = () => {
             }
             if (m.type === 'binary') {
                 row += `<td class="col-stat editable-cell" onclick="window.toggleBinaryCell('${dateKey}','${m.name}',${mVal === true})">${cellContent}</td>`;
+            } else if (m.scale === 100) {
+                row += `<td class="col-stat editable-cell" onclick="window.promptCellValue('${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'},100)">${cellContent}</td>`;
             } else {
                 row += `<td class="col-stat editable-cell" onclick="window.openCellEdit(event,'${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'})">${cellContent}</td>`;
             }
@@ -1430,6 +1437,14 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
     if (top + popover.offsetHeight > window.innerHeight - 8) top = rect.top - popover.offsetHeight - 6;
     popover.style.left = left + 'px';
     popover.style.top = top + 'px';
+};
+
+window.promptCellValue = (dateKey, field, currentVal, max) => {
+    const input = prompt(`${field.replace('metric-','').replace(/-/g,' ')} (1-${max}):`, currentVal !== null ? currentVal : '');
+    if (input === null) return;
+    const num = Math.max(1, Math.min(max, parseInt(input)));
+    if (isNaN(num)) return;
+    window.saveCellValue(dateKey, field, num);
 };
 
 window.saveCellValue = async (dateKey, field, value) => {
