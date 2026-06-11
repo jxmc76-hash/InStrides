@@ -1159,14 +1159,14 @@ const renderMatrix = () => {
     const expandWeekIds = new Set();
 
     const hideFuture = localStorage.getItem('hideFuturePlans') === '1';
-    const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+    const todayKey = new Date().toISOString().split('T')[0];
 
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
         const dayOfWeek = d.getDay();
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
-        if (hideFuture && d > todayMidnight) continue;
+        if (hideFuture && dateKey > todayKey) continue;
 
         if (!weekId) {
             weekId = dateKey;
