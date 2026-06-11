@@ -32,6 +32,7 @@ const TYPE_CATEGORIES = [
     { value: 'bodyweight',  label: 'Reps' },
     { value: 'gym',         label: 'Weight' },
     { value: 'time',        label: 'Time' },
+    { value: 'pacing',      label: 'Time + Distance' },
     { value: 'other',       label: 'Other' },
 ];
 
@@ -279,10 +280,10 @@ window.toggleDistanceRow = () => {
     const badge = document.getElementById('typeCategoryBadge');
     section.style.display = cat ? 'block' : 'none';
     if (badge) badge.textContent = catLabel;
-    document.getElementById('metricCardio').style.display     = cat === 'cardio'     ? 'block' : 'none';
+    document.getElementById('metricCardio').style.display     = (cat === 'cardio' || cat === 'pacing')   ? 'block' : 'none';
     document.getElementById('metricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
     document.getElementById('metricGym').style.display        = cat === 'gym'        ? 'block' : 'none';
-    document.getElementById('metricTime').style.display       = cat === 'time'       ? 'block' : 'none';
+    document.getElementById('metricTime').style.display       = (cat === 'time' || cat === 'pacing')     ? 'block' : 'none';
     document.getElementById('metricOther').style.display      = cat === 'other'      ? 'block' : 'none';
 };
 
@@ -376,12 +377,12 @@ window.saveExercise = async () => {
         mark: isPlannedStrategy ? null : window.tempMark,
         isPlanned: isPlannedStrategy,
         customMetricData: isPlannedStrategy ? {} : { ...dynamicMetricValues },
-        distance: cat === 'cardio' && !isNaN(distVal) && distVal > 0 ? distVal : null,
+        distance: (cat === 'cardio' || cat === 'pacing') && !isNaN(distVal) && distVal > 0 ? distVal : null,
         distanceUnit: document.getElementById('modalDistanceUnit').value,
         reps: cat === 'bodyweight' && !isNaN(repsVal) && repsVal > 0 ? repsVal : null,
         weight: cat === 'gym' && !isNaN(weightVal) && weightVal > 0 ? weightVal : null,
         weightUnit: document.getElementById('modalWeightUnit').value,
-        duration: cat === 'time' && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
+        duration: (cat === 'time' || cat === 'pacing') && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
         otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
         id: editingId || Date.now()
     };
@@ -1145,14 +1146,18 @@ const renderMatrix = () => {
             const count = acc.typeDays[type] || 0;
             const m = acc.typeMetric?.[type];
             let cell = count > 0 ? count + 'd' : '';
-            if (m && m.values.length > 0) {
+            if (m && (m.values.length > 0 || (m.timeValues && m.timeValues.length > 0))) {
                 const cat = getTypeCategory(type);
-                const total = m.values.reduce((a,b)=>a+b,0);
-                const avg = total / m.values.length;
                 const fmt = (n) => n % 1 === 0 ? n : n.toFixed(1);
-                if (cat === 'other') cell += ` · ${fmt(avg)}${m.unit}`;
-                else if (cat === 'time') cell += ` · ${fmt(total)}${m.unit}`;
-                else cell += ` · ${fmt(total)}${m.unit}`;
+                if (cat === 'pacing') {
+                    if (m.values.length > 0) cell += ` · ${fmt(m.values.reduce((a,b)=>a+b,0))}${m.unit}`;
+                    if (m.timeValues.length > 0) cell += ` · ${fmt(m.timeValues.reduce((a,b)=>a+b,0))}min`;
+                } else if (m.values.length > 0) {
+                    const total = m.values.reduce((a,b)=>a+b,0);
+                    const avg = total / m.values.length;
+                    if (cat === 'other') cell += ` · ${fmt(avg)}${m.unit}`;
+                    else cell += ` · ${fmt(total)}${m.unit}`;
+                }
             }
             html += `<td>${cell}</td>`;
         });
@@ -1165,7 +1170,7 @@ const renderMatrix = () => {
         days: 0,
         customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
         typeDays: Object.fromEntries(sortedTypes.map(t => [t, 0])),
-        typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '' }])),
+        typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '', timeValues: [] }])),
     });
 
     body.innerHTML = "";
@@ -1214,6 +1219,10 @@ const renderMatrix = () => {
                     else if (cat === 'gym' && done.weight) { weekAcc.typeMetric[type].values.push(done.weight); weekAcc.typeMetric[type].unit = done.weightUnit || 'kg'; }
                     else if (cat === 'time' && done.duration) { weekAcc.typeMetric[type].values.push(done.duration); weekAcc.typeMetric[type].unit = 'min'; }
                     else if (cat === 'other' && done.otherRating) { weekAcc.typeMetric[type].values.push(done.otherRating); weekAcc.typeMetric[type].unit = '/10'; }
+                    else if (cat === 'pacing') {
+                        if (done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
+                        if (done.duration) { weekAcc.typeMetric[type].timeValues.push(done.duration); }
+                    }
                 }
             }
         });
@@ -1261,6 +1270,7 @@ const renderMatrix = () => {
             else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
             else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
             else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
+            else if (cat === 'pacing' && (exercise.distance || exercise.duration)) metricLabel = `${exercise.distance ? exercise.distance + (exercise.distanceUnit || 'km') : ''}${exercise.distance && exercise.duration ? ' / ' : ''}${exercise.duration ? exercise.duration + 'min' : ''}`;
             else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
             const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 if (exercise.isPlanned) {
