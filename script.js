@@ -765,11 +765,17 @@ const renderGoals = () => {
     }
     el.innerHTML = logData.goals.map(g => {
         const pct = Math.max(0, Math.min(100, g.progress || 0));
-        const dateLabel = g.targetDate ? new Date(g.targetDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+        const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const startLabel = g.startDate ? fmtDate(g.startDate) : '';
+        const endLabel = g.targetDate ? fmtDate(g.targetDate) : '';
+        let dateLabel = '';
+        if (startLabel && endLabel) dateLabel = `${startLabel} → ${endLabel}`;
+        else if (endLabel) dateLabel = `Target: ${endLabel}`;
+        else if (startLabel) dateLabel = `Start: ${startLabel}`;
         return `<div class="achievement-card unlocked goal-card" onclick="window.editGoal(${g.id})">
             <div class="goal-title">${g.title}</div>
             ${g.description ? `<div class="goal-desc">${g.description}</div>` : ''}
-            ${dateLabel ? `<div class="goal-date">Target: ${dateLabel}</div>` : ''}
+            ${dateLabel ? `<div class="goal-date">${dateLabel}</div>` : ''}
             <div class="goal-progress-outer"><div class="goal-progress-inner" style="width:${pct}%"></div></div>
             <div class="goal-progress-pct">${pct}%</div>
         </div>`;
@@ -782,6 +788,7 @@ window.showGoalModal = () => {
     document.getElementById('deleteGoalBtn').style.display = 'none';
     document.getElementById('goalTitle').value = '';
     document.getElementById('goalDesc').value = '';
+    document.getElementById('goalStartDate').value = '';
     document.getElementById('goalTargetDate').value = '';
     document.getElementById('goalProgress').value = 0;
     document.getElementById('goalProgressLbl').innerText = '0%';
@@ -796,6 +803,7 @@ window.editGoal = (id) => {
     document.getElementById('deleteGoalBtn').style.display = 'block';
     document.getElementById('goalTitle').value = goal.title || '';
     document.getElementById('goalDesc').value = goal.description || '';
+    document.getElementById('goalStartDate').value = goal.startDate || '';
     document.getElementById('goalTargetDate').value = goal.targetDate || '';
     document.getElementById('goalProgress').value = goal.progress || 0;
     document.getElementById('goalProgressLbl').innerText = (goal.progress || 0) + '%';
@@ -809,6 +817,7 @@ window.saveGoal = async () => {
         id: editingGoalId || Date.now(),
         title,
         description: document.getElementById('goalDesc').value.trim(),
+        startDate: document.getElementById('goalStartDate').value,
         targetDate: document.getElementById('goalTargetDate').value,
         progress: parseInt(document.getElementById('goalProgress').value) || 0,
     };

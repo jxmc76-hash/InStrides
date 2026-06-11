@@ -327,9 +327,15 @@
                     <label>Description / Notes</label>
                     <textarea id="goalDesc" rows="2" placeholder="Optional details..."></textarea>
                 </div>
-                <div class="input-row">
-                    <label>Target Date</label>
-                    <input type="date" id="goalTargetDate">
+                <div class="input-row" style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>Start Date</label>
+                        <input type="date" id="goalStartDate">
+                    </div>
+                    <div style="flex:1;">
+                        <label>End Date</label>
+                        <input type="date" id="goalTargetDate">
+                    </div>
                 </div>
                 <div class="input-row highlight-box">
                     <label>Progress</label>
@@ -362,7 +368,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=121"></script>
+    <script type="module" src="script.js?v=122"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
