@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=96">
+    <link rel="stylesheet" href="style.css?v=97">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -164,6 +164,11 @@
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
 
+                    <!-- Goals & Projects -->
+                    <div class="insights-section-title">Goals &amp; Projects</div>
+                    <div id="goalsGrid" class="achievements-grid"></div>
+                    <button onclick="window.showGoalModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Goal</button>
+
                     <!-- Weekly recap -->
                     <div class="insights-section-title">Weekly Recap</div>
                     <div id="weeklyRecap" class="recap-card"></div>
@@ -312,6 +317,41 @@
         </div>
     </div>
 
+    <!-- Goal Modal -->
+    <div id="goalModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="goalModalTitle">Add Goal</h2>
+                <button onclick="window.closeModal('goalModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body">
+                <div class="input-row">
+                    <label>Goal Title</label>
+                    <input type="text" id="goalTitle" placeholder="e.g. Run 5km in under 20 minutes">
+                </div>
+                <div class="input-row">
+                    <label>Description / Notes</label>
+                    <textarea id="goalDesc" rows="2" placeholder="Optional details..."></textarea>
+                </div>
+                <div class="input-row">
+                    <label>Target Date</label>
+                    <input type="date" id="goalTargetDate">
+                </div>
+                <div class="input-row highlight-box">
+                    <label>Progress</label>
+                    <div class="slider-row">
+                        <input type="range" min="0" max="100" step="5" value="0" id="goalProgress" oninput="document.getElementById('goalProgressLbl').innerText = this.value + '%'">
+                        <span id="goalProgressLbl" class="score-display" style="width:45px;">0%</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="deleteGoalBtn" onclick="window.deleteGoal()" class="btn-delete" style="display:none;">Delete</button>
+                    <button onclick="window.saveGoal()" class="btn-submit">Save Goal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Strava Activity Modal -->
     <div id="stravaModal" class="modal-overlay">
         <div class="modal-card">
@@ -328,7 +368,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=115"></script>
+    <script type="module" src="script.js?v=116"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

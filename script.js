@@ -24,7 +24,8 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {} };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [] };
+let editingGoalId = null;
 
 const TYPE_CATEGORIES = [
     { value: 'cardio',      label: 'Distance' },
@@ -122,7 +123,7 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {} };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [] };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
@@ -753,9 +754,87 @@ const _unused_renderPersonalRecords = (completed) => {
     ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val stat-val--sm">${c.val}</div></div>`).join('');
 };
 
+// --- GOALS & PROJECTS ---
+const renderGoals = () => {
+    const el = document.getElementById('goalsGrid');
+    if (!el) return;
+    if (!logData.goals || logData.goals.length === 0) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No goals yet — add one to start tracking progress.</p>`;
+        return;
+    }
+    el.innerHTML = logData.goals.map(g => {
+        const pct = Math.max(0, Math.min(100, g.progress || 0));
+        const dateLabel = g.targetDate ? new Date(g.targetDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+        return `<div class="achievement-card unlocked goal-card" onclick="window.editGoal(${g.id})">
+            <div class="goal-title">${g.title}</div>
+            ${g.description ? `<div class="goal-desc">${g.description}</div>` : ''}
+            ${dateLabel ? `<div class="goal-date">Target: ${dateLabel}</div>` : ''}
+            <div class="goal-progress-outer"><div class="goal-progress-inner" style="width:${pct}%"></div></div>
+            <div class="goal-progress-pct">${pct}%</div>
+        </div>`;
+    }).join('');
+};
+
+window.showGoalModal = () => {
+    editingGoalId = null;
+    document.getElementById('goalModalTitle').textContent = 'Add Goal';
+    document.getElementById('deleteGoalBtn').style.display = 'none';
+    document.getElementById('goalTitle').value = '';
+    document.getElementById('goalDesc').value = '';
+    document.getElementById('goalTargetDate').value = '';
+    document.getElementById('goalProgress').value = 0;
+    document.getElementById('goalProgressLbl').innerText = '0%';
+    document.getElementById('goalModal').style.display = 'flex';
+};
+
+window.editGoal = (id) => {
+    const goal = logData.goals.find(g => g.id === id);
+    if (!goal) return;
+    editingGoalId = id;
+    document.getElementById('goalModalTitle').textContent = 'Edit Goal';
+    document.getElementById('deleteGoalBtn').style.display = 'block';
+    document.getElementById('goalTitle').value = goal.title || '';
+    document.getElementById('goalDesc').value = goal.description || '';
+    document.getElementById('goalTargetDate').value = goal.targetDate || '';
+    document.getElementById('goalProgress').value = goal.progress || 0;
+    document.getElementById('goalProgressLbl').innerText = (goal.progress || 0) + '%';
+    document.getElementById('goalModal').style.display = 'flex';
+};
+
+window.saveGoal = async () => {
+    const title = document.getElementById('goalTitle').value.trim();
+    if (!title) return alert('Please enter a goal title.');
+    const goalData = {
+        id: editingGoalId || Date.now(),
+        title,
+        description: document.getElementById('goalDesc').value.trim(),
+        targetDate: document.getElementById('goalTargetDate').value,
+        progress: parseInt(document.getElementById('goalProgress').value) || 0,
+    };
+    if (!logData.goals) logData.goals = [];
+    if (editingGoalId) {
+        const idx = logData.goals.findIndex(g => g.id === editingGoalId);
+        logData.goals[idx] = goalData;
+    } else {
+        logData.goals.push(goalData);
+    }
+    renderGoals();
+    window.closeModal('goalModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+window.deleteGoal = async () => {
+    if (!confirm('Delete this goal?')) return;
+    logData.goals = logData.goals.filter(g => g.id !== editingGoalId);
+    renderGoals();
+    window.closeModal('goalModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
+    renderGoals();
     renderWeeklyRecap(completed);
     renderAchievements(completed);
     renderWeekCompare(completed);
