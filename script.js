@@ -167,12 +167,25 @@ const renderStreak = () => {
 window.showMetricModal = () => {
     const container = document.getElementById('metricList');
     container.innerHTML = logData.customMetrics.map((m, idx) => `
-        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px;">
+        <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+            <div class="reorder-btns">
+                <button onclick="window.moveCustomMetric(${idx},-1)" class="reorder-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                <button onclick="window.moveCustomMetric(${idx},1)" class="reorder-btn" ${idx === logData.customMetrics.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
             <span style="flex:1; text-align:left; font-weight:700; font-size:0.85rem; align-self:center;">${m.name} (${m.type})</span>
             <button onclick="window.deleteCustomMetric(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:6px 12px;" class="nav-btn">✕ Delete</button>
         </div>
     `).join('');
     document.getElementById('metricModal').style.display = 'flex';
+};
+
+window.moveCustomMetric = async (idx, dir) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= logData.customMetrics.length) return;
+    [logData.customMetrics[idx], logData.customMetrics[newIdx]] = [logData.customMetrics[newIdx], logData.customMetrics[idx]];
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+    window.showMetricModal();
+    renderMatrix();
 };
 
 window.addCustomMetric = async () => {
@@ -1184,8 +1197,7 @@ const renderMatrix = () => {
     const header = document.getElementById('headerRow');
     if (!body || !header) return;
     
-    const catOrder = { cardio: 0, gym: 1, bodyweight: 2, time: 3, other: 4 };
-    const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
+    const sortedTypes = [...logData.types];
 
     let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Notes</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
@@ -1288,6 +1300,8 @@ const renderMatrix = () => {
 
         const activeData = dayData || { customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
+        const dayTheme = getThemeForDate(dateKey);
+        const dayThemeLabel = dayTheme ? `<div class="day-theme-tag">${dayTheme.title}</div>` : '';
 
         weekAcc.days++;
         logData.customMetrics.forEach(m => {
@@ -1321,7 +1335,7 @@ const renderMatrix = () => {
             ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
             : `<div class="cell-empty">+</div>`;
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
-            <td class="col-date">${displayDate}</td>
+            <td class="col-date">${displayDate}${dayThemeLabel}</td>
             <td class="col-stat editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteCell}</td>`;
 
         logData.customMetrics.forEach(m => {
@@ -1486,12 +1500,25 @@ window.showTypeModal = () => {
     const container = document.getElementById('typeList');
     container.innerHTML = logData.types.map((type, idx) => `
         <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+            <div class="reorder-btns">
+                <button onclick="window.moveType(${idx},-1)" class="reorder-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                <button onclick="window.moveType(${idx},1)" class="reorder-btn" ${idx === logData.types.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
             <input type="text" value="${type}" id="type-input-${idx}" style="flex:1;">
             <select id="type-cat-${idx}" style="width:110px; padding:6px; border-radius:8px; border:1px solid var(--border); font-size:0.75rem;">${catOptions(getTypeCategory(type))}</select>
             <button onclick="window.renameType(${idx})" class="nav-btn btn-secondary" style="font-size:0.65rem; padding:4px 10px;">Save</button>
             <button onclick="window.removeType(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:4px 10px;" class="nav-btn">✕</button>
         </div>`).join('');
     document.getElementById('typeModal').style.display = 'flex';
+};
+
+window.moveType = async (idx, dir) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= logData.types.length) return;
+    [logData.types[idx], logData.types[newIdx]] = [logData.types[newIdx], logData.types[idx]];
+    await setDoc(doc(db, "logs", LOG_ID), logData);
+    window.showTypeModal();
+    renderMatrix();
 };
 window.addType = async () => {
     const input = document.getElementById('newTypeInput');
