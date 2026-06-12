@@ -24,13 +24,16 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {} };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [] };
+let editingGoalId = null;
+let editingThemeId = null;
 
 const TYPE_CATEGORIES = [
     { value: 'cardio',      label: 'Distance' },
     { value: 'bodyweight',  label: 'Reps' },
     { value: 'gym',         label: 'Weight' },
     { value: 'time',        label: 'Time' },
+    { value: 'pacing',      label: 'Time + Distance' },
     { value: 'other',       label: 'Other' },
 ];
 
@@ -122,11 +125,14 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {} };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [] };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
-        } else {
+        } else if (!snap.metadata.fromCache) {
+            // Only create a fresh log if the server has confirmed no document exists.
+            // A cache-only "not found" can happen before the server responds, and must
+            // never trigger an overwrite of real data.
             setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [], dailyNotes: {} });
         }
     });
@@ -176,7 +182,11 @@ window.addCustomMetric = async () => {
     if(!name) return;
     
     if(logData.customMetrics.some(m => m.name === name)) return alert('Metric name already active.');
-    logData.customMetrics.push({ name: name, type: typeSelect.value });
+    if (typeSelect.value === 'slider100') {
+        logData.customMetrics.push({ name: name, type: 'slider', scale: 100 });
+    } else {
+        logData.customMetrics.push({ name: name, type: typeSelect.value });
+    }
     await setDoc(doc(db, "logs", LOG_ID), logData);
     nameInput.value = "";
     window.showMetricModal();
@@ -191,6 +201,10 @@ window.deleteCustomMetric = async (idx) => {
 };
 
 window.updateLocalCustomMetricVal = (name, val) => { dynamicMetricValues[name] = val; };
+window.updateTimeDistanceVal = (name, field, val) => {
+    const current = (dynamicMetricValues[name] && typeof dynamicMetricValues[name] === 'object') ? dynamicMetricValues[name] : { time: '', distance: '' };
+    dynamicMetricValues[name] = { ...current, [field]: val };
+};
 
 const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
     const container = document.getElementById('customMetricsFormContainer');
@@ -199,17 +213,28 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
     dynamicMetricValues = {};
 
     logData.customMetrics.forEach(m => {
-        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : (m.type === 'slider' ? 5 : false);
+        const scale = m.scale || 10;
+        const defaultVal = m.type === 'slider' ? Math.round(scale/2) : (m.type === 'timedistance' ? { time: '', distance: '' } : false);
+        const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : defaultVal;
         dynamicMetricValues[m.name] = val;
 
         const div = document.createElement('div');
         div.className = "input-row";
-        if (m.type === 'slider') {
+        if (m.type === 'timedistance') {
+            const time = (val && val.time) || '';
+            const dist = (val && val.distance) || '';
+            div.innerHTML = `
+                <label>${m.name.replace(/-/g, ' ')} (time &amp; distance)</label>
+                <div class="distance-input-row">
+                    <input type="number" min="0" step="1" placeholder="Minutes" value="${time}" oninput="window.updateTimeDistanceVal('${m.name}','time',this.value)">
+                    <input type="number" min="0" step="0.01" placeholder="Distance (km)" value="${dist}" oninput="window.updateTimeDistanceVal('${m.name}','distance',this.value)">
+                </div>`;
+        } else if (m.type === 'slider') {
             div.className = "input-row highlight-box";
             div.innerHTML = `
-                <label>${m.name.replace(/-/g, ' ')} (1-10)</label>
+                <label>${m.name.replace(/-/g, ' ')} (1-${scale})</label>
                 <div class="slider-row">
-                    <input type="range" min="1" max="10" value="${val}" oninput="document.getElementById('lbl-${m.name}').innerText = this.value; window.updateLocalCustomMetricVal('${m.name}', parseInt(this.value))">
+                    <input type="range" min="1" max="${scale}" value="${val}" oninput="document.getElementById('lbl-${m.name}').innerText = this.value; window.updateLocalCustomMetricVal('${m.name}', parseInt(this.value))">
                     <span id="lbl-${m.name}" class="score-display">${val}</span>
                 </div>`;
         } else {
@@ -256,10 +281,10 @@ window.toggleDistanceRow = () => {
     const badge = document.getElementById('typeCategoryBadge');
     section.style.display = cat ? 'block' : 'none';
     if (badge) badge.textContent = catLabel;
-    document.getElementById('metricCardio').style.display     = cat === 'cardio'     ? 'block' : 'none';
+    document.getElementById('metricCardio').style.display     = (cat === 'cardio' || cat === 'pacing')   ? 'block' : 'none';
     document.getElementById('metricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
     document.getElementById('metricGym').style.display        = cat === 'gym'        ? 'block' : 'none';
-    document.getElementById('metricTime').style.display       = cat === 'time'       ? 'block' : 'none';
+    document.getElementById('metricTime').style.display       = (cat === 'time' || cat === 'pacing')     ? 'block' : 'none';
     document.getElementById('metricOther').style.display      = cat === 'other'      ? 'block' : 'none';
 };
 
@@ -321,7 +346,6 @@ window.quickCompletePlan = async (id) => {
     const idx = logData.entries.findIndex(e => e.id === id);
     if(idx === -1) return;
     logData.entries[idx].isPlanned = false;
-    logData.entries[idx].happiness = 5;
     logData.entries[idx].mark = 2;
     logData.entries[idx].customMetricData = {};
     celebrate();
@@ -349,18 +373,17 @@ window.saveExercise = async () => {
     const otherRating = Math.min(10, Math.max(1, parseInt(document.getElementById('modalOtherRating').value) || 5));
     const entryData = {
         date: document.getElementById('modalDate').value,
-        happiness: null,
         type,
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark,
         isPlanned: isPlannedStrategy,
         customMetricData: isPlannedStrategy ? {} : { ...dynamicMetricValues },
-        distance: cat === 'cardio' && !isNaN(distVal) && distVal > 0 ? distVal : null,
+        distance: (cat === 'cardio' || cat === 'pacing') && !isNaN(distVal) && distVal > 0 ? distVal : null,
         distanceUnit: document.getElementById('modalDistanceUnit').value,
         reps: cat === 'bodyweight' && !isNaN(repsVal) && repsVal > 0 ? repsVal : null,
         weight: cat === 'gym' && !isNaN(weightVal) && weightVal > 0 ? weightVal : null,
         weightUnit: document.getElementById('modalWeightUnit').value,
-        duration: cat === 'time' && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
+        duration: (cat === 'time' || cat === 'pacing') && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
         otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
         id: editingId || Date.now()
     };
@@ -393,11 +416,10 @@ const renderTrailingCharts = (completed) => {
     Object.keys(chartInstances).filter(k => k.startsWith('trailing-')).forEach(k => destroyChart(k));
     container.innerHTML = '';
 
-    // Build daily lookup: date → { happiness, customMetricData }
+    // Build daily lookup: date → { customMetricData }
     const byDate = {};
     completed.forEach(e => {
-        if (!byDate[e.date]) byDate[e.date] = { happiness: null, customVals: {} };
-        if (e.happiness) byDate[e.date].happiness = e.happiness;
+        if (!byDate[e.date]) byDate[e.date] = { customVals: {} };
         if (e.customMetricData) Object.assign(byDate[e.date].customVals, e.customMetricData);
     });
 
@@ -409,13 +431,14 @@ const renderTrailingCharts = (completed) => {
         allDates.push(d.toISOString().split('T')[0]);
     }
 
-    // Build 10-day trailing average series for a value accessor
+    // Build 5-day trailing average series for a value accessor
+    const TRAILING_WINDOW = 5;
     const trailingSeries = (accessor) => {
         const points = { labels: [], data: [] };
         allDates.forEach((dateStr, i) => {
-            const window = allDates.slice(Math.max(0, i - 9), i + 1);
+            const window = allDates.slice(Math.max(0, i - (TRAILING_WINDOW - 1)), i + 1);
             const vals = window.map(d => accessor(byDate[d])).filter(v => v != null && v > 0);
-            if (vals.length >= 3) {
+            if (vals.length >= 2) {
                 points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
                 points.data.push(+(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
             }
@@ -423,18 +446,41 @@ const renderTrailingCharts = (completed) => {
         return points;
     };
 
+    // Simple linear regression trend line over the data points
+    const trendLine = (data) => {
+        const n = data.length;
+        if (n < 2) return { line: [], slope: 0 };
+        const xs = data.map((_, i) => i);
+        const meanX = xs.reduce((a,b)=>a+b,0) / n;
+        const meanY = data.reduce((a,b)=>a+b,0) / n;
+        let num = 0, den = 0;
+        for (let i = 0; i < n; i++) { num += (xs[i]-meanX)*(data[i]-meanY); den += (xs[i]-meanX)**2; }
+        const slope = den === 0 ? 0 : num / den;
+        const intercept = meanY - slope * meanX;
+        return { line: xs.map(x => +(slope*x + intercept).toFixed(2)), slope };
+    };
+
+    const trendDescription = (label, slope) => {
+        const threshold = 0.01;
+        if (slope > threshold) return `Your ${label.toLowerCase()} has been trending upward recently. 📈`;
+        if (slope < -threshold) return `Your ${label.toLowerCase()} has been trending downward recently. 📉`;
+        return `Your ${label.toLowerCase()} has been holding fairly steady recently. ➡️`;
+    };
+
     const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
 
-    const sliders = logData.customMetrics
-        .filter(m => m.type === 'slider')
-        .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name] }));
+    const series = [
+        ...logData.customMetrics
+            .filter(m => m.type === 'slider')
+            .map(m => ({ key: `trailing-${m.name}`, label: m.name.charAt(0) + m.name.slice(1).toLowerCase(), accessor: d => d?.customVals[m.name], scale: m.scale || 10 }))
+    ];
 
-    sliders.forEach(({ key, label, accessor }, idx) => {
+    series.forEach(({ key, label, accessor, scale }, idx) => {
         const { labels, data } = trailingSeries(accessor);
 
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
-        titleEl.textContent = `${label} — 10-day trailing average`;
+        titleEl.textContent = `${label} — ${TRAILING_WINDOW}-day moving average`;
         container.appendChild(titleEl);
 
         if (data.length < 2) {
@@ -445,7 +491,15 @@ const renderTrailingCharts = (completed) => {
             return;
         }
 
+        const { line, slope } = trendLine(data);
         const color = colors[idx % colors.length];
+
+        const desc = document.createElement('p');
+        desc.className = 'neutral-msg';
+        desc.style.marginBottom = '12px';
+        desc.textContent = trendDescription(label, slope);
+        container.appendChild(desc);
+
         const wrap = document.createElement('div');
         wrap.className = 'chart-container';
         const canvas = document.createElement('canvas');
@@ -467,13 +521,22 @@ const renderTrailingCharts = (completed) => {
                     pointBackgroundColor: color,
                     fill: false,
                     tension: 0.4,
+                }, {
+                    label: 'Trend',
+                    data: line,
+                    borderColor: '#9499a3',
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
                 }]
             },
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' }, title: { display: true, text: 'Score (1–10)', font: { size: 11 }, color: '#8a8a8a' } },
+                    y: { min: 1, max: scale, ticks: { stepSize: scale === 100 ? 10 : 1 }, grid: { color: '#f1f5f9' }, title: { display: true, text: `Score (1–${scale})`, font: { size: 11 }, color: '#8a8a8a' } },
                     x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
                 }
             }
@@ -708,9 +771,180 @@ const _unused_renderPersonalRecords = (completed) => {
     ].map(c => `<div class="stat-card"><div class="stat-icon">${c.icon}</div><label>${c.label}</label><div class="stat-val stat-val--sm">${c.val}</div></div>`).join('');
 };
 
+// --- GOALS & PROJECTS ---
+const renderGoals = () => {
+    const el = document.getElementById('goalsGrid');
+    if (!el) return;
+    if (!logData.goals || logData.goals.length === 0) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No goals yet — add one to start tracking progress.</p>`;
+        return;
+    }
+    el.innerHTML = logData.goals.map(g => {
+        const pct = Math.max(0, Math.min(100, g.progress || 0));
+        const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const startLabel = g.startDate ? fmtDate(g.startDate) : '';
+        const endLabel = g.targetDate ? fmtDate(g.targetDate) : '';
+        let dateLabel = '';
+        if (startLabel && endLabel) dateLabel = `${startLabel} → ${endLabel}`;
+        else if (endLabel) dateLabel = `Target: ${endLabel}`;
+        else if (startLabel) dateLabel = `Start: ${startLabel}`;
+        return `<div class="achievement-card unlocked goal-card" onclick="window.editGoal(${g.id})">
+            <div class="goal-title">${g.title}</div>
+            ${g.description ? `<div class="goal-desc">${g.description}</div>` : ''}
+            ${dateLabel ? `<div class="goal-date">${dateLabel}</div>` : ''}
+            <div class="goal-progress-outer"><div class="goal-progress-inner" style="width:${pct}%"></div></div>
+            <div class="goal-progress-pct">${pct}%</div>
+        </div>`;
+    }).join('');
+};
+
+window.showGoalModal = () => {
+    editingGoalId = null;
+    document.getElementById('goalModalTitle').textContent = 'Add Goal';
+    document.getElementById('deleteGoalBtn').style.display = 'none';
+    document.getElementById('goalTitle').value = '';
+    document.getElementById('goalDesc').value = '';
+    document.getElementById('goalStartDate').value = '';
+    document.getElementById('goalTargetDate').value = '';
+    document.getElementById('goalProgress').value = 0;
+    document.getElementById('goalProgressLbl').innerText = '0%';
+    document.getElementById('goalModal').style.display = 'flex';
+};
+
+window.editGoal = (id) => {
+    const goal = logData.goals.find(g => g.id === id);
+    if (!goal) return;
+    editingGoalId = id;
+    document.getElementById('goalModalTitle').textContent = 'Edit Goal';
+    document.getElementById('deleteGoalBtn').style.display = 'block';
+    document.getElementById('goalTitle').value = goal.title || '';
+    document.getElementById('goalDesc').value = goal.description || '';
+    document.getElementById('goalStartDate').value = goal.startDate || '';
+    document.getElementById('goalTargetDate').value = goal.targetDate || '';
+    document.getElementById('goalProgress').value = goal.progress || 0;
+    document.getElementById('goalProgressLbl').innerText = (goal.progress || 0) + '%';
+    document.getElementById('goalModal').style.display = 'flex';
+};
+
+window.saveGoal = async () => {
+    const title = document.getElementById('goalTitle').value.trim();
+    if (!title) return alert('Please enter a goal title.');
+    const goalData = {
+        id: editingGoalId || Date.now(),
+        title,
+        description: document.getElementById('goalDesc').value.trim(),
+        startDate: document.getElementById('goalStartDate').value,
+        targetDate: document.getElementById('goalTargetDate').value,
+        progress: parseInt(document.getElementById('goalProgress').value) || 0,
+    };
+    if (!logData.goals) logData.goals = [];
+    if (editingGoalId) {
+        const idx = logData.goals.findIndex(g => g.id === editingGoalId);
+        logData.goals[idx] = goalData;
+    } else {
+        logData.goals.push(goalData);
+    }
+    renderGoals();
+    window.closeModal('goalModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+window.deleteGoal = async () => {
+    if (!confirm('Delete this goal?')) return;
+    logData.goals = logData.goals.filter(g => g.id !== editingGoalId);
+    renderGoals();
+    window.closeModal('goalModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+// --- TRAINING THEMES ---
+const renderThemes = () => {
+    const el = document.getElementById('themesGrid');
+    if (!el) return;
+    if (!logData.themes || logData.themes.length === 0) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No themes yet — add one to mark a training focus period.</p>`;
+        return;
+    }
+    const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    el.innerHTML = logData.themes.slice().sort((a,b) => (b.startDate || '').localeCompare(a.startDate || '')).map(t => {
+        const startLabel = t.startDate ? fmtDate(t.startDate) : '';
+        const endLabel = t.endDate ? fmtDate(t.endDate) : '';
+        let dateLabel = '';
+        if (startLabel && endLabel) dateLabel = `${startLabel} → ${endLabel}`;
+        else if (endLabel) dateLabel = `Until: ${endLabel}`;
+        else if (startLabel) dateLabel = `From: ${startLabel}`;
+        return `<div class="achievement-card unlocked goal-card" onclick="window.editTheme(${t.id})">
+            <div class="goal-title">${t.title}</div>
+            ${t.description ? `<div class="goal-desc">${t.description}</div>` : ''}
+            ${dateLabel ? `<div class="goal-date">${dateLabel}</div>` : ''}
+        </div>`;
+    }).join('');
+};
+
+window.showThemeModal = () => {
+    editingThemeId = null;
+    document.getElementById('themeModalTitle').textContent = 'Add Theme';
+    document.getElementById('deleteThemeBtn').style.display = 'none';
+    document.getElementById('themeTitle').value = '';
+    document.getElementById('themeDesc').value = '';
+    document.getElementById('themeStartDate').value = '';
+    document.getElementById('themeEndDate').value = '';
+    document.getElementById('themeModal').style.display = 'flex';
+};
+
+window.editTheme = (id) => {
+    const theme = logData.themes.find(t => t.id === id);
+    if (!theme) return;
+    editingThemeId = id;
+    document.getElementById('themeModalTitle').textContent = 'Edit Theme';
+    document.getElementById('deleteThemeBtn').style.display = 'block';
+    document.getElementById('themeTitle').value = theme.title || '';
+    document.getElementById('themeDesc').value = theme.description || '';
+    document.getElementById('themeStartDate').value = theme.startDate || '';
+    document.getElementById('themeEndDate').value = theme.endDate || '';
+    document.getElementById('themeModal').style.display = 'flex';
+};
+
+window.saveTheme = async () => {
+    const title = document.getElementById('themeTitle').value.trim();
+    if (!title) return alert('Please enter a theme title.');
+    const themeData = {
+        id: editingThemeId || Date.now(),
+        title,
+        description: document.getElementById('themeDesc').value.trim(),
+        startDate: document.getElementById('themeStartDate').value,
+        endDate: document.getElementById('themeEndDate').value,
+    };
+    if (!logData.themes) logData.themes = [];
+    if (editingThemeId) {
+        const idx = logData.themes.findIndex(t => t.id === editingThemeId);
+        logData.themes[idx] = themeData;
+    } else {
+        logData.themes.push(themeData);
+    }
+    renderThemes();
+    window.closeModal('themeModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+window.deleteTheme = async () => {
+    if (!confirm('Delete this theme?')) return;
+    logData.themes = logData.themes.filter(t => t.id !== editingThemeId);
+    renderThemes();
+    window.closeModal('themeModal');
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+const getThemeForDate = (dateKey) => {
+    if (!logData.themes) return null;
+    return logData.themes.find(t => t.startDate && dateKey >= t.startDate && (!t.endDate || dateKey <= t.endDate));
+};
+
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
+    renderGoals();
+    renderThemes();
     renderWeeklyRecap(completed);
     renderAchievements(completed);
     renderWeekCompare(completed);
@@ -953,15 +1187,14 @@ const renderMatrix = () => {
     const catOrder = { cardio: 0, gym: 1, bodyweight: 2, time: 3, other: 4 };
     const sortedTypes = [...logData.types].sort((a, b) => (catOrder[getTypeCategory(a)] ?? 9) - (catOrder[getTypeCategory(b)] ?? 9));
 
-    let headerHTML = `<th class="col-date">Date</th><th class="col-note">Notes</th>`;
+    let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Notes</th>`;
     logData.customMetrics.forEach(m => { headerHTML += `<th class="col-stat">${m.name.replace(/-/g, ' ')}</th>`; });
     sortedTypes.forEach(t => { headerHTML += `<th class="dynamic-type-th cat-${getTypeCategory(t)}">${t}</th>`; });
     header.innerHTML = headerHTML;
 
     const entriesByDate = {};
     logData.entries.forEach(e => {
-        if (!entriesByDate[e.date]) entriesByDate[e.date] = { happiness: null, customVals: {}, exercises: {} };
-        if (e.happiness && !e.isPlanned) entriesByDate[e.date].happiness = e.happiness;
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = { customVals: {}, exercises: {} };
         if (!e.isPlanned && e.customMetricData) Object.assign(entriesByDate[e.date].customVals, e.customMetricData);
         if (e.type !== "NONE") {
             if (!entriesByDate[e.date].exercises[e.type]) entriesByDate[e.date].exercises[e.type] = [];
@@ -979,15 +1212,18 @@ const renderMatrix = () => {
         if (acc.days === 0) return '';
         const monDate = new Date(getWeekStart(weekId));
         const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const weekTheme = getThemeForDate(weekId);
+        const themeLabel = weekTheme ? `<div class="plan-note">${weekTheme.title}</div>` : '';
         let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
-            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →</td>
-            <td class="col-note"></td>`;
+            <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →${themeLabel}</td>
+            <td class="col-stat"></td>`;
 
         logData.customMetrics.forEach(m => {
             const vals = acc.customVals[m.name] || [];
             let cell = '';
             if (vals.length) {
                 if (m.type === 'slider') cell = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+                else if (m.type === 'timedistance') { const count = vals.filter(v => v && (v.time || v.distance)).length; cell = count > 0 ? `${count}d` : ''; }
                 else { const count = vals.filter(v=>v===true).length; cell = count > 0 ? `${count}d` : ''; }
             }
             html += `<td class="col-stat">${cell}</td>`;
@@ -997,14 +1233,18 @@ const renderMatrix = () => {
             const count = acc.typeDays[type] || 0;
             const m = acc.typeMetric?.[type];
             let cell = count > 0 ? count + 'd' : '';
-            if (m && m.values.length > 0) {
+            if (m && (m.values.length > 0 || (m.timeValues && m.timeValues.length > 0))) {
                 const cat = getTypeCategory(type);
-                const total = m.values.reduce((a,b)=>a+b,0);
-                const avg = total / m.values.length;
                 const fmt = (n) => n % 1 === 0 ? n : n.toFixed(1);
-                if (cat === 'other') cell += ` · ${fmt(avg)}${m.unit}`;
-                else if (cat === 'time') cell += ` · ${fmt(total)}${m.unit}`;
-                else cell += ` · ${fmt(total)}${m.unit}`;
+                if (cat === 'pacing') {
+                    if (m.values.length > 0) cell += ` · ${fmt(m.values.reduce((a,b)=>a+b,0))}${m.unit}`;
+                    if (m.timeValues.length > 0) cell += ` · ${fmt(m.timeValues.reduce((a,b)=>a+b,0))}min`;
+                } else if (m.values.length > 0) {
+                    const total = m.values.reduce((a,b)=>a+b,0);
+                    const avg = total / m.values.length;
+                    if (cat === 'other') cell += ` · ${fmt(avg)}${m.unit}`;
+                    else cell += ` · ${fmt(total)}${m.unit}`;
+                }
             }
             html += `<td>${cell}</td>`;
         });
@@ -1017,7 +1257,7 @@ const renderMatrix = () => {
         days: 0,
         customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
         typeDays: Object.fromEntries(sortedTypes.map(t => [t, 0])),
-        typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '' }])),
+        typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '', timeValues: [] }])),
     });
 
     body.innerHTML = "";
@@ -1030,11 +1270,15 @@ const renderMatrix = () => {
     const currentWeekStart = getWeekStart(new Date().toISOString().split('T')[0]);
     const expandWeekIds = new Set();
 
+    const hideFuture = localStorage.getItem('hideFuturePlans') === '1';
+    const todayKey = new Date().toISOString().split('T')[0];
+
     for (let d = new Date(futureBuffer); d >= firstDate; d.setDate(d.getDate() - 1)) {
         const dateKey = d.toISOString().split('T')[0];
         const dayOfWeek = d.getDay();
         const dayData = entriesByDate[dateKey];
         if (!dayData && d > new Date()) continue;
+        if (hideFuture && dateKey > todayKey) continue;
 
         if (!weekId) {
             weekId = dateKey;
@@ -1042,7 +1286,7 @@ const renderMatrix = () => {
             if (getWeekStart(weekId) >= currentWeekStart) expandWeekIds.add(weekId);
         }
 
-        const activeData = dayData || { happiness: null, customVals: {}, exercises: {} };
+        const activeData = dayData || { customVals: {}, exercises: {} };
         const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
 
         weekAcc.days++;
@@ -1062,24 +1306,30 @@ const renderMatrix = () => {
                     else if (cat === 'gym' && done.weight) { weekAcc.typeMetric[type].values.push(done.weight); weekAcc.typeMetric[type].unit = done.weightUnit || 'kg'; }
                     else if (cat === 'time' && done.duration) { weekAcc.typeMetric[type].values.push(done.duration); weekAcc.typeMetric[type].unit = 'min'; }
                     else if (cat === 'other' && done.otherRating) { weekAcc.typeMetric[type].values.push(done.otherRating); weekAcc.typeMetric[type].unit = '/10'; }
+                    else if (cat === 'pacing') {
+                        if (done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
+                        if (done.duration) { weekAcc.typeMetric[type].timeValues.push(done.duration); }
+                    }
                 }
             }
         });
 
         dayCounter++;
         const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
-        const dayNote = (logData.dailyNotes || {})[dateKey] || '';
-        const noteDisplay = dayNote
-            ? `<span class="note-text">${dayNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`
-            : `<span class="cell-empty">+</span>`;
+        const noteText = (logData.dailyNotes && logData.dailyNotes[dateKey]) || '';
+        const noteCell = noteText
+            ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
+            : `<div class="cell-empty">+</div>`;
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
             <td class="col-date">${displayDate}</td>
-            <td class="col-note editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteDisplay}</td>`;
+            <td class="col-stat editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteCell}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
-            if (mVal !== undefined && mVal !== null) {
+            if (m.type === 'timedistance' && mVal && (mVal.time || mVal.distance)) {
+                cellContent = `<div class="dist-label">${mVal.time ? mVal.time + 'min' : ''}${mVal.time && mVal.distance ? ' / ' : ''}${mVal.distance ? mVal.distance + 'km' : ''}</div>`;
+            } else if (mVal !== undefined && mVal !== null) {
                 cellContent = m.type === 'slider'
                     ? `<div class="happy-pill">${mVal}</div>`
                     : (mVal ? '✅' : '❌');
@@ -1088,6 +1338,10 @@ const renderMatrix = () => {
             }
             if (m.type === 'binary') {
                 row += `<td class="col-stat editable-cell" onclick="window.toggleBinaryCell('${dateKey}','${m.name}',${mVal === true})">${cellContent}</td>`;
+            } else if (m.type === 'timedistance') {
+                row += `<td class="col-stat editable-cell" onclick="window.promptTimeDistance('${dateKey}','${m.name}',${mVal && mVal.time != null ? `'${mVal.time}'` : 'null'},${mVal && mVal.distance != null ? `'${mVal.distance}'` : 'null'})">${cellContent}</td>`;
+            } else if (m.scale === 100) {
+                row += `<td class="col-stat editable-cell" onclick="window.promptCellValue('${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'},100)">${cellContent}</td>`;
             } else {
                 row += `<td class="col-stat editable-cell" onclick="window.openCellEdit(event,'${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'})">${cellContent}</td>`;
             }
@@ -1103,6 +1357,7 @@ const renderMatrix = () => {
             else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
             else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
             else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
+            else if (cat === 'pacing' && (exercise.distance || exercise.duration)) metricLabel = `${exercise.distance ? exercise.distance + (exercise.distanceUnit || 'km') : ''}${exercise.distance && exercise.duration ? ' / ' : ''}${exercise.duration ? exercise.duration + 'min' : ''}`;
             else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
             const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 if (exercise.isPlanned) {
@@ -1295,7 +1550,7 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
         `<button class="pop-btn ${n === currentVal ? 'pop-btn-active' : ''}" onclick="window.saveCellValue('${dateKey}','${field}',${n})">${n}</button>`
     ).join('');
 
-    const label = field === 'mood' ? 'Mood' : field.replace('metric-','').replace(/-/g,' ');
+    const label = field.replace('metric-','').replace(/-/g,' ');
     content.innerHTML = `<div class="pop-label">${label}</div><div class="pop-btns">${buttons}</div>`;
 
     popover.style.display = 'block';
@@ -1308,19 +1563,46 @@ window.openCellEdit = (e, dateKey, field, currentVal) => {
     popover.style.top = top + 'px';
 };
 
+window.promptTimeDistance = async (dateKey, metricName, currentTime, currentDist) => {
+    const timeInput = prompt(`${metricName.replace(/-/g,' ')} — time (minutes):`, currentTime !== null ? currentTime : '');
+    if (timeInput === null) return;
+    const distInput = prompt(`${metricName.replace(/-/g,' ')} — distance (km):`, currentDist !== null ? currentDist : '');
+    if (distInput === null) return;
+
+    let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
+    if (!record) {
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
+        logData.entries.push(record);
+    }
+    if (!record.customMetricData) record.customMetricData = {};
+    const time = timeInput.trim() === '' ? null : parseFloat(timeInput);
+    const distance = distInput.trim() === '' ? null : parseFloat(distInput);
+    if (time === null && distance === null) {
+        delete record.customMetricData[metricName];
+    } else {
+        record.customMetricData[metricName] = { time, distance };
+    }
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
+window.promptCellValue = (dateKey, field, currentVal, max) => {
+    const input = prompt(`${field.replace('metric-','').replace(/-/g,' ')} (1-${max}):`, currentVal !== null ? currentVal : '');
+    if (input === null) return;
+    const num = Math.max(1, Math.min(max, parseInt(input)));
+    if (isNaN(num)) return;
+    window.saveCellValue(dateKey, field, num);
+};
+
 window.saveCellValue = async (dateKey, field, value) => {
     closeCellPopover();
     let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
     if (!record) {
-        record = { id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: {} };
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
         logData.entries.push(record);
     }
-    if (field === 'mood') {
-        record.happiness = value;
-    } else {
-        if (!record.customMetricData) record.customMetricData = {};
-        record.customMetricData[field.replace('metric-', '')] = value;
-    }
+    if (!record.customMetricData) record.customMetricData = {};
+    record.customMetricData[field.replace('metric-', '')] = value;
     renderMatrix();
     try {
         await setDoc(doc(db, 'logs', LOG_ID), logData);
@@ -1333,7 +1615,7 @@ window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     const newVal = !currentVal;
     let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
     if (!record) {
-        record = { id: Date.now(), date: dateKey, happiness: null, type: 'NONE', isPlanned: false, customMetricData: {} };
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
         logData.entries.push(record);
     }
     if (!record.customMetricData) record.customMetricData = {};
@@ -1420,3 +1702,41 @@ const celebrate = () => {
     setTimeout(() => el.remove(), 900);
 };
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
+
+// --- DARK MODE ---
+const applyDarkMode = (on) => {
+    document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+    document.getElementById('darkModeToggleBtn')?.classList.toggle('active', on);
+};
+window.toggleDarkMode = () => {
+    const on = document.documentElement.getAttribute('data-theme') !== 'dark';
+    localStorage.setItem('darkMode', on ? '1' : '0');
+    applyDarkMode(on);
+};
+applyDarkMode(localStorage.getItem('darkMode') === '1');
+
+// --- HIDE FUTURE PLANS ---
+const applyHideFuture = (on) => {
+    document.getElementById('hideFutureToggleBtn')?.classList.toggle('active', on);
+};
+window.toggleHideFuture = () => {
+    const on = localStorage.getItem('hideFuturePlans') !== '1';
+    localStorage.setItem('hideFuturePlans', on ? '1' : '0');
+    applyHideFuture(on);
+    renderMatrix();
+};
+applyHideFuture(localStorage.getItem('hideFuturePlans') === '1');
+
+// --- EXPORT DATA ---
+window.exportData = () => {
+    const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `traininglog-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    window.closeSettings();
+};
