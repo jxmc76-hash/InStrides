@@ -133,7 +133,7 @@ const attachRealtimeListener = () => {
             // Only create a fresh log if the server has confirmed no document exists.
             // A cache-only "not found" can happen before the server responds, and must
             // never trigger an overwrite of real data.
-            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [] });
+            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [], dailyNotes: {} });
         }
     });
 };
@@ -1322,7 +1322,7 @@ const renderMatrix = () => {
             : `<div class="cell-empty">+</div>`;
         let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
             <td class="col-date">${displayDate}</td>
-            <td class="col-stat editable-cell" onclick="window.editDailyNote('${dateKey}')">${noteCell}</td>`;
+            <td class="col-stat editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteCell}</td>`;
 
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
@@ -1623,6 +1623,59 @@ window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     renderMatrix();
     await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
+window.openNoteEdit = (e, dateKey) => {
+    e.stopPropagation();
+    const popover = document.getElementById('cellPopover');
+    const content = document.getElementById('cellPopoverContent');
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentNote = (logData.dailyNotes || {})[dateKey] || '';
+
+    const safeNote = currentNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const clearBtn = currentNote ? `<button class="pop-btn note-clear-btn" onclick="window.saveNote('${dateKey}','')">Clear</button>` : '';
+    content.innerHTML = `
+        <div class="pop-label">Daily Note</div>
+        <textarea id="noteEditInput" maxlength="140" placeholder="What's on your mind? (140 chars)" rows="3" class="note-edit-textarea">${safeNote}</textarea>
+        <div class="note-edit-footer">
+            <span id="noteCharCount" class="note-char-count">${currentNote.length}/140</span>
+            <div style="display:flex;gap:6px;">${clearBtn}<button class="pop-btn pop-btn-active" onclick="window.saveNote('${dateKey}',document.getElementById('noteEditInput').value)">Save</button></div>
+        </div>`;
+
+    popover.style.display = 'block';
+    const pw = popover.offsetWidth;
+    let left = rect.left + rect.width / 2 - pw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+    let top = rect.bottom + 6;
+    if (top + popover.offsetHeight > window.innerHeight - 8) top = rect.top - popover.offsetHeight - 6;
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+
+    const textarea = document.getElementById('noteEditInput');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    textarea.addEventListener('input', () => {
+        document.getElementById('noteCharCount').textContent = `${textarea.value.length}/140`;
+    });
+    textarea.addEventListener('keydown', (ke) => {
+        if (ke.key === 'Enter' && !ke.shiftKey) {
+            ke.preventDefault();
+            window.saveNote(dateKey, textarea.value);
+        }
+    });
+};
+
+window.saveNote = async (dateKey, text) => {
+    closeCellPopover();
+    if (!logData.dailyNotes) logData.dailyNotes = {};
+    const note = text.trim().slice(0, 140);
+    if (note) {
+        logData.dailyNotes[dateKey] = note;
+    } else {
+        delete logData.dailyNotes[dateKey];
+    }
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+};
+
 window.toggleSettings = () => { document.getElementById('settingsMenu').classList.toggle('open'); };
 window.closeSettings = () => { document.getElementById('settingsMenu').classList.remove('open'); };
 document.addEventListener('click', (e) => { if (!e.target.closest('.settings-dropdown')) window.closeSettings(); });
@@ -1649,21 +1702,6 @@ const celebrate = () => {
     setTimeout(() => el.remove(), 900);
 };
 window.selectMark = (v) => { window.tempMark = v; document.querySelectorAll('.rate-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-val') == v)); };
-
-// --- DAILY NOTES ---
-window.editDailyNote = async (dateKey) => {
-    if (!logData.dailyNotes) logData.dailyNotes = {};
-    const current = logData.dailyNotes[dateKey] || '';
-    const note = prompt(`Daily note for ${dateKey}:`, current);
-    if (note === null) return; // cancelled
-    if (note.trim() === '') {
-        delete logData.dailyNotes[dateKey];
-    } else {
-        logData.dailyNotes[dateKey] = note.trim();
-    }
-    renderMatrix();
-    await setDoc(doc(db, 'logs', LOG_ID), logData);
-};
 
 // --- DARK MODE ---
 const applyDarkMode = (on) => {
