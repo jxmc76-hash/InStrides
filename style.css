@@ -97,6 +97,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .empty-type-cell { border-right: 2px solid var(--border) !important; }
 .dynamic-type-th { border-right: 2px solid var(--border) !important; }
 .entry-group { min-width: 0; max-width: 100%; }
+.tick-row { text-align: center; }
+.tick-row .tick-cell { display: inline-block; width: auto; margin: 0 4px; }
 .entry-group + .entry-group { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .add-entry-btn { color: #d0d0d0; font-size: 1rem; font-weight: 700; cursor: pointer; line-height: 1; margin-top: 6px; }
 .add-entry-btn:hover { color: var(--primary); }

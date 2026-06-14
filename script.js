@@ -38,6 +38,46 @@ const TYPE_CATEGORIES = [
 ];
 
 const getTypeCategory = (typeName) => logData.typeCategories?.[typeName] || 'other';
+
+const fmtNum = (n) => { const r = Math.round(n * 100) / 100; return r % 1 === 0 ? r : r.toString(); };
+
+const aggregateExerciseLabel = (entries, cat) => {
+    switch (cat) {
+        case 'cardio': {
+            const total = entries.reduce((s, e) => s + (e.distance || 0), 0);
+            const unit = entries.find(e => e.distanceUnit)?.distanceUnit || 'km';
+            return total ? `${fmtNum(total)}${unit}` : '';
+        }
+        case 'bodyweight': {
+            const total = entries.reduce((s, e) => s + (e.reps || 0), 0);
+            return total ? `${total} reps` : '';
+        }
+        case 'gym': {
+            const total = entries.reduce((s, e) => s + (e.weight || 0), 0);
+            const unit = entries.find(e => e.weightUnit)?.weightUnit || 'kg';
+            return total ? `${fmtNum(total)}${unit}` : '';
+        }
+        case 'time': {
+            const total = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            return total ? `${total}min` : '';
+        }
+        case 'pacing': {
+            const totalDist = entries.reduce((s, e) => s + (e.distance || 0), 0);
+            const totalDur = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            const unit = entries.find(e => e.distanceUnit)?.distanceUnit || 'km';
+            const parts = [];
+            if (totalDist) parts.push(`${fmtNum(totalDist)}${unit}`);
+            if (totalDur) parts.push(`${totalDur}min`);
+            return parts.join(' / ');
+        }
+        case 'other': {
+            const vals = entries.filter(e => e.otherRating).map(e => e.otherRating);
+            if (!vals.length) return '';
+            return `${fmtNum(vals.reduce((a, b) => a + b, 0) / vals.length)}/10`;
+        }
+        default: return '';
+    }
+};
 let editingId = null;
 let unsubSnapshot = null;
 window.tempMark = 1;
@@ -1482,23 +1522,19 @@ const renderMatrix = () => {
         sortedTypes.forEach(type => {
             const exercises = activeData.exercises[type] || [];
             const cat = getTypeCategory(type);
+            const doneEntries = exercises.filter(e => !e.isPlanned);
+            const plannedEntries = exercises.filter(e => e.isPlanned);
             let displaySymbol = '';
-            exercises.forEach(exercise => {
-                let metricLabel = '';
-                if (cat === 'cardio' && exercise.distance) metricLabel = `${exercise.distance}${exercise.distanceUnit || 'km'}`;
-                else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
-                else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
-                else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
-                else if (cat === 'pacing' && (exercise.distance || exercise.duration)) metricLabel = `${exercise.distance ? exercise.distance + (exercise.distanceUnit || 'km') : ''}${exercise.distance && exercise.duration ? ' / ' : ''}${exercise.duration ? exercise.duration + 'min' : ''}`;
-                else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
-                const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
-                if (exercise.isPlanned) {
-                    const noteText = (exercise.details || '').trim();
-                    const noteLabel = noteText ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>` : '';
-                    displaySymbol += `<div class="entry-group"><div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>${noteLabel}</div>`;
-                } else {
-                    displaySymbol += `<div class="entry-group"><div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}</div>`;
-                }
+            if (doneEntries.length) {
+                const totalLabel = aggregateExerciseLabel(doneEntries, cat);
+                const distLabel = totalLabel ? `<div class="dist-label">${totalLabel}</div>` : '';
+                const ticksHTML = doneEntries.map(exercise => `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>`).join('');
+                displaySymbol += `<div class="entry-group"><div class="tick-row">${ticksHTML}</div>${distLabel}</div>`;
+            }
+            plannedEntries.forEach(exercise => {
+                const noteText = (exercise.details || '').trim();
+                const noteLabel = noteText ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>` : '';
+                displaySymbol += `<div class="entry-group"><div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>${noteLabel}</div>`;
             });
             displaySymbol += `<div class="add-entry-btn" data-quick-date="${dateKey}" data-quick-type="${type}" title="Add another ${type} entry">+</div>`;
             row += `<td class="${exercises.length ? 'multi-type-cell' : 'empty-type-cell'}">${displaySymbol}</td>`;
