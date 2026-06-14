@@ -85,7 +85,7 @@ const renderWeekStrapline = () => {
 
     const todayStr = new Date().toISOString().split('T')[0];
     const weekStart = getWeekStart(todayStr);
-    const thisWeek = logData.entries.filter(e => !e.isPlanned && e.date >= weekStart && e.date <= todayStr);
+    const thisWeek = logData.entries.filter(e => !e.isPlanned && e.date >= weekStart && e.date <= todayStr && e.type && e.type !== 'NONE');
 
     if (!thisWeek.length) {
         el.textContent = "No sessions logged yet this week — let's get moving! 💪";
