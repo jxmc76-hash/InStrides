@@ -73,6 +73,8 @@
                             <button id="darkModeToggleBtn" onclick="window.toggleDarkMode()">🌙 Dark Mode</button>
                             <button id="hideFutureToggleBtn" onclick="window.toggleHideFuture()">🙈 Hide Future Plans</button>
                             <button onclick="window.exportData()">⬇ Export Data</button>
+                            <button onclick="document.getElementById('importFileInput').click()">⬆ Import Data</button>
+                            <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="window.handleImportFile(event)">
                             <button onclick="window.switchTab('help'); window.closeSettings()">Help</button>
                             <div class="settings-divider"></div>
                             <button onclick="window.handleSignOut()" style="color:#ef4444">Sign Out</button>
@@ -444,7 +446,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=132"></script>
+    <script type="module" src="script.js?v=133"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

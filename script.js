@@ -1909,6 +1909,42 @@ window.toggleHideFuture = () => {
 };
 applyHideFuture(localStorage.getItem('hideFuturePlans') === '1');
 
+// --- IMPORT DATA ---
+window.handleImportFile = async (event) => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    window.closeSettings();
+
+    let imported;
+    try {
+        imported = JSON.parse(await file.text());
+    } catch (err) {
+        return alert('Could not read that file as JSON: ' + err.message);
+    }
+
+    if (!Array.isArray(imported.entries)) return alert('That file does not look like a valid TrainingLog export (missing "entries").');
+
+    if (!confirm(`Import this file? It contains ${imported.entries.length} entries and will REPLACE all data currently stored for your account. This cannot be undone.`)) return;
+
+    const newData = {
+        types: imported.types || [],
+        typeCategories: imported.typeCategories || {},
+        customMetrics: imported.customMetrics || [],
+        entries: imported.entries || [],
+        dailyNotes: imported.dailyNotes || {},
+        goals: imported.goals || [],
+        themes: imported.themes || []
+    };
+
+    try {
+        await setDoc(doc(db, "logs", LOG_ID), newData);
+        alert('Import successful.');
+    } catch (err) {
+        alert('Import failed: ' + err.message);
+    }
+};
+
 // --- EXPORT DATA ---
 window.exportData = () => {
     const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
