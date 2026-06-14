@@ -78,6 +78,35 @@ const aggregateExerciseLabel = (entries, cat) => {
         default: return '';
     }
 };
+
+const renderWeekStrapline = () => {
+    const el = document.getElementById('weekStrapline');
+    if (!el) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const weekStart = getWeekStart(todayStr);
+    const thisWeek = logData.entries.filter(e => !e.isPlanned && e.date >= weekStart && e.date <= todayStr);
+
+    if (!thisWeek.length) {
+        el.textContent = "No sessions logged yet this week — let's get moving! 💪";
+        el.style.display = 'block';
+        return;
+    }
+
+    const segments = [];
+    logData.types.forEach(type => {
+        const entries = thisWeek.filter(e => e.type === type);
+        if (!entries.length) return;
+        const cat = getTypeCategory(type);
+        const label = aggregateExerciseLabel(entries, cat);
+        const count = `${entries.length}× ${type}`;
+        segments.push(label ? `${count} (${label})` : count);
+    });
+
+    const sessionWord = thisWeek.length === 1 ? 'session' : 'sessions';
+    el.innerHTML = `<strong>This week:</strong> ${thisWeek.length} ${sessionWord} logged — ${segments.join(' · ')}`;
+    el.style.display = 'block';
+};
 let editingId = null;
 let unsubSnapshot = null;
 window.tempMark = 1;
@@ -1352,7 +1381,9 @@ const renderMatrix = () => {
     const body = document.getElementById('matrixBody');
     const header = document.getElementById('headerRow');
     if (!body || !header) return;
-    
+
+    renderWeekStrapline();
+
     const sortedTypes = [...logData.types];
 
     let headerHTML = `<th class="col-date">Date</th><th class="col-stat">Notes</th>`;
