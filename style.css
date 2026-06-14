@@ -79,7 +79,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .dynamic-type-th.cat-other,   .tick-cell.cat-other   { color: #8a8a8a; }
 
 /* Interactive Cells */
-.tick-cell { font-size: 1.4rem; font-weight: 900; cursor: pointer; transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease; margin: 0 auto; }
+.tick-cell { font-size: 1.4rem; font-weight: 900; cursor: pointer; transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease; margin: 0 auto; width: max-content; }
 .tick-cell:hover { transform: scale(1.18) rotate(-4deg); }
 .tick-cell:active { transform: scale(0.88); }
 .tick-cell.done {
@@ -93,12 +93,12 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .tick-cell.cat-time.done       { background-image: linear-gradient(135deg, #60a5fa, #3b82f6); }
 .tick-cell.cat-other.done      { background-image: linear-gradient(135deg, #a8a8a8, #8a8a8a); }
 .tick-cell.plan { color: var(--text-muted); background: white; border: 2.5px dashed var(--text-muted); border-radius: 6px; width: 28px; height: 28px; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.multi-type-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; border-right: 2px solid var(--border) !important; }
+.multi-type-cell { min-width: 0; border-right: 2px solid var(--border) !important; }
 .empty-type-cell { border-right: 2px solid var(--border) !important; }
 .dynamic-type-th { border-right: 2px solid var(--border) !important; }
-.entry-group { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: 100%; }
-.entry-group + .entry-group { padding-top: 6px; border-top: 1px dashed var(--border); width: 100%; }
-.add-entry-btn { color: #d0d0d0; font-size: 1rem; font-weight: 700; cursor: pointer; line-height: 1; }
+.entry-group { min-width: 0; max-width: 100%; }
+.entry-group + .entry-group { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.add-entry-btn { color: #d0d0d0; font-size: 1rem; font-weight: 700; cursor: pointer; line-height: 1; margin-top: 6px; }
 .add-entry-btn:hover { color: var(--primary); }
 .multi-type-cell .add-entry-btn { font-size: 0.8rem; }
 .happy-pill { background: linear-gradient(135deg, #eef2f7, #f1f5f9); color: #475569; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; margin: 0 auto; font-size: 0.9rem; transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease; cursor: pointer; }
