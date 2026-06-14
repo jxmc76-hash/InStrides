@@ -93,6 +93,12 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .tick-cell.cat-time.done       { background-image: linear-gradient(135deg, #60a5fa, #3b82f6); }
 .tick-cell.cat-other.done      { background-image: linear-gradient(135deg, #a8a8a8, #8a8a8a); }
 .tick-cell.plan { color: var(--text-muted); background: white; border: 2.5px dashed var(--text-muted); border-radius: 6px; width: 28px; height: 28px; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.multi-type-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.entry-group { display: flex; flex-direction: column; align-items: center; }
+.entry-group + .entry-group { padding-top: 6px; border-top: 1px dashed var(--border); width: 100%; }
+.add-entry-btn { color: #d0d0d0; font-size: 1rem; font-weight: 700; cursor: pointer; line-height: 1; }
+.add-entry-btn:hover { color: var(--primary); }
+.multi-type-cell .add-entry-btn { font-size: 0.8rem; }
 .happy-pill { background: linear-gradient(135deg, #eef2f7, #f1f5f9); color: #475569; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; margin: 0 auto; font-size: 0.9rem; transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease; cursor: pointer; }
 .happy-pill:hover { transform: scale(1.15); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
 .happy-pill:active { transform: scale(0.9); }
@@ -249,9 +255,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .editable-cell:hover { background: #fdf4f0 !important; }
 .cell-empty { color: #d0d0d0; font-size: 1rem; font-weight: 700; }
 .editable-cell:hover .cell-empty { color: var(--primary); }
-.empty-type-cell { cursor: pointer; }
 .empty-type-cell:hover { background: #fdf4f0 !important; }
-.empty-type-cell:hover::after { content: '+'; color: #e0c8bf; font-size: 1rem; font-weight: 700; }
 
 .cell-popover { position: fixed; background: white; border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 500; min-width: 240px; }
 .pop-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
