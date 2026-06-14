@@ -200,9 +200,14 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .btn-done { width: 100%; padding: 12px; background: #dcfce7; color: #16a34a; border: none; border-radius: 10px; font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; cursor: pointer; }
 .add-type-footer { display: flex; gap: 10px; margin-top: 15px; }
 .type-editor-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+.reorder-btns { display: flex; flex-direction: column; gap: 2px; }
+.reorder-btn { width: 26px; height: 22px; border: 1px solid var(--border); border-radius: 6px; background: white; font-size: 0.6rem; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0; }
+.reorder-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.reorder-btn:disabled { opacity: 0.3; cursor: default; }
 
 .dist-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-top: 3px; }
 .plan-note { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); margin-top: 4px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: auto; margin-right: auto; cursor: default; }
+.day-theme-tag { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .type-category-badge { display: inline-block; background: #fff4ee; color: var(--primary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; margin: 8px 0 12px 0; border: 1px solid #ffd5c0; }
 .distance-input-row { display: flex; gap: 8px; }
 .distance-input-row input { flex: 1; }
