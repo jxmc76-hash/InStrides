@@ -1426,20 +1426,22 @@ const renderMatrix = () => {
         });
         sortedTypes.forEach(type => {
             const ex = activeData.exercises[type];
-            if (ex && ex.some(e => !e.isPlanned)) {
+            const doneEntries = ex ? ex.filter(e => !e.isPlanned) : [];
+            if (doneEntries.length) {
                 weekAcc.typeDays[type]++;
-                const done = ex.find(e => !e.isPlanned);
-                if (done && weekAcc.typeMetric[type]) {
+                if (weekAcc.typeMetric[type]) {
                     const cat = getTypeCategory(type);
-                    if (cat === 'cardio' && done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
-                    else if (cat === 'bodyweight' && done.reps) { weekAcc.typeMetric[type].values.push(done.reps); weekAcc.typeMetric[type].unit = 'reps'; }
-                    else if (cat === 'gym' && done.weight) { weekAcc.typeMetric[type].values.push(done.weight); weekAcc.typeMetric[type].unit = done.weightUnit || 'kg'; }
-                    else if (cat === 'time' && done.duration) { weekAcc.typeMetric[type].values.push(done.duration); weekAcc.typeMetric[type].unit = 'min'; }
-                    else if (cat === 'other' && done.otherRating) { weekAcc.typeMetric[type].values.push(done.otherRating); weekAcc.typeMetric[type].unit = '/10'; }
-                    else if (cat === 'pacing') {
-                        if (done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
-                        if (done.duration) { weekAcc.typeMetric[type].timeValues.push(done.duration); }
-                    }
+                    doneEntries.forEach(done => {
+                        if (cat === 'cardio' && done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
+                        else if (cat === 'bodyweight' && done.reps) { weekAcc.typeMetric[type].values.push(done.reps); weekAcc.typeMetric[type].unit = 'reps'; }
+                        else if (cat === 'gym' && done.weight) { weekAcc.typeMetric[type].values.push(done.weight); weekAcc.typeMetric[type].unit = done.weightUnit || 'kg'; }
+                        else if (cat === 'time' && done.duration) { weekAcc.typeMetric[type].values.push(done.duration); weekAcc.typeMetric[type].unit = 'min'; }
+                        else if (cat === 'other' && done.otherRating) { weekAcc.typeMetric[type].values.push(done.otherRating); weekAcc.typeMetric[type].unit = '/10'; }
+                        else if (cat === 'pacing') {
+                            if (done.distance) { weekAcc.typeMetric[type].values.push(done.distance); weekAcc.typeMetric[type].unit = done.distanceUnit || 'km'; }
+                            if (done.duration) { weekAcc.typeMetric[type].timeValues.push(done.duration); }
+                        }
+                    });
                 }
             }
         });
@@ -1478,27 +1480,28 @@ const renderMatrix = () => {
         });
 
         sortedTypes.forEach(type => {
-            const exercise = activeData.exercises[type] ? activeData.exercises[type][0] : null;
+            const exercises = activeData.exercises[type] || [];
+            const cat = getTypeCategory(type);
             let displaySymbol = '';
-            if (exercise) {
-                const cat = getTypeCategory(type);
-            let metricLabel = '';
-            if (cat === 'cardio' && exercise.distance) metricLabel = `${exercise.distance}${exercise.distanceUnit || 'km'}`;
-            else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
-            else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
-            else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
-            else if (cat === 'pacing' && (exercise.distance || exercise.duration)) metricLabel = `${exercise.distance ? exercise.distance + (exercise.distanceUnit || 'km') : ''}${exercise.distance && exercise.duration ? ' / ' : ''}${exercise.duration ? exercise.duration + 'min' : ''}`;
-            else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
-            const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
+            exercises.forEach(exercise => {
+                let metricLabel = '';
+                if (cat === 'cardio' && exercise.distance) metricLabel = `${exercise.distance}${exercise.distanceUnit || 'km'}`;
+                else if (cat === 'bodyweight' && exercise.reps) metricLabel = `${exercise.reps} reps`;
+                else if (cat === 'gym' && exercise.weight) metricLabel = `${exercise.weight}${exercise.weightUnit || 'kg'}`;
+                else if (cat === 'time' && exercise.duration) metricLabel = `${exercise.duration}min`;
+                else if (cat === 'pacing' && (exercise.distance || exercise.duration)) metricLabel = `${exercise.distance ? exercise.distance + (exercise.distanceUnit || 'km') : ''}${exercise.distance && exercise.duration ? ' / ' : ''}${exercise.duration ? exercise.duration + 'min' : ''}`;
+                else if (cat === 'other' && exercise.otherRating) metricLabel = `${exercise.otherRating}/10`;
+                const distLabel = metricLabel ? `<div class="dist-label">${metricLabel}</div>` : '';
                 if (exercise.isPlanned) {
                     const noteText = (exercise.details || '').trim();
                     const noteLabel = noteText ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>` : '';
-                    displaySymbol = `<div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>${noteLabel}`;
+                    displaySymbol += `<div class="entry-group"><div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>${noteLabel}</div>`;
                 } else {
-                    displaySymbol = `<div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}`;
+                    displaySymbol += `<div class="entry-group"><div class="tick-cell done cat-${cat}" onclick="window.editEntry(${exercise.id})">✓</div>${distLabel}</div>`;
                 }
-            }
-            row += `<td class="${exercise ? '' : 'empty-type-cell'}" ${exercise ? '' : `data-quick-date="${dateKey}" data-quick-type="${type}"`}>${displaySymbol}</td>`;
+            });
+            displaySymbol += `<div class="add-entry-btn" data-quick-date="${dateKey}" data-quick-type="${type}" title="Add another ${type} entry">+</div>`;
+            row += `<td class="${exercises.length ? 'multi-type-cell' : 'empty-type-cell'}">${displaySymbol}</td>`;
         });
         weekRowsHTML += row + `</tr>`;
 
@@ -1515,9 +1518,9 @@ const renderMatrix = () => {
     if (expandWeekIds.size === 0 && firstWeekId) window.toggleWeek(firstWeekId);
 
     body.onclick = (e) => {
-        const td = e.target.closest('td[data-quick-date]');
-        if (!td) return;
-        window.quickAddEntry(td.dataset.quickDate, td.dataset.quickType);
+        const btn = e.target.closest('.add-entry-btn[data-quick-date]');
+        if (!btn) return;
+        window.quickAddEntry(btn.dataset.quickDate, btn.dataset.quickType);
     };
 };
 
