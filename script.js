@@ -1488,11 +1488,12 @@ const renderMatrix = () => {
 
         dayCounter++;
         const altClass = dayCounter % 2 === 0 ? ' alt-row' : '';
+        const todayClass = dateKey === todayKey ? ' today-row' : '';
         const noteText = (logData.dailyNotes && logData.dailyNotes[dateKey]) || '';
         const noteCell = noteText
             ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
             : `<div class="cell-empty">+</div>`;
-        let row = `<tr class="week-day-row${altClass}" data-week="${weekId}" style="display:none">
+        let row = `<tr class="week-day-row${altClass}${todayClass}" data-week="${weekId}" style="display:none">
             <td class="col-date">${displayDate}${dayThemeLabel}</td>
             <td class="col-stat editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteCell}</td>`;
 
@@ -1536,7 +1537,7 @@ const renderMatrix = () => {
                 const noteLabel = noteText ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>` : '';
                 displaySymbol += `<div class="entry-group"><div class="tick-cell plan cat-${cat}" title="View plan details" onclick="window.editEntry(${exercise.id})">?</div>${noteLabel}</div>`;
             });
-            displaySymbol += `<div class="add-entry-btn" data-quick-date="${dateKey}" data-quick-type="${type}" title="Add another ${type} entry">+</div>`;
+            displaySymbol += `<div class="add-entry-btn" data-quick-date="${dateKey}" data-quick-type="${type}">+</div>`;
             row += `<td class="${exercises.length ? 'multi-type-cell' : 'empty-type-cell'}">${displaySymbol}</td>`;
         });
         weekRowsHTML += row + `</tr>`;
