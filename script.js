@@ -921,14 +921,22 @@ window.editTheme = (id) => {
 window.saveTheme = async () => {
     const title = document.getElementById('themeTitle').value.trim();
     if (!title) return alert('Please enter a theme title.');
+    const startDate = document.getElementById('themeStartDate').value;
+    const endDate = document.getElementById('themeEndDate').value;
+    if (!startDate || !endDate) return alert('Please enter both a start date and an end date.');
+    if (startDate > endDate) return alert('The start date must be on or before the end date.');
+    if (!logData.themes) logData.themes = [];
+    const overlap = logData.themes.find(t =>
+        t.id !== editingThemeId && startDate <= t.endDate && t.startDate <= endDate
+    );
+    if (overlap) return alert(`These dates overlap with the existing theme "${overlap.title}". Only one theme can be active at a time.`);
     const themeData = {
         id: editingThemeId || Date.now(),
         title,
         description: document.getElementById('themeDesc').value.trim(),
-        startDate: document.getElementById('themeStartDate').value,
-        endDate: document.getElementById('themeEndDate').value,
+        startDate,
+        endDate,
     };
-    if (!logData.themes) logData.themes = [];
     if (editingThemeId) {
         const idx = logData.themes.findIndex(t => t.id === editingThemeId);
         logData.themes[idx] = themeData;
