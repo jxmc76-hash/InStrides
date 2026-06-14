@@ -58,8 +58,8 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var
 .view-pane { display: none !important; }
 .view-pane.active { display: block !important; }
 
-.week-strapline { background: linear-gradient(135deg, var(--primary), #ff2e8c); border-radius: 14px; padding: 16px 22px; margin-bottom: 18px; font-size: 1rem; font-weight: 600; color: #fff; line-height: 1.6; box-shadow: 0 6px 20px rgba(255,85,0,0.25); }
-.week-strapline strong { font-weight: 800; margin-right: 4px; }
+.week-strapline { background: #fff; border: 1px solid var(--border); border-left: 5px solid var(--primary); border-radius: 14px; padding: 16px 22px; margin-bottom: 18px; font-size: 0.95rem; font-weight: 500; color: var(--text); line-height: 1.6; box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+.week-strapline strong { font-weight: 800; color: var(--primary); margin-right: 4px; }
 .week-strapline::before { content: "📊 "; }
 
 /* Grid Structural Containers */
@@ -327,6 +327,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 }
 [data-theme="dark"] body { background-color: var(--bg); color: var(--text-main); }
 [data-theme="dark"] .app-header { background: rgba(20,22,28,0.9); }
+[data-theme="dark"] .week-strapline,
 [data-theme="dark"] .matrix-container,
 [data-theme="dark"] .auth-card,
 [data-theme="dark"] .modal-card,
