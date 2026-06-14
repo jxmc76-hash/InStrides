@@ -93,7 +93,9 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .tick-cell.cat-time.done       { background-image: linear-gradient(135deg, #60a5fa, #3b82f6); }
 .tick-cell.cat-other.done      { background-image: linear-gradient(135deg, #a8a8a8, #8a8a8a); }
 .tick-cell.plan { color: var(--text-muted); background: white; border: 2.5px dashed var(--text-muted); border-radius: 6px; width: 28px; height: 28px; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.multi-type-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.multi-type-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; border-right: 2px solid var(--border) !important; }
+.empty-type-cell { border-right: 2px solid var(--border) !important; }
+.dynamic-type-th { border-right: 2px solid var(--border) !important; }
 .entry-group { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: 100%; }
 .entry-group + .entry-group { padding-top: 6px; border-top: 1px dashed var(--border); width: 100%; }
 .add-entry-btn { color: #d0d0d0; font-size: 1rem; font-weight: 700; cursor: pointer; line-height: 1; }
