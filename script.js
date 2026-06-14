@@ -129,6 +129,7 @@ const attachRealtimeListener = () => {
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
+            if(document.getElementById('viewGoals').classList.contains('active')) { renderThemes(); renderGoals(); }
         } else if (!snap.metadata.fromCache) {
             // Only create a fresh log if the server has confirmed no document exists.
             // A cache-only "not found" can happen before the server responds, and must
@@ -270,12 +271,14 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'help'].forEach(t => {
+    ['log', 'insights', 'goals', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.getElementById('tabLog')?.classList.toggle('active', tab === 'log');
     document.getElementById('tabInsights')?.classList.toggle('active', tab === 'insights');
+    document.getElementById('tabGoals')?.classList.toggle('active', tab === 'goals');
     if (tab === 'insights') renderInsights();
+    if (tab === 'goals') { renderThemes(); renderGoals(); }
 };
 
 window.setStrategy = (wantsPlanned) => {
@@ -785,6 +788,62 @@ const _unused_renderPersonalRecords = (completed) => {
 };
 
 // --- GOALS & PROJECTS ---
+const GOAL_CATEGORIES = ['cardio', 'bodyweight', 'gym', 'time', 'pacing'];
+
+const goalTargetLabel = (g) => {
+    switch (g.category) {
+        case 'cardio': return `Cover ${g.targetDistance}${g.targetDistanceUnit} or more`;
+        case 'gym': return `Lift ${g.targetWeight}${g.targetWeightUnit} or more`;
+        case 'bodyweight': return `${g.targetReps}+ reps`;
+        case 'time': return `${g.targetTime}+ minutes`;
+        case 'pacing': return `${g.targetDistance}${g.targetDistanceUnit} in under ${g.targetTime} min`;
+        default: return '';
+    }
+};
+
+const computeGoalProgress = (g) => {
+    const entries = logData.entries.filter(e => e.type === g.type && !e.isPlanned);
+    switch (g.category) {
+        case 'cardio': {
+            const best = Math.max(0, ...entries.filter(e => e.distance > 0).map(e => e.distance));
+            const pct = g.targetDistance > 0 ? Math.min(100, Math.round((best / g.targetDistance) * 100)) : 0;
+            return { pct, currentLabel: best > 0 ? `Best so far: ${best}${g.targetDistanceUnit}` : 'No entries logged yet' };
+        }
+        case 'gym': {
+            const best = Math.max(0, ...entries.filter(e => e.weight > 0).map(e => e.weight));
+            const pct = g.targetWeight > 0 ? Math.min(100, Math.round((best / g.targetWeight) * 100)) : 0;
+            return { pct, currentLabel: best > 0 ? `Best so far: ${best}${g.targetWeightUnit}` : 'No entries logged yet' };
+        }
+        case 'bodyweight': {
+            const best = Math.max(0, ...entries.filter(e => e.reps > 0).map(e => e.reps));
+            const pct = g.targetReps > 0 ? Math.min(100, Math.round((best / g.targetReps) * 100)) : 0;
+            return { pct, currentLabel: best > 0 ? `Best so far: ${best} reps` : 'No entries logged yet' };
+        }
+        case 'time': {
+            const best = Math.max(0, ...entries.filter(e => e.duration > 0).map(e => e.duration));
+            const pct = g.targetTime > 0 ? Math.min(100, Math.round((best / g.targetTime) * 100)) : 0;
+            return { pct, currentLabel: best > 0 ? `Best so far: ${best} min` : 'No entries logged yet' };
+        }
+        case 'pacing': {
+            const withinTime = entries.filter(e => e.distance > 0 && e.duration > 0 && e.duration <= g.targetTime);
+            const bestDistanceInTime = withinTime.length ? Math.max(...withinTime.map(e => e.distance)) : 0;
+            const distRatio = g.targetDistance > 0 ? Math.min(1, bestDistanceInTime / g.targetDistance) : 0;
+
+            const overDistance = entries.filter(e => e.distance >= g.targetDistance && e.duration > 0);
+            const bestTimeForDistance = overDistance.length ? Math.min(...overDistance.map(e => e.duration)) : null;
+            const timeRatio = (bestTimeForDistance !== null && g.targetTime > 0) ? Math.min(1, g.targetTime / bestTimeForDistance) : 0;
+
+            const pct = Math.round(((distRatio + timeRatio) / 2) * 100);
+            let currentLabel = 'No entries logged yet';
+            if (bestTimeForDistance !== null) currentLabel = `Best so far: ${g.targetDistance}${g.targetDistanceUnit} in ${bestTimeForDistance} min`;
+            else if (bestDistanceInTime > 0) currentLabel = `Best so far: ${bestDistanceInTime}${g.targetDistanceUnit} in ${g.targetTime} min`;
+            return { pct, currentLabel };
+        }
+        default:
+            return { pct: Math.max(0, Math.min(100, g.progress || 0)), currentLabel: '' };
+    }
+};
+
 const renderGoals = () => {
     const el = document.getElementById('goalsGrid');
     if (!el) return;
@@ -793,7 +852,7 @@ const renderGoals = () => {
         return;
     }
     el.innerHTML = logData.goals.map(g => {
-        const pct = Math.max(0, Math.min(100, g.progress || 0));
+        const { pct, currentLabel } = computeGoalProgress(g);
         const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         const startLabel = g.startDate ? fmtDate(g.startDate) : '';
         const endLabel = g.targetDate ? fmtDate(g.targetDate) : '';
@@ -801,15 +860,32 @@ const renderGoals = () => {
         if (startLabel && endLabel) dateLabel = `${startLabel} → ${endLabel}`;
         else if (endLabel) dateLabel = `Target: ${endLabel}`;
         else if (startLabel) dateLabel = `Start: ${startLabel}`;
+        const targetLabel = goalTargetLabel(g);
         return `<div class="achievement-card unlocked goal-card" onclick="window.editGoal(${g.id})">
             <div class="goal-title">${g.title}</div>
             ${g.description ? `<div class="goal-desc">${g.description}</div>` : ''}
+            ${g.type ? `<div class="goal-desc">${g.type} — ${targetLabel}</div>` : ''}
             ${dateLabel ? `<div class="goal-date">${dateLabel}</div>` : ''}
             <div class="goal-progress-outer"><div class="goal-progress-inner" style="width:${pct}%"></div></div>
-            <div class="goal-progress-pct">${pct}%</div>
+            <div class="goal-progress-pct">${pct}%${currentLabel ? ` · ${currentLabel}` : ''}</div>
         </div>`;
     }).join('');
 };
+
+window.toggleGoalTypeFields = () => {
+    const type = document.getElementById('goalType').value;
+    const cat = getTypeCategory(type);
+    document.getElementById('goalMetricCardio').style.display = (cat === 'cardio' || cat === 'pacing') ? 'block' : 'none';
+    document.getElementById('goalMetricGym').style.display = cat === 'gym' ? 'block' : 'none';
+    document.getElementById('goalMetricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
+    document.getElementById('goalMetricTime').style.display = (cat === 'time' || cat === 'pacing') ? 'block' : 'none';
+    document.getElementById('goalMetricCardioLabel').textContent = cat === 'pacing' ? 'Target Distance' : 'Target Distance (or more)';
+    document.getElementById('goalMetricTimeLabel').textContent = cat === 'pacing' ? 'Target Time, minutes (under)' : 'Target Time, minutes (or more)';
+};
+
+const goalTypeOptions = () => logData.types
+    .filter(t => GOAL_CATEGORIES.includes(getTypeCategory(t)))
+    .map(t => `<option value="${t}">${t}</option>`).join('');
 
 window.showGoalModal = () => {
     editingGoalId = null;
@@ -819,8 +895,14 @@ window.showGoalModal = () => {
     document.getElementById('goalDesc').value = '';
     document.getElementById('goalStartDate').value = '';
     document.getElementById('goalTargetDate').value = '';
-    document.getElementById('goalProgress').value = 0;
-    document.getElementById('goalProgressLbl').innerText = '0%';
+    document.getElementById('goalType').innerHTML = goalTypeOptions();
+    document.getElementById('goalTargetDistance').value = '';
+    document.getElementById('goalTargetDistanceUnit').value = 'km';
+    document.getElementById('goalTargetWeight').value = '';
+    document.getElementById('goalTargetWeightUnit').value = 'kg';
+    document.getElementById('goalTargetReps').value = '';
+    document.getElementById('goalTargetTime').value = '';
+    window.toggleGoalTypeFields();
     document.getElementById('goalModal').style.display = 'flex';
 };
 
@@ -834,21 +916,49 @@ window.editGoal = (id) => {
     document.getElementById('goalDesc').value = goal.description || '';
     document.getElementById('goalStartDate').value = goal.startDate || '';
     document.getElementById('goalTargetDate').value = goal.targetDate || '';
-    document.getElementById('goalProgress').value = goal.progress || 0;
-    document.getElementById('goalProgressLbl').innerText = (goal.progress || 0) + '%';
+    document.getElementById('goalType').innerHTML = goalTypeOptions();
+    document.getElementById('goalType').value = goal.type || '';
+    document.getElementById('goalTargetDistance').value = goal.targetDistance || '';
+    document.getElementById('goalTargetDistanceUnit').value = goal.targetDistanceUnit || 'km';
+    document.getElementById('goalTargetWeight').value = goal.targetWeight || '';
+    document.getElementById('goalTargetWeightUnit').value = goal.targetWeightUnit || 'kg';
+    document.getElementById('goalTargetReps').value = goal.targetReps || '';
+    document.getElementById('goalTargetTime').value = goal.targetTime || '';
+    window.toggleGoalTypeFields();
     document.getElementById('goalModal').style.display = 'flex';
 };
 
 window.saveGoal = async () => {
     const title = document.getElementById('goalTitle').value.trim();
     if (!title) return alert('Please enter a goal title.');
+    const type = document.getElementById('goalType').value;
+    if (!type) return alert('Please add an exercise type with a category first (Settings → Manage Types).');
+    const cat = getTypeCategory(type);
+
+    const targetDistance = parseFloat(document.getElementById('goalTargetDistance').value);
+    const targetWeight = parseFloat(document.getElementById('goalTargetWeight').value);
+    const targetReps = parseInt(document.getElementById('goalTargetReps').value);
+    const targetTime = parseInt(document.getElementById('goalTargetTime').value);
+
+    if ((cat === 'cardio' || cat === 'pacing') && (isNaN(targetDistance) || targetDistance <= 0)) return alert('Please enter a target distance.');
+    if (cat === 'gym' && (isNaN(targetWeight) || targetWeight <= 0)) return alert('Please enter a target weight.');
+    if (cat === 'bodyweight' && (isNaN(targetReps) || targetReps <= 0)) return alert('Please enter a target number of reps.');
+    if ((cat === 'time' || cat === 'pacing') && (isNaN(targetTime) || targetTime <= 0)) return alert('Please enter a target time.');
+
     const goalData = {
         id: editingGoalId || Date.now(),
         title,
         description: document.getElementById('goalDesc').value.trim(),
+        type,
+        category: cat,
+        targetDistance: (cat === 'cardio' || cat === 'pacing') ? targetDistance : null,
+        targetDistanceUnit: document.getElementById('goalTargetDistanceUnit').value,
+        targetWeight: cat === 'gym' ? targetWeight : null,
+        targetWeightUnit: document.getElementById('goalTargetWeightUnit').value,
+        targetReps: cat === 'bodyweight' ? targetReps : null,
+        targetTime: (cat === 'time' || cat === 'pacing') ? targetTime : null,
         startDate: document.getElementById('goalStartDate').value,
         targetDate: document.getElementById('goalTargetDate').value,
-        progress: parseInt(document.getElementById('goalProgress').value) || 0,
     };
     if (!logData.goals) logData.goals = [];
     if (editingGoalId) {
@@ -964,8 +1074,6 @@ const getThemeForDate = (dateKey) => {
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
-    renderGoals();
-    renderThemes();
     renderWeeklyRecap(completed);
     renderAchievements(completed);
     renderWeekCompare(completed);

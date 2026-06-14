@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=100">
+    <link rel="stylesheet" href="style.css?v=101">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -59,6 +59,7 @@
                     <nav class="tab-nav">
                         <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Log</button>
                         <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
+                        <button id="tabGoals" class="tab-btn" onclick="window.switchTab('goals')">Goals</button>
                     </nav>
                 </div>
 
@@ -157,16 +158,6 @@
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
 
-                    <!-- Goals & Projects -->
-                    <div class="insights-section-title">Goals &amp; Projects</div>
-                    <div id="goalsGrid" class="achievements-grid"></div>
-                    <button onclick="window.showGoalModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Goal</button>
-
-                    <!-- Training Themes -->
-                    <div class="insights-section-title">Training Themes</div>
-                    <div id="themesGrid" class="achievements-grid"></div>
-                    <button onclick="window.showThemeModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Theme</button>
-
                     <!-- Weekly recap -->
                     <div class="insights-section-title">Weekly Recap</div>
                     <div id="weeklyRecap" class="recap-card"></div>
@@ -185,6 +176,22 @@
 
                     <!-- 10-day trailing averages for slider metrics -->
                     <div id="trailingChartsContainer"></div>
+
+                </div>
+            </div>
+
+            <div id="viewGoals" class="view-pane">
+                <div class="insights-container">
+
+                    <!-- Training Themes -->
+                    <div class="insights-section-title">Training Themes</div>
+                    <div id="themesGrid" class="achievements-grid"></div>
+                    <button onclick="window.showThemeModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Theme</button>
+
+                    <!-- Goals & Projects -->
+                    <div class="insights-section-title">Goals &amp; Projects</div>
+                    <div id="goalsGrid" class="achievements-grid"></div>
+                    <button onclick="window.showGoalModal()" class="nav-btn btn-secondary" style="margin-bottom:30px;">+ Add Goal</button>
 
                 </div>
             </div>
@@ -368,6 +375,41 @@
                     <label>Description / Notes</label>
                     <textarea id="goalDesc" rows="2" placeholder="Optional details..."></textarea>
                 </div>
+                <div class="input-row">
+                    <label>Exercise Type</label>
+                    <select id="goalType" onchange="window.toggleGoalTypeFields()"></select>
+                </div>
+                <div id="goalTargetSection">
+                    <div class="input-row" id="goalMetricCardio" style="display:none">
+                        <label id="goalMetricCardioLabel">Target Distance (or more)</label>
+                        <div class="distance-input-row">
+                            <input type="number" id="goalTargetDistance" placeholder="0.0" min="0" step="0.1">
+                            <select id="goalTargetDistanceUnit">
+                                <option value="km">km</option>
+                                <option value="mi">mi</option>
+                                <option value="m">m</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row" id="goalMetricGym" style="display:none">
+                        <label>Target Weight (or more)</label>
+                        <div class="distance-input-row">
+                            <input type="number" id="goalTargetWeight" placeholder="0.0" min="0" step="0.5">
+                            <select id="goalTargetWeightUnit">
+                                <option value="kg">kg</option>
+                                <option value="lbs">lbs</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row" id="goalMetricBodyweight" style="display:none">
+                        <label>Target Reps (or more)</label>
+                        <input type="number" id="goalTargetReps" placeholder="0" min="0" step="1">
+                    </div>
+                    <div class="input-row" id="goalMetricTime" style="display:none">
+                        <label id="goalMetricTimeLabel">Target Time, minutes (or more)</label>
+                        <input type="number" id="goalTargetTime" placeholder="0" min="0" step="1">
+                    </div>
+                </div>
                 <div class="input-row" style="display:flex; gap:10px;">
                     <div style="flex:1;">
                         <label>Start Date</label>
@@ -376,13 +418,6 @@
                     <div style="flex:1;">
                         <label>End Date</label>
                         <input type="date" id="goalTargetDate">
-                    </div>
-                </div>
-                <div class="input-row highlight-box">
-                    <label>Progress</label>
-                    <div class="slider-row">
-                        <input type="range" min="0" max="100" step="5" value="0" id="goalProgress" oninput="document.getElementById('goalProgressLbl').innerText = this.value + '%'">
-                        <span id="goalProgressLbl" class="score-display" style="width:45px;">0%</span>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -409,7 +444,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=129"></script>
+    <script type="module" src="script.js?v=130"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
