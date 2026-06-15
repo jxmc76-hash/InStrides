@@ -61,6 +61,8 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var
 .week-strapline { background: #fff; border: 1px solid var(--border); border-left: 5px solid var(--primary); border-radius: 16px; padding: 16px 22px; margin-bottom: 18px; font-size: 0.95rem; font-weight: 500; color: var(--text-main); line-height: 1.6; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
 .week-strapline strong { font-weight: 800; color: var(--primary); margin-right: 4px; }
 .week-strapline::before { content: "📊 "; }
+.pr-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-weight: 700; color: #b8860b; font-size: 0.9rem; }
+[data-theme="dark"] .pr-line { color: #f5c451; }
 
 /* Grid Structural Containers */
 .matrix-container { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border); width: 100%; overflow-x: auto; }
