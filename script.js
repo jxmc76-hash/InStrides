@@ -1286,11 +1286,119 @@ const getThemeForDate = (dateKey) => {
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
+    renderHealthScore(completed);
     renderWeeklyRecap(completed);
     renderAchievements(completed);
     renderWeekCompare(completed);
     renderDistanceChart(completed);
     renderTrailingCharts(completed);
+};
+
+// Average a metric over the N weeks prior to the current week, only counting weeks that have any logged data
+const priorWeeksAverage = (completed, weekStart, weeks, valueFn) => {
+    const totals = [];
+    for (let i = 1; i <= weeks; i++) {
+        const start = new Date(weekStart); start.setDate(start.getDate() - 7 * i);
+        const end = new Date(start); end.setDate(end.getDate() + 6);
+        const sKey = start.toISOString().split('T')[0], eKey = end.toISOString().split('T')[0];
+        const weekEntries = completed.filter(e => e.date >= sKey && e.date <= eKey);
+        if (!weekEntries.length) continue;
+        totals.push(valueFn(weekEntries));
+    }
+    return totals.length ? totals.reduce((a, b) => a + b, 0) / totals.length : null;
+};
+
+const computeHealthScore = (completed) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const weekStart = getWeekStart(todayStr);
+    const thisWeek = completed.filter(e => e.date >= weekStart && e.date <= todayStr);
+
+    const components = [];
+
+    // Activity: sessions logged this week vs. typical weekly volume
+    const sessionCount = entries => entries.filter(e => e.type && e.type !== 'NONE').length;
+    const thisWeekSessions = sessionCount(thisWeek);
+    const avgSessions = priorWeeksAverage(completed, weekStart, 8, sessionCount);
+    const activityScore = avgSessions ? Math.min(100, Math.round((thisWeekSessions / avgSessions) * 100)) : (thisWeekSessions > 0 ? 100 : 50);
+    components.push({
+        name: 'Activity', score: activityScore, weight: 0.4,
+        detail: avgSessions ? `${thisWeekSessions} sessions this week vs your ${avgSessions.toFixed(1)}/wk average` : `${thisWeekSessions} sessions this week`
+    });
+
+    // Recovery: average of slider metrics (e.g. SLEEP, ENERGY) vs. typical levels
+    const sliderMetrics = logData.customMetrics.filter(m => m.type === 'slider');
+    if (sliderMetrics.length) {
+        const recoveryRatio = entries => {
+            const scores = sliderMetrics.map(m => {
+                const vals = entries.filter(e => e.customMetricData?.[m.name] != null).map(e => e.customMetricData[m.name]);
+                if (!vals.length) return null;
+                return (vals.reduce((a, b) => a + b, 0) / vals.length) / (m.scale || 10);
+            }).filter(v => v != null);
+            return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+        };
+        const thisWeekRecovery = recoveryRatio(thisWeek);
+        const avgRecovery = priorWeeksAverage(completed, weekStart, 8, recoveryRatio);
+        if (thisWeekRecovery != null) {
+            const recoveryScore = avgRecovery ? Math.min(100, Math.round((thisWeekRecovery / avgRecovery) * 100)) : Math.round(thisWeekRecovery * 100);
+            const names = sliderMetrics.map(m => m.name.charAt(0) + m.name.slice(1).toLowerCase()).join(' & ');
+            components.push({
+                name: 'Recovery', score: recoveryScore, weight: 0.35,
+                detail: avgRecovery ? `${names} is ${recoveryScore >= 100 ? 'at or above' : 'below'} your usual average` : `${names} logged this week`
+            });
+        }
+    }
+
+    // Consistency: how many days this week have any logging activity
+    const daysPossible = Math.floor((new Date(todayStr) - new Date(weekStart)) / 86400000) + 1;
+    const daysLogged = new Set(thisWeek.map(e => e.date)).size;
+    const consistencyScore = Math.min(100, Math.round((daysLogged / daysPossible) * 100));
+    components.push({
+        name: 'Consistency', score: consistencyScore, weight: 0.25,
+        detail: `Logged ${daysLogged} of ${daysPossible} day${daysPossible === 1 ? '' : 's'} so far this week`
+    });
+
+    const totalWeight = components.reduce((s, c) => s + c.weight, 0);
+    const score = Math.round(components.reduce((s, c) => s + c.score * c.weight, 0) / totalWeight);
+
+    let label, color;
+    if (score >= 80) { label = 'Excellent'; color = '#22c55e'; }
+    else if (score >= 60) { label = 'Good'; color = '#3b82f6'; }
+    else if (score >= 40) { label = 'Fair'; color = '#f59e0b'; }
+    else { label = 'Needs attention'; color = '#ef4444'; }
+
+    return { score, label, color, components };
+};
+
+const renderHealthScore = (completed) => {
+    const el = document.getElementById('healthScoreCard');
+    if (!el) return;
+
+    if (!completed.length) {
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">Log some activity to see your health score.</p>`;
+        return;
+    }
+
+    const { score, label, color, components } = computeHealthScore(completed);
+
+    el.innerHTML = `
+        <div class="health-score-main">
+            <div class="health-score-ring" style="background: conic-gradient(${color} ${score * 3.6}deg, var(--border) 0deg);">
+                <div class="health-score-ring-inner">
+                    <span class="health-score-num">${score}</span>
+                </div>
+            </div>
+            <div class="health-score-label" style="color:${color}">${label}</div>
+        </div>
+        <div class="health-score-breakdown">
+            ${components.map(c => `
+                <div class="hs-row">
+                    <div class="hs-row-top"><span class="hs-name">${c.name}</span><span class="hs-score">${c.score}</span></div>
+                    <div class="hs-bar"><div class="hs-fill" style="width:${Math.min(100, c.score)}%; background:${color}"></div></div>
+                    <div class="hs-detail">${c.detail}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 };
 
 const computeLongestStreak = (loggedDates) => {
