@@ -1294,38 +1294,33 @@ const renderInsights = () => {
     renderTrailingCharts(completed);
 };
 
-// Average a metric over the N weeks prior to the current week, only counting weeks that have any logged data
-const priorWeeksAverage = (completed, weekStart, weeks, valueFn) => {
-    const totals = [];
-    for (let i = 1; i <= weeks; i++) {
-        const start = new Date(weekStart); start.setDate(start.getDate() - 7 * i);
-        const end = new Date(start); end.setDate(end.getDate() + 6);
-        const sKey = start.toISOString().split('T')[0], eKey = end.toISOString().split('T')[0];
-        const weekEntries = completed.filter(e => e.date >= sKey && e.date <= eKey);
-        if (!weekEntries.length) continue;
-        totals.push(valueFn(weekEntries));
-    }
-    return totals.length ? totals.reduce((a, b) => a + b, 0) / totals.length : null;
-};
-
 const computeHealthScore = (completed) => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const weekStart = getWeekStart(todayStr);
-    const thisWeek = completed.filter(e => e.date >= weekStart && e.date <= todayStr);
+    const today = new Date(todayStr);
+    const windowStart = new Date(today); windowStart.setDate(windowStart.getDate() - 9);
+    const priorStart = new Date(today); priorStart.setDate(priorStart.getDate() - 19);
+    const priorEnd = new Date(today); priorEnd.setDate(priorEnd.getDate() - 10);
+
+    const winKey = windowStart.toISOString().split('T')[0];
+    const priorStartKey = priorStart.toISOString().split('T')[0];
+    const priorEndKey = priorEnd.toISOString().split('T')[0];
+
+    const last10 = completed.filter(e => e.date >= winKey && e.date <= todayStr);
+    const prior10 = completed.filter(e => e.date >= priorStartKey && e.date <= priorEndKey);
 
     const components = [];
 
-    // Activity: sessions logged this week vs. typical weekly volume
+    // Activity: sessions logged in the last 10 days vs. the 10 days before that
     const sessionCount = entries => entries.filter(e => e.type && e.type !== 'NONE').length;
-    const thisWeekSessions = sessionCount(thisWeek);
-    const avgSessions = priorWeeksAverage(completed, weekStart, 8, sessionCount);
-    const activityScore = avgSessions ? Math.min(100, Math.round((thisWeekSessions / avgSessions) * 100)) : (thisWeekSessions > 0 ? 100 : 50);
+    const recentSessions = sessionCount(last10);
+    const priorSessions = sessionCount(prior10);
+    const activityScore = priorSessions ? Math.min(100, Math.round((recentSessions / priorSessions) * 100)) : (recentSessions > 0 ? 100 : 50);
     components.push({
         name: 'Activity', score: activityScore, weight: 0.4,
-        detail: avgSessions ? `${thisWeekSessions} sessions this week vs your ${avgSessions.toFixed(1)}/wk average` : `${thisWeekSessions} sessions this week`
+        detail: priorSessions ? `${recentSessions} sessions in the last 10 days vs ${priorSessions} in the 10 days before` : `${recentSessions} sessions in the last 10 days`
     });
 
-    // Recovery: average of slider metrics (e.g. SLEEP, ENERGY) vs. typical levels
+    // Recovery: average of slider metrics (e.g. SLEEP, ENERGY) over the last 10 days vs. the 10 days before
     const sliderMetrics = logData.customMetrics.filter(m => m.type === 'slider');
     if (sliderMetrics.length) {
         const recoveryRatio = entries => {
@@ -1336,25 +1331,24 @@ const computeHealthScore = (completed) => {
             }).filter(v => v != null);
             return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
         };
-        const thisWeekRecovery = recoveryRatio(thisWeek);
-        const avgRecovery = priorWeeksAverage(completed, weekStart, 8, recoveryRatio);
-        if (thisWeekRecovery != null) {
-            const recoveryScore = avgRecovery ? Math.min(100, Math.round((thisWeekRecovery / avgRecovery) * 100)) : Math.round(thisWeekRecovery * 100);
+        const recentRecovery = recoveryRatio(last10);
+        const priorRecovery = recoveryRatio(prior10);
+        if (recentRecovery != null) {
+            const recoveryScore = priorRecovery ? Math.min(100, Math.round((recentRecovery / priorRecovery) * 100)) : Math.round(recentRecovery * 100);
             const names = sliderMetrics.map(m => m.name.charAt(0) + m.name.slice(1).toLowerCase()).join(' & ');
             components.push({
                 name: 'Recovery', score: recoveryScore, weight: 0.35,
-                detail: avgRecovery ? `${names} is ${recoveryScore >= 100 ? 'at or above' : 'below'} your usual average` : `${names} logged this week`
+                detail: priorRecovery ? `${names} is ${recoveryScore >= 100 ? 'at or above' : 'below'} your level from the previous 10 days` : `${names} logged over the last 10 days`
             });
         }
     }
 
-    // Consistency: how many days this week have any logging activity
-    const daysPossible = Math.floor((new Date(todayStr) - new Date(weekStart)) / 86400000) + 1;
-    const daysLogged = new Set(thisWeek.map(e => e.date)).size;
-    const consistencyScore = Math.min(100, Math.round((daysLogged / daysPossible) * 100));
+    // Consistency: how many of the last 10 days have any logging activity
+    const daysLogged = new Set(last10.map(e => e.date)).size;
+    const consistencyScore = Math.min(100, Math.round((daysLogged / 10) * 100));
     components.push({
         name: 'Consistency', score: consistencyScore, weight: 0.25,
-        detail: `Logged ${daysLogged} of ${daysPossible} day${daysPossible === 1 ? '' : 's'} so far this week`
+        detail: `Logged ${daysLogged} of the last 10 days`
     });
 
     const totalWeight = components.reduce((s, c) => s + c.weight, 0);
