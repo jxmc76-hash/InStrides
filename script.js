@@ -104,8 +104,53 @@ const renderWeekStrapline = () => {
     });
 
     const sessionWord = thisWeek.length === 1 ? 'session' : 'sessions';
-    el.innerHTML = `<strong>This week:</strong> ${thisWeek.length} ${sessionWord} logged — ${segments.join(' · ')}`;
+    let html = `<strong>This week:</strong> ${thisWeek.length} ${sessionWord} logged — ${segments.join(' · ')}`;
+
+    const prLine = buildPersonalRecordsLine(thisWeek);
+    if (prLine) html += `<div class="pr-line">${prLine}</div>`;
+
+    el.innerHTML = html;
     el.style.display = 'block';
+};
+
+// Detect new personal bests set this week, vs. all prior completed entries of the same type
+const buildPersonalRecordsLine = (thisWeek) => {
+    const metricValue = (e, cat) => {
+        switch (cat) {
+            case 'cardio': case 'pacing': return e.distance || null;
+            case 'gym': return e.weight || null;
+            case 'bodyweight': return e.reps || null;
+            case 'time': return e.duration || null;
+            default: return null;
+        }
+    };
+    const unitFor = (e, cat) => {
+        switch (cat) {
+            case 'cardio': case 'pacing': return e.distanceUnit || 'km';
+            case 'gym': return e.weightUnit || 'kg';
+            case 'bodyweight': return 'reps';
+            case 'time': return 'min';
+            default: return '';
+        }
+    };
+
+    const allCompleted = logData.entries.filter(e => !e.isPlanned && e.type && e.type !== 'NONE');
+    const prSegments = [];
+
+    thisWeek.forEach(e => {
+        const cat = getTypeCategory(e.type);
+        const val = metricValue(e, cat);
+        if (val == null) return;
+        const priorMax = allCompleted
+            .filter(o => o.type === e.type && o.date < e.date)
+            .reduce((max, o) => Math.max(max, metricValue(o, cat) || 0), 0);
+        if (priorMax > 0 && val > priorMax) {
+            const unit = unitFor(e, cat);
+            prSegments.push(`🏆 New ${e.type} PR: ${fmtNum(val)}${unit} (previous best ${fmtNum(priorMax)}${unit})`);
+        }
+    });
+
+    return prSegments.join(' · ');
 };
 let editingId = null;
 let unsubSnapshot = null;
