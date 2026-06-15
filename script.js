@@ -40,6 +40,7 @@ const TYPE_CATEGORIES = [
 const getTypeCategory = (typeName) => logData.typeCategories?.[typeName] || 'other';
 
 const fmtNum = (n) => { const r = Math.round(n * 100) / 100; return r % 1 === 0 ? r : r.toString(); };
+const titleCase = (s) => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
 const aggregateExerciseLabel = (entries, cat) => {
     switch (cat) {
@@ -99,7 +100,7 @@ const renderWeekStrapline = () => {
         if (!entries.length) return;
         const cat = getTypeCategory(type);
         const label = aggregateExerciseLabel(entries, cat);
-        const count = `${entries.length}× ${type}`;
+        const count = `${entries.length}× ${titleCase(type)}`;
         segments.push(label ? `${count} (${label})` : count);
     });
 
@@ -146,7 +147,7 @@ const buildPersonalRecordsLine = (thisWeek) => {
             .reduce((max, o) => Math.max(max, metricValue(o, cat) || 0), 0);
         if (priorMax > 0 && val > priorMax) {
             const unit = unitFor(e, cat);
-            prSegments.push(`🏆 New ${e.type} PR: ${fmtNum(val)}${unit} (previous best ${fmtNum(priorMax)}${unit})`);
+            prSegments.push(`🏆 New ${titleCase(e.type)} PR: ${fmtNum(val)}${unit} (previous best ${fmtNum(priorMax)}${unit})`);
         }
     });
 
