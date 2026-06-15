@@ -1108,7 +1108,18 @@ window.toggleGoalTypeFields = () => {
     document.getElementById('goalMetricTarget').style.display = isMetric ? 'block' : 'none';
     document.getElementById('goalMetricCardioLabel').textContent = cat === 'pacing' ? 'Target Distance' : 'Target Distance (or more)';
     document.getElementById('goalMetricTimeLabel').textContent = cat === 'pacing' ? 'Target Time, minutes (under)' : 'Target Time, minutes (or more)';
-    if (isMetric) document.getElementById('goalMetricTargetLabel').textContent = `Target ${titleCase(type.slice(7))}`;
+    const hintEl = document.getElementById('goalMetricTargetHint');
+    if (isMetric) {
+        const metricName = type.slice(7);
+        document.getElementById('goalMetricTargetLabel').textContent = `Target ${titleCase(metricName)}`;
+        const vals = logData.entries
+            .filter(e => !e.isPlanned && e.customMetricData?.[metricName] != null)
+            .sort((a, b) => a.date < b.date ? -1 : 1);
+        const latest = vals.length ? vals[vals.length - 1].customMetricData[metricName] : null;
+        hintEl.textContent = latest != null ? `Most recently logged ${titleCase(metricName)}: ${fmtNum(latest)}` : `No ${titleCase(metricName)} entries logged yet`;
+    } else {
+        hintEl.textContent = '';
+    }
 };
 
 const goalTypeOptions = () => {
@@ -1117,8 +1128,11 @@ const goalTypeOptions = () => {
         .map(t => `<option value="${t}">${t}</option>`).join('');
     const metricOpts = logData.customMetrics
         .filter(m => m.type === 'number')
-        .map(m => `<option value="metric:${m.name}">${titleCase(m.name)} (target)</option>`).join('');
-    return exerciseOpts + metricOpts;
+        .map(m => `<option value="metric:${m.name}">Reach a target ${titleCase(m.name)}</option>`).join('');
+    let html = '';
+    if (exerciseOpts) html += `<optgroup label="Exercise Goals">${exerciseOpts}</optgroup>`;
+    if (metricOpts) html += `<optgroup label="Body Metrics">${metricOpts}</optgroup>`;
+    return html;
 };
 
 window.showGoalModal = () => {
