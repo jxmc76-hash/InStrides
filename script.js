@@ -1009,6 +1009,7 @@ const goalTargetLabel = (g) => {
         case 'bodyweight': return `${g.targetReps}+ reps`;
         case 'time': return `${g.targetTime}+ minutes`;
         case 'pacing': return `${g.targetDistance}${g.targetDistanceUnit} in under ${g.targetTime} min`;
+        case 'metric': return `Reach ${g.targetValue} ${titleCase(g.metricName)}`;
         default: return '';
     }
 };
@@ -1051,6 +1052,18 @@ const computeGoalProgress = (g) => {
             else if (bestDistanceInTime > 0) currentLabel = `Best so far: ${bestDistanceInTime}${g.targetDistanceUnit} in ${g.targetTime} min`;
             return { pct, currentLabel };
         }
+        case 'metric': {
+            const vals = logData.entries
+                .filter(e => !e.isPlanned && e.customMetricData?.[g.metricName] != null)
+                .sort((a, b) => a.date < b.date ? -1 : 1);
+            if (!vals.length) return { pct: 0, currentLabel: 'No entries logged yet' };
+            const current = vals[vals.length - 1].customMetricData[g.metricName];
+            const start = vals[0].customMetricData[g.metricName];
+            const distStart = Math.abs(g.targetValue - start);
+            const distNow = Math.abs(g.targetValue - current);
+            const pct = distStart === 0 ? 100 : Math.max(0, Math.min(100, Math.round((1 - distNow / distStart) * 100)));
+            return { pct, currentLabel: `Current: ${fmtNum(current)} (target ${fmtNum(g.targetValue)})` };
+        }
         default:
             return { pct: Math.max(0, Math.min(100, g.progress || 0)), currentLabel: '' };
     }
@@ -1086,18 +1099,27 @@ const renderGoals = () => {
 
 window.toggleGoalTypeFields = () => {
     const type = document.getElementById('goalType').value;
-    const cat = getTypeCategory(type);
+    const isMetric = type.startsWith('metric:');
+    const cat = isMetric ? 'metric' : getTypeCategory(type);
     document.getElementById('goalMetricCardio').style.display = (cat === 'cardio' || cat === 'pacing') ? 'block' : 'none';
     document.getElementById('goalMetricGym').style.display = cat === 'gym' ? 'block' : 'none';
     document.getElementById('goalMetricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
     document.getElementById('goalMetricTime').style.display = (cat === 'time' || cat === 'pacing') ? 'block' : 'none';
+    document.getElementById('goalMetricTarget').style.display = isMetric ? 'block' : 'none';
     document.getElementById('goalMetricCardioLabel').textContent = cat === 'pacing' ? 'Target Distance' : 'Target Distance (or more)';
     document.getElementById('goalMetricTimeLabel').textContent = cat === 'pacing' ? 'Target Time, minutes (under)' : 'Target Time, minutes (or more)';
+    if (isMetric) document.getElementById('goalMetricTargetLabel').textContent = `Target ${titleCase(type.slice(7))}`;
 };
 
-const goalTypeOptions = () => logData.types
-    .filter(t => GOAL_CATEGORIES.includes(getTypeCategory(t)))
-    .map(t => `<option value="${t}">${t}</option>`).join('');
+const goalTypeOptions = () => {
+    const exerciseOpts = logData.types
+        .filter(t => GOAL_CATEGORIES.includes(getTypeCategory(t)))
+        .map(t => `<option value="${t}">${t}</option>`).join('');
+    const metricOpts = logData.customMetrics
+        .filter(m => m.type === 'number')
+        .map(m => `<option value="metric:${m.name}">${titleCase(m.name)} (target)</option>`).join('');
+    return exerciseOpts + metricOpts;
+};
 
 window.showGoalModal = () => {
     editingGoalId = null;
@@ -1114,6 +1136,7 @@ window.showGoalModal = () => {
     document.getElementById('goalTargetWeightUnit').value = 'kg';
     document.getElementById('goalTargetReps').value = '';
     document.getElementById('goalTargetTime').value = '';
+    document.getElementById('goalTargetValue').value = '';
     window.toggleGoalTypeFields();
     document.getElementById('goalModal').style.display = 'flex';
 };
@@ -1136,6 +1159,7 @@ window.editGoal = (id) => {
     document.getElementById('goalTargetWeightUnit').value = goal.targetWeightUnit || 'kg';
     document.getElementById('goalTargetReps').value = goal.targetReps || '';
     document.getElementById('goalTargetTime').value = goal.targetTime || '';
+    document.getElementById('goalTargetValue').value = goal.targetValue ?? '';
     window.toggleGoalTypeFields();
     document.getElementById('goalModal').style.display = 'flex';
 };
@@ -1145,17 +1169,20 @@ window.saveGoal = async () => {
     if (!title) return alert('Please enter a goal title.');
     const type = document.getElementById('goalType').value;
     if (!type) return alert('Please add an exercise type with a category first (Settings → Manage Types).');
-    const cat = getTypeCategory(type);
+    const isMetric = type.startsWith('metric:');
+    const cat = isMetric ? 'metric' : getTypeCategory(type);
 
     const targetDistance = parseFloat(document.getElementById('goalTargetDistance').value);
     const targetWeight = parseFloat(document.getElementById('goalTargetWeight').value);
     const targetReps = parseInt(document.getElementById('goalTargetReps').value);
     const targetTime = parseInt(document.getElementById('goalTargetTime').value);
+    const targetValue = parseFloat(document.getElementById('goalTargetValue').value);
 
     if ((cat === 'cardio' || cat === 'pacing') && (isNaN(targetDistance) || targetDistance <= 0)) return alert('Please enter a target distance.');
     if (cat === 'gym' && (isNaN(targetWeight) || targetWeight <= 0)) return alert('Please enter a target weight.');
     if (cat === 'bodyweight' && (isNaN(targetReps) || targetReps <= 0)) return alert('Please enter a target number of reps.');
     if ((cat === 'time' || cat === 'pacing') && (isNaN(targetTime) || targetTime <= 0)) return alert('Please enter a target time.');
+    if (cat === 'metric' && isNaN(targetValue)) return alert('Please enter a target value.');
 
     const goalData = {
         id: editingGoalId || Date.now(),
@@ -1169,6 +1196,8 @@ window.saveGoal = async () => {
         targetWeightUnit: document.getElementById('goalTargetWeightUnit').value,
         targetReps: cat === 'bodyweight' ? targetReps : null,
         targetTime: (cat === 'time' || cat === 'pacing') ? targetTime : null,
+        metricName: isMetric ? type.slice(7) : null,
+        targetValue: cat === 'metric' ? targetValue : null,
         startDate: document.getElementById('goalStartDate').value,
         targetDate: document.getElementById('goalTargetDate').value,
     };
@@ -1350,6 +1379,34 @@ const computeHealthScore = (completed, asOfDateStr) => {
         name: 'Consistency', score: consistencyScore, weight: 0.25,
         detail: `Logged ${daysLogged} of the last 10 days`
     });
+
+    // Goal progress: movement toward a target value (e.g. body weight) over the last 10 days
+    const weightGoal = (logData.goals || []).find(g => g.category === 'metric');
+    if (weightGoal) {
+        const metricName = weightGoal.metricName;
+        const valueAsOf = (dateStr) => {
+            let val = null, valDate = null;
+            completed.forEach(e => {
+                if (e.date <= dateStr && e.customMetricData?.[metricName] != null && (!valDate || e.date > valDate)) {
+                    valDate = e.date;
+                    val = e.customMetricData[metricName];
+                }
+            });
+            return val;
+        };
+        const currentVal = valueAsOf(todayStr);
+        const pastVal = valueAsOf(priorEndKey);
+        if (currentVal != null && pastVal != null) {
+            const distPast = Math.abs(weightGoal.targetValue - pastVal);
+            const distNow = Math.abs(weightGoal.targetValue - currentVal);
+            const goalScore = distPast === 0 ? 100 : Math.max(0, Math.min(100, Math.round((1 - (distNow - distPast) / distPast) * 50)));
+            const label = titleCase(metricName);
+            const detail = currentVal === pastVal
+                ? `${label} unchanged at ${fmtNum(currentVal)} (target ${fmtNum(weightGoal.targetValue)})`
+                : `${label} moved from ${fmtNum(pastVal)} to ${fmtNum(currentVal)} (target ${fmtNum(weightGoal.targetValue)})`;
+            components.push({ name: `${label} Goal`, score: goalScore, weight: 0.25, detail });
+        }
+    }
 
     const totalWeight = components.reduce((s, c) => s + c.weight, 0);
     const score = Math.round(components.reduce((s, c) => s + c.score * c.weight, 0) / totalWeight);
