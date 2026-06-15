@@ -1294,8 +1294,8 @@ const renderInsights = () => {
     renderTrailingCharts(completed);
 };
 
-const computeHealthScore = (completed) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+const computeHealthScore = (completed, asOfDateStr) => {
+    const todayStr = asOfDateStr || new Date().toISOString().split('T')[0];
     const today = new Date(todayStr);
     const windowStart = new Date(today); windowStart.setDate(windowStart.getDate() - 9);
     const priorStart = new Date(today); priorStart.setDate(priorStart.getDate() - 19);
@@ -1363,16 +1363,41 @@ const computeHealthScore = (completed) => {
     return { score, label, color, components };
 };
 
+// Health score for each of the last `days` days, for the trend chart and the up/down arrow
+const computeHealthScoreSeries = (completed, days) => {
+    const points = { labels: [], data: [] };
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        points.labels.push(d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+        points.data.push(computeHealthScore(completed, dateStr).score);
+    }
+    return points;
+};
+
 const renderHealthScore = (completed) => {
     const el = document.getElementById('healthScoreCard');
+    const chartWrap = document.getElementById('healthScoreChartWrap');
     if (!el) return;
 
     if (!completed.length) {
         el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">Log some activity to see your health score.</p>`;
+        if (chartWrap) chartWrap.style.display = 'none';
         return;
     }
 
     const { score, label, color, components } = computeHealthScore(completed);
+
+    const series = computeHealthScoreSeries(completed, 30);
+    const prevScore = series.data[series.data.length - 8]; // score 7 days ago
+    let trendArrow = '';
+    if (prevScore != null) {
+        const diff = score - prevScore;
+        if (diff >= 2) trendArrow = `<span class="hs-trend hs-trend-up" title="Up ${diff} vs 7 days ago">▲ ${diff}</span>`;
+        else if (diff <= -2) trendArrow = `<span class="hs-trend hs-trend-down" title="Down ${Math.abs(diff)} vs 7 days ago">▼ ${Math.abs(diff)}</span>`;
+        else trendArrow = `<span class="hs-trend hs-trend-flat" title="Steady vs 7 days ago">▬ 0</span>`;
+    }
 
     el.innerHTML = `
         <div class="health-score-main">
@@ -1381,7 +1406,7 @@ const renderHealthScore = (completed) => {
                     <span class="health-score-num">${score}</span>
                 </div>
             </div>
-            <div class="health-score-label" style="color:${color}">${label}</div>
+            <div class="health-score-label" style="color:${color}">${label} ${trendArrow}</div>
         </div>
         <div class="health-score-breakdown">
             ${components.map(c => `
@@ -1393,6 +1418,36 @@ const renderHealthScore = (completed) => {
             `).join('')}
         </div>
     `;
+
+    if (chartWrap) {
+        chartWrap.style.display = '';
+        destroyChart('health-score');
+        chartInstances['health-score'] = new Chart(document.getElementById('healthScoreChart'), {
+            type: 'line',
+            data: {
+                labels: series.labels,
+                datasets: [{
+                    label: 'Health Score',
+                    data: series.data,
+                    borderColor: color,
+                    backgroundColor: color.replace(')', ',0.08)').replace('rgb', 'rgba'),
+                    borderWidth: 2.5,
+                    pointRadius: 2,
+                    pointBackgroundColor: color,
+                    fill: true,
+                    tension: 0.4,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { stepSize: 20 }, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
+                }
+            }
+        });
+    }
 };
 
 const computeLongestStreak = (loggedDates) => {
