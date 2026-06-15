@@ -224,6 +224,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 1000; }
 .modal-card { background: white; width: 95%; max-width: 480px; border-radius: 24px; padding: 30px; }
 .input-row label { display: block; font-weight: 700; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
+.field-hint { display: block; margin-top: 5px; font-size: 0.75rem; color: var(--text-muted); }
 .input-row input[type="date"], .input-row textarea, .input-row select, .input-row input[type="email"], .input-row input[type="password"], .input-row input[type="text"] { width: 100%; padding: 12px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 0.9rem; outline: none; }
 
 .rating-strip { display: flex; gap: 8px; }
