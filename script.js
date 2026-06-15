@@ -297,7 +297,7 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
 
     logData.customMetrics.forEach(m => {
         const scale = m.scale || 10;
-        const defaultVal = m.type === 'slider' ? Math.round(scale/2) : (m.type === 'timedistance' ? { time: '', distance: '' } : false);
+        const defaultVal = m.type === 'slider' ? Math.round(scale/2) : (m.type === 'timedistance' ? { time: '', distance: '' } : (m.type === 'number' ? '' : false));
         const val = existingCustomValues[m.name] !== undefined ? existingCustomValues[m.name] : defaultVal;
         dynamicMetricValues[m.name] = val;
 
@@ -320,6 +320,10 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
                     <input type="range" min="1" max="${scale}" value="${val}" oninput="document.getElementById('lbl-${m.name}').innerText = this.value; window.updateLocalCustomMetricVal('${m.name}', parseInt(this.value))">
                     <span id="lbl-${m.name}" class="score-display">${val}</span>
                 </div>`;
+        } else if (m.type === 'number') {
+            div.innerHTML = `
+                <label>${m.name.replace(/-/g, ' ')}</label>
+                <input type="number" step="0.1" placeholder="e.g. 72.5" value="${val}" oninput="window.updateLocalCustomMetricVal('${m.name}', this.value)">`;
         } else {
             div.innerHTML = `
                 <label>${m.name.replace(/-/g, ' ')}</label>
@@ -456,13 +460,20 @@ window.saveExercise = async () => {
     const weightVal = parseFloat(document.getElementById('modalWeight').value);
     const durationVal = parseInt(document.getElementById('modalDuration').value);
     const otherRating = Math.min(10, Math.max(1, parseInt(document.getElementById('modalOtherRating').value) || 5));
+    const customMetricData = isPlannedStrategy ? {} : { ...dynamicMetricValues };
+    logData.customMetrics.forEach(m => {
+        if (m.type !== 'number') return;
+        const v = customMetricData[m.name];
+        if (v === '' || v === undefined || v === null || isNaN(parseFloat(v))) delete customMetricData[m.name];
+        else customMetricData[m.name] = parseFloat(v);
+    });
     const entryData = {
         date: document.getElementById('modalDate').value,
         type,
         details: document.getElementById('modalDetails').value,
         mark: isPlannedStrategy ? null : window.tempMark,
         isPlanned: isPlannedStrategy,
-        customMetricData: isPlannedStrategy ? {} : { ...dynamicMetricValues },
+        customMetricData,
         distance: (cat === 'cardio' || cat === 'pacing') && !isNaN(distVal) && distVal > 0 ? distVal : null,
         distanceUnit: document.getElementById('modalDistanceUnit').value,
         reps: cat === 'bodyweight' && !isNaN(repsVal) && repsVal > 0 ? repsVal : null,
@@ -1401,6 +1412,26 @@ const renderMatrix = () => {
         }
     });
 
+    // Carry forward "number" metrics (e.g. WEIGHT) to later days that have completed activities, until a new value is logged
+    const rollForwardMetrics = logData.customMetrics.filter(m => m.type === 'number').map(m => m.name);
+    if (rollForwardMetrics.length) {
+        const ascDates = Object.keys(entriesByDate).sort((a, b) => new Date(a) - new Date(b));
+        const lastVal = {};
+        ascDates.forEach(dateKey => {
+            const dayData = entriesByDate[dateKey];
+            const hasCompleted = Object.values(dayData.exercises).some(arr => arr.some(e => !e.isPlanned));
+            rollForwardMetrics.forEach(name => {
+                const explicit = dayData.customVals[name];
+                if (explicit !== undefined && explicit !== null && explicit !== '') {
+                    lastVal[name] = explicit;
+                } else if (hasCompleted && lastVal[name] !== undefined) {
+                    dayData.customVals[name] = lastVal[name];
+                    (dayData.customValsCarried = dayData.customValsCarried || {})[name] = true;
+                }
+            });
+        });
+    }
+
     const dates = Object.keys(entriesByDate).sort((a,b) => new Date(b) - new Date(a));
     const firstDate = dates.length > 0 ? new Date(dates[dates.length-1]) : new Date();
     const futureBuffer = new Date(); futureBuffer.setDate(futureBuffer.getDate() + 5);
@@ -1423,6 +1454,7 @@ const renderMatrix = () => {
             if (vals.length) {
                 if (m.type === 'slider') cell = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
                 else if (m.type === 'timedistance') { const count = vals.filter(v => v && (v.time || v.distance)).length; cell = count > 0 ? `${count}d` : ''; }
+                else if (m.type === 'number') cell = `${vals[0]}`;
                 else { const count = vals.filter(v=>v===true).length; cell = count > 0 ? `${count}d` : ''; }
             }
             html += `<td class="col-stat">${cell}</td>`;
@@ -1531,8 +1563,11 @@ const renderMatrix = () => {
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
+            const isCarried = m.type === 'number' && activeData.customValsCarried?.[m.name];
             if (m.type === 'timedistance' && mVal && (mVal.time || mVal.distance)) {
                 cellContent = `<div class="dist-label">${mVal.time ? mVal.time + 'min' : ''}${mVal.time && mVal.distance ? ' / ' : ''}${mVal.distance ? mVal.distance + 'km' : ''}</div>`;
+            } else if (m.type === 'number' && mVal !== undefined && mVal !== null && mVal !== '') {
+                cellContent = `<div class="dist-label${isCarried ? ' carried-value' : ''}" title="${isCarried ? 'Carried forward from a previous entry' : ''}">${mVal}</div>`;
             } else if (mVal !== undefined && mVal !== null) {
                 cellContent = m.type === 'slider'
                     ? `<div class="happy-pill">${mVal}</div>`
@@ -1544,6 +1579,8 @@ const renderMatrix = () => {
                 row += `<td class="col-stat editable-cell" onclick="window.toggleBinaryCell('${dateKey}','${m.name}',${mVal === true})">${cellContent}</td>`;
             } else if (m.type === 'timedistance') {
                 row += `<td class="col-stat editable-cell" onclick="window.promptTimeDistance('${dateKey}','${m.name}',${mVal && mVal.time != null ? `'${mVal.time}'` : 'null'},${mVal && mVal.distance != null ? `'${mVal.distance}'` : 'null'})">${cellContent}</td>`;
+            } else if (m.type === 'number') {
+                row += `<td class="col-stat editable-cell" onclick="window.promptNumberValue('${dateKey}','metric-${m.name}',${!isCarried && mVal !== undefined && mVal !== null && mVal !== '' ? mVal : 'null'})">${cellContent}</td>`;
             } else if (m.scale === 100) {
                 row += `<td class="col-stat editable-cell" onclick="window.promptCellValue('${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'},100)">${cellContent}</td>`;
             } else {
@@ -1804,6 +1841,15 @@ window.promptCellValue = (dateKey, field, currentVal, max) => {
     const input = prompt(`${field.replace('metric-','').replace(/-/g,' ')} (1-${max}):`, currentVal !== null ? currentVal : '');
     if (input === null) return;
     const num = Math.max(1, Math.min(max, parseInt(input)));
+    if (isNaN(num)) return;
+    window.saveCellValue(dateKey, field, num);
+};
+
+window.promptNumberValue = (dateKey, field, currentVal) => {
+    const input = prompt(`${field.replace('metric-','').replace(/-/g,' ')}:`, currentVal !== null ? currentVal : '');
+    if (input === null) return;
+    if (input.trim() === '') return window.saveCellValue(dateKey, field, null);
+    const num = parseFloat(input);
     if (isNaN(num)) return;
     window.saveCellValue(dateKey, field, num);
 };

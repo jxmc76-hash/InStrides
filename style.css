@@ -222,6 +222,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .reorder-btn:disabled { opacity: 0.3; cursor: default; }
 
 .dist-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-top: 3px; }
+.dist-label.carried-value { font-style: italic; opacity: 0.55; }
 .plan-note { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); margin-top: 4px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: auto; margin-right: auto; cursor: default; }
 .day-theme-tag { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .type-category-badge { display: inline-block; background: #fff4ee; color: var(--primary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; margin: 8px 0 12px 0; border: 1px solid #ffd5c0; }
