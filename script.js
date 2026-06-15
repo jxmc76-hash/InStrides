@@ -638,6 +638,92 @@ const renderTrailingCharts = (completed) => {
             }
         });
     });
+
+    // Number-type metrics (e.g. WEIGHT) — plot raw values over time, carrying forward gaps
+    const numberMetrics = logData.customMetrics.filter(m => m.type === 'number');
+    const numberSeries = (accessor) => {
+        const points = { labels: [], data: [] };
+        let last = null;
+        allDates.forEach(dateStr => {
+            const v = accessor(byDate[dateStr]);
+            if (v != null) last = v;
+            if (last != null) {
+                points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+                points.data.push(last);
+            }
+        });
+        return points;
+    };
+
+    numberMetrics.forEach((m, idx) => {
+        const label = m.name.charAt(0) + m.name.slice(1).toLowerCase();
+        const key = `trailing-num-${m.name}`;
+        const { labels, data } = numberSeries(d => d?.customVals[m.name]);
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'insights-section-title';
+        titleEl.textContent = `${label} — trend`;
+        container.appendChild(titleEl);
+
+        if (data.length < 2) {
+            const wrap = document.createElement('div');
+            wrap.className = 'chart-container chart-empty-state';
+            wrap.innerHTML = `<div class="chart-empty-icon">📈</div><p>Log more ${label.toLowerCase()} entries to see the trend</p>`;
+            container.appendChild(wrap);
+            return;
+        }
+
+        const { line, slope } = trendLine(data);
+        const color = colors[(series.length + idx) % colors.length];
+
+        const desc = document.createElement('p');
+        desc.className = 'neutral-msg';
+        desc.style.marginBottom = '12px';
+        desc.textContent = trendDescription(label, slope);
+        container.appendChild(desc);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-container';
+        const canvas = document.createElement('canvas');
+        canvas.id = key;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        chartInstances[key] = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label,
+                    data,
+                    borderColor: color,
+                    backgroundColor: color.replace(')', ',0.08)').replace('rgb', 'rgba'),
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: color,
+                    fill: false,
+                    tension: 0.4,
+                }, {
+                    label: 'Trend',
+                    data: line,
+                    borderColor: '#9499a3',
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: '#f1f5f9' }, title: { display: true, text: label, font: { size: 11 }, color: '#8a8a8a' } },
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
+                }
+            }
+        });
+    });
 };
 
 const renderVolumeChart = (completed) => {
