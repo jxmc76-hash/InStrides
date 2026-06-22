@@ -1472,37 +1472,37 @@ const renderCorrelations = () => {
     });
 
     candidates.sort((a, b) => Math.abs(b.r||0) - Math.abs(a.r||0));
-    const top5 = candidates.slice(0, 5);
+    const strong = candidates.filter(c => Math.abs(c.r||0) >= 0.5).slice(0, 5);
 
-    if (!top5.length) {
-        container.innerHTML = '<p class="neutral-msg">Not enough overlapping data yet — keep logging both metrics and activity!</p>';
+    if (!strong.length) {
+        container.innerHTML = '<p class="neutral-msg">No strong correlations found in your data yet — keep logging and patterns will start to emerge!</p>';
         return;
     }
 
     const toSentence = (pair) => {
         const r = pair.r || 0;
-        const absR = Math.abs(r);
         const pos = r >= 0;
-        const strength = absR > 0.6 ? 'a strong' : absR > 0.3 ? 'a moderate' : 'a weak';
         const x = pair.xLabel, y = pair.yLabel;
-        const n = pair.xs.length;
 
         if (pair.kind === 'lag') {
-            const more = pos ? 'more' : 'less';
-            return `There is ${strength} relationship between your ${x} and how active you are the following day — higher ${x} tends to be followed by ${more} activity the next day (based on ${n} consecutive-day pairs).`;
+            return pos
+                ? `Your ${x} seems to set you up for the next day — when it's high, you're noticeably more likely to get a session in the following day.`
+                : `Interestingly, higher ${x} seems to be followed by quieter days — you tend to do less the day after a high ${x} reading.`;
         }
         if (pair.kind === 'weekly') {
-            const higher = pos ? 'higher' : 'lower';
-            return `Weeks when you train more frequently tend to have ${higher} ${y} — there is ${strength} link between your ${x} and ${y} across ${n} weeks of data.`;
+            return pos
+                ? `Busier training weeks really do seem to pay off — the more sessions you do, the better your ${y} tends to be that week.`
+                : `It looks like heavy training weeks take a toll on your ${y} — more sessions in a week tends to coincide with lower ${y}.`;
         }
         // same-day
-        const also = pos ? 'also tends to be higher' : 'tends to be lower';
-        return `Your ${x} and ${y} show ${strength} same-day relationship — on days when your ${x} is higher, your ${y} ${also} (${n} days of data).`;
+        return pos
+            ? `Your ${x} and ${y} really do go hand in hand — on days when one is up, the other almost always is too.`
+            : `Your ${x} and ${y} seem to pull in opposite directions — when your ${x} is high, your ${y} tends to be lower on the same day.`;
     };
 
     container.innerHTML = `
         <div class="correlation-list">
-            ${top5.map((pair, i) => `
+            ${strong.map((pair, i) => `
                 <div class="correlation-item">
                     <span class="correlation-num">${i + 1}</span>
                     <p class="correlation-sentence">${toSentence(pair)}</p>
