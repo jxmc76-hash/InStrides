@@ -1523,9 +1523,23 @@ const renderCorrelations = () => {
         wrap.appendChild(canvas);
         container.appendChild(wrap);
 
+        const n = pair.xs.length;
+        const meanX = pair.xs.reduce((s, v) => s + v, 0) / n;
+        const meanY = pair.ys.reduce((s, v) => s + v, 0) / n;
+        const slope = pair.xs.reduce((s, x, i) => s + (x - meanX) * (pair.ys[i] - meanY), 0) /
+                      (pair.xs.reduce((s, x) => s + (x - meanX) ** 2, 0) || 1);
+        const intercept = meanY - slope * meanX;
+        const xMin = Math.min(...pair.xs), xMax = Math.max(...pair.xs);
+        const trendData = [{ x: xMin, y: slope * xMin + intercept }, { x: xMax, y: slope * xMax + intercept }];
+
         chartInstances[key] = new Chart(canvas, {
             type: 'scatter',
-            data: { datasets: [{ data: pair.xs.map((x, i) => ({ x, y: pair.ys[i] })), backgroundColor: `${color}55`, borderColor: color, pointRadius: 5, pointHoverRadius: 7 }] },
+            data: {
+                datasets: [
+                    { data: pair.xs.map((x, i) => ({ x, y: pair.ys[i] })), backgroundColor: `${color}55`, borderColor: color, pointRadius: 5, pointHoverRadius: 7 },
+                    { type: 'line', data: trendData, borderColor: color, borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: false, tension: 0 }
+                ]
+            },
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
