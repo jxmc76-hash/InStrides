@@ -1408,7 +1408,6 @@ const pearsonR = (xs, ys) => {
 const renderCorrelations = () => {
     const container = document.getElementById('correlationsContainer');
     if (!container) return;
-    Object.keys(chartInstances).filter(k => k.startsWith('corrsc-')).forEach(k => destroyChart(k));
     container.innerHTML = '';
 
     const completed = logData.entries.filter(e => !e.isPlanned);
@@ -1434,7 +1433,7 @@ const renderCorrelations = () => {
     for (let i=0; i<sliders.length; i++) for (let j=i+1; j<sliders.length; j++) {
         const xs=[], ys=[];
         allDates.forEach(d => { const x=byDate[d].metrics[sliders[i].name], y=byDate[d].metrics[sliders[j].name]; if (x!=null&&y!=null){xs.push(x);ys.push(y);} });
-        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: titleCase(sliders[i].name), yLabel: titleCase(sliders[j].name), title: `${titleCase(sliders[i].name)} vs ${titleCase(sliders[j].name)}` });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), kind: 'same-day', xLabel: titleCase(sliders[i].name), yLabel: titleCase(sliders[j].name) });
     }
 
     // Same-day: slider vs number metric (carry-forward last known number value)
@@ -1442,7 +1441,7 @@ const renderCorrelations = () => {
         const xs=[], ys=[];
         let last=null;
         allDates.forEach(d => { const nv=byDate[d].metrics[n.name]; if(nv!=null)last=nv; const sv=byDate[d].metrics[s.name]; if(sv!=null&&last!=null){xs.push(sv);ys.push(last);} });
-        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: titleCase(s.name), yLabel: titleCase(n.name), title: `${titleCase(s.name)} vs ${titleCase(n.name)}` });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), kind: 'same-day', xLabel: titleCase(s.name), yLabel: titleCase(n.name) });
     }));
 
     // Lag-1: slider today → sessions tomorrow
@@ -1453,7 +1452,7 @@ const renderCorrelations = () => {
             const sv = byDate[allDates[i]].metrics[s.name];
             if (diff===1 && sv!=null) { xs.push(sv); ys.push(byDate[allDates[i+1]].sessions); }
         }
-        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: titleCase(s.name), yLabel: 'Next-day sessions', title: `${titleCase(s.name)} → Next-day activity` });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), kind: 'lag', xLabel: titleCase(s.name), yLabel: 'next-day activity' });
     });
 
     // Weekly: sessions/week vs avg slider that week
@@ -1469,7 +1468,7 @@ const renderCorrelations = () => {
     sliders.forEach(s => {
         const xs=[], ys=[];
         Object.values(weeklyData).forEach(w => { const vals=w.metrics[s.name]; if(vals?.length){xs.push(w.sessions);ys.push(vals.reduce((a,b)=>a+b,0)/vals.length);} });
-        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: 'Sessions/week', yLabel: `Avg ${titleCase(s.name)}`, title: `Weekly sessions vs ${titleCase(s.name)}` });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), kind: 'weekly', xLabel: 'weekly sessions', yLabel: `average ${titleCase(s.name).toLowerCase()}` });
     });
 
     candidates.sort((a, b) => Math.abs(b.r||0) - Math.abs(a.r||0));
@@ -1480,48 +1479,37 @@ const renderCorrelations = () => {
         return;
     }
 
-    const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899'];
-    top5.forEach((pair, idx) => {
-        const key = `corrsc-${idx}`;
-        const r = pair.r != null ? pair.r.toFixed(2) : '—';
-        const absR = Math.abs(pair.r||0);
-        const strength = absR > 0.6 ? 'strong' : absR > 0.3 ? 'moderate' : 'weak';
-        const direction = (pair.r||0) >= 0 ? 'positive' : 'negative';
-        const color = colors[idx % colors.length];
+    const toSentence = (pair) => {
+        const r = pair.r || 0;
+        const absR = Math.abs(r);
+        const pos = r >= 0;
+        const strength = absR > 0.6 ? 'a strong' : absR > 0.3 ? 'a moderate' : 'a weak';
+        const x = pair.xLabel, y = pair.yLabel;
+        const n = pair.xs.length;
 
-        const titleEl = document.createElement('div');
-        titleEl.className = 'insights-section-title';
-        titleEl.textContent = pair.title;
-        container.appendChild(titleEl);
+        if (pair.kind === 'lag') {
+            const more = pos ? 'more' : 'less';
+            return `There is ${strength} relationship between your ${x} and how active you are the following day — higher ${x} tends to be followed by ${more} activity the next day (based on ${n} consecutive-day pairs).`;
+        }
+        if (pair.kind === 'weekly') {
+            const higher = pos ? 'higher' : 'lower';
+            return `Weeks when you train more frequently tend to have ${higher} ${y} — there is ${strength} link between your ${x} and ${y} across ${n} weeks of data.`;
+        }
+        // same-day
+        const also = pos ? 'also tends to be higher' : 'tends to be lower';
+        return `Your ${x} and ${y} show ${strength} same-day relationship — on days when your ${x} is higher, your ${y} ${also} (${n} days of data).`;
+    };
 
-        const desc = document.createElement('p');
-        desc.className = 'neutral-msg';
-        desc.style.marginBottom = '12px';
-        desc.textContent = `r = ${r}  ·  ${strength} ${direction} correlation  ·  ${pair.xs.length} data points`;
-        container.appendChild(desc);
-
-        if (pair.xs.length < 5) { const empty = document.createElement('div'); empty.className='chart-container chart-empty-state'; empty.innerHTML='<p>Not enough data points yet</p>'; container.appendChild(empty); return; }
-
-        const wrap = document.createElement('div');
-        wrap.className = 'chart-container';
-        const canvas = document.createElement('canvas');
-        canvas.id = key;
-        wrap.appendChild(canvas);
-        container.appendChild(wrap);
-
-        chartInstances[key] = new Chart(canvas, {
-            type: 'scatter',
-            data: { datasets: [{ data: pair.xs.map((x,i)=>({x,y:pair.ys[i]})), backgroundColor: `${color}80`, borderColor: color, pointRadius: 5 }] },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { title: { display: true, text: pair.xLabel, font: { size: 11 }, color: '#8a8a8a' }, grid: { color: '#f1f5f9' } },
-                    y: { title: { display: true, text: pair.yLabel, font: { size: 11 }, color: '#8a8a8a' }, grid: { color: '#f1f5f9' } }
-                }
-            }
-        });
-    });
+    container.innerHTML = `
+        <div class="correlation-list">
+            ${top5.map((pair, i) => `
+                <div class="correlation-item">
+                    <span class="correlation-num">${i + 1}</span>
+                    <p class="correlation-sentence">${toSentence(pair)}</p>
+                </div>
+            `).join('')}
+        </div>
+    `;
 };
 
 // --- INSIGHTS RENDERER ---
