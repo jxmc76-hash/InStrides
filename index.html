@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=117">
+    <link rel="stylesheet" href="style.css?v=118">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -60,6 +60,7 @@
                         <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Log</button>
                         <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
                         <button id="tabCorrelations" class="tab-btn" onclick="window.switchTab('correlations')">Correlations</button>
+                        <button id="tabLearnings" class="tab-btn" onclick="window.switchTab('learnings')">Learnings</button>
                         <button id="tabGoals" class="tab-btn" onclick="window.switchTab('goals')">Goals</button>
                     </nav>
                 </div>
@@ -189,6 +190,12 @@
                 </div>
             </div>
 
+            <div id="viewLearnings" class="view-pane">
+                <div class="insights-container">
+                    <div id="learningsContainer"></div>
+                </div>
+            </div>
+
             <div id="viewCorrelations" class="view-pane">
                 <div class="insights-container">
                     <div id="correlationsContainer"></div>
@@ -280,6 +287,13 @@
                     <div class="input-row">
                         <label>Workout Notes / Strategy</label>
                         <textarea id="modalDetails" rows="2" placeholder="Notes..."></textarea>
+                    </div>
+
+                    <div class="input-row" id="learningsSection">
+                        <label>What did you learn? (up to 3 things to work on)</label>
+                        <input type="text" id="learning0" placeholder="e.g. Keep cadence above 170" style="margin-bottom:6px;">
+                        <input type="text" id="learning1" placeholder="" style="margin-bottom:6px;">
+                        <input type="text" id="learning2" placeholder="">
                     </div>
 
                     <div class="modal-footer">
@@ -465,7 +479,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=146"></script>
+    <script type="module" src="script.js?v=147"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

@@ -24,7 +24,7 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [], completedLearnings: [] };
 let editingGoalId = null;
 let editingThemeId = null;
 
@@ -244,7 +244,7 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [] };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
@@ -394,16 +394,18 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'goals', 'correlations', 'help'].forEach(t => {
+    ['log', 'insights', 'goals', 'correlations', 'learnings', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.getElementById('tabLog')?.classList.toggle('active', tab === 'log');
     document.getElementById('tabInsights')?.classList.toggle('active', tab === 'insights');
     document.getElementById('tabGoals')?.classList.toggle('active', tab === 'goals');
     document.getElementById('tabCorrelations')?.classList.toggle('active', tab === 'correlations');
+    document.getElementById('tabLearnings')?.classList.toggle('active', tab === 'learnings');
     if (tab === 'insights') renderInsights();
     if (tab === 'goals') { renderThemes(); renderGoals(); }
     if (tab === 'correlations') renderCorrelations();
+    if (tab === 'learnings') renderLearnings();
 };
 
 window.setStrategy = (wantsPlanned) => {
@@ -445,6 +447,7 @@ window.showInputModal = () => {
     document.getElementById('modalWeightUnit').value = 'kg';
     document.getElementById('modalDuration').value = '';
     document.getElementById('modalOtherRating').value = '';
+    [0,1,2].forEach(i => { document.getElementById(`learning${i}`).value = ''; });
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
     window.toggleDistanceRow();
@@ -478,6 +481,7 @@ window.editEntry = (id) => {
     document.getElementById('modalWeightUnit').value = entry.weightUnit || 'kg';
     document.getElementById('modalDuration').value = entry.duration || '';
     document.getElementById('modalOtherRating').value = entry.otherRating || '';
+    [0,1,2].forEach(i => { document.getElementById(`learning${i}`).value = (entry.learnings || [])[i] || ''; });
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
     window.toggleDistanceRow();
@@ -533,6 +537,7 @@ window.saveExercise = async () => {
         weightUnit: document.getElementById('modalWeightUnit').value,
         duration: (cat === 'time' || cat === 'pacing') && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
         otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
+        learnings: [0,1,2].map(i => document.getElementById(`learning${i}`).value.trim()).filter(Boolean),
         id: editingId || Date.now()
     };
     if (editingId) {
@@ -1330,6 +1335,64 @@ window.deleteTheme = async () => {
 const getThemeForDate = (dateKey) => {
     if (!logData.themes) return null;
     return logData.themes.find(t => t.startDate && dateKey >= t.startDate && (!t.endDate || dateKey <= t.endDate));
+};
+
+// --- LEARNINGS ---
+const renderLearnings = () => {
+    const container = document.getElementById('learningsContainer');
+    if (!container) return;
+
+    const entries = logData.entries.filter(e => !e.isPlanned && e.type && e.type !== 'NONE' && e.learnings?.length);
+    const done = new Set(logData.completedLearnings || []);
+
+    if (!entries.length) {
+        container.innerHTML = '<p class="neutral-msg" style="padding:20px 0">No learnings logged yet — add some when recording a session.</p>';
+        return;
+    }
+
+    // Group by type
+    const byType = {};
+    entries.forEach(e => {
+        if (!byType[e.type]) byType[e.type] = [];
+        e.learnings.forEach((text, i) => {
+            const key = `${e.id}-${i}`;
+            byType[e.type].push({ key, text, date: e.date, isDone: done.has(key) });
+        });
+    });
+
+    const pending = [], completed = [];
+    Object.entries(byType).forEach(([type, items]) => {
+        const p = items.filter(x => !x.isDone);
+        const c = items.filter(x => x.isDone);
+        if (p.length) pending.push({ type, items: p });
+        if (c.length) completed.push({ type, items: c });
+    });
+
+    const renderGroup = (groups, isDoneSection) => groups.map(({ type, items }) => `
+        <div class="learning-type-group">
+            <div class="learning-type-label cat-${getTypeCategory(type)}">${titleCase(type)}</div>
+            ${items.map(item => `
+                <label class="learning-item${item.isDone ? ' learning-done' : ''}">
+                    <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
+                    <span class="learning-text">${item.text}</span>
+                    <span class="learning-date">${new Date(item.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
+                </label>
+            `).join('')}
+        </div>
+    `).join('');
+
+    let html = '';
+    if (pending.length) html += `<div class="insights-section-title">To work on</div>${renderGroup(pending, false)}`;
+    if (completed.length) html += `<div class="insights-section-title" style="margin-top:30px">Done</div>${renderGroup(completed, true)}`;
+    container.innerHTML = html;
+};
+
+window.toggleLearning = async (key) => {
+    const done = new Set(logData.completedLearnings || []);
+    if (done.has(key)) done.delete(key); else done.add(key);
+    logData.completedLearnings = [...done];
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    renderLearnings();
 };
 
 // --- CORRELATIONS ---
