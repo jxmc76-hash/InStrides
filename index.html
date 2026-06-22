@@ -59,6 +59,7 @@
                     <nav class="tab-nav">
                         <button id="tabLog" class="tab-btn active" onclick="window.switchTab('log')">Log</button>
                         <button id="tabInsights" class="tab-btn" onclick="window.switchTab('insights')">Insights</button>
+                        <button id="tabCorrelations" class="tab-btn" onclick="window.switchTab('correlations')">Correlations</button>
                         <button id="tabGoals" class="tab-btn" onclick="window.switchTab('goals')">Goals</button>
                     </nav>
                 </div>
@@ -185,6 +186,12 @@
                     <!-- 10-day trailing averages for slider metrics -->
                     <div id="trailingChartsContainer"></div>
 
+                </div>
+            </div>
+
+            <div id="viewCorrelations" class="view-pane">
+                <div class="insights-container">
+                    <div id="correlationsContainer"></div>
                 </div>
             </div>
 
@@ -458,7 +465,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=145"></script>
+    <script type="module" src="script.js?v=146"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

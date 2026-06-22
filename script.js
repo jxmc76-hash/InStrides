@@ -136,7 +136,7 @@ const buildPersonalRecordsLine = (thisWeek) => {
     };
 
     const allCompleted = logData.entries.filter(e => !e.isPlanned && e.type && e.type !== 'NONE');
-    const prSegments = [];
+    const prs = [];
 
     thisWeek.forEach(e => {
         const cat = getTypeCategory(e.type);
@@ -146,12 +146,16 @@ const buildPersonalRecordsLine = (thisWeek) => {
             .filter(o => o.type === e.type && o.date < e.date)
             .reduce((max, o) => Math.max(max, metricValue(o, cat) || 0), 0);
         if (priorMax > 0 && val > priorMax) {
-            const unit = unitFor(e, cat);
-            prSegments.push(`🏆 New ${titleCase(e.type)} PR: ${fmtNum(val)}${unit} (previous best ${fmtNum(priorMax)}${unit})`);
+            prs.push({ e, cat, val, priorMax, margin: val - priorMax });
         }
     });
 
-    return prSegments.join(' · ');
+    if (!prs.length) return '';
+    // Show only the single most impressive PR (largest absolute margin)
+    prs.sort((a, b) => b.margin - a.margin);
+    const best = prs[0];
+    const unit = unitFor(best.e, best.cat);
+    return `🏆 New ${titleCase(best.e.type)} PR: ${fmtNum(best.val)}${unit} (previous best ${fmtNum(best.priorMax)}${unit})`;
 };
 let editingId = null;
 let unsubSnapshot = null;
@@ -390,14 +394,16 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'goals', 'help'].forEach(t => {
+    ['log', 'insights', 'goals', 'correlations', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.getElementById('tabLog')?.classList.toggle('active', tab === 'log');
     document.getElementById('tabInsights')?.classList.toggle('active', tab === 'insights');
     document.getElementById('tabGoals')?.classList.toggle('active', tab === 'goals');
+    document.getElementById('tabCorrelations')?.classList.toggle('active', tab === 'correlations');
     if (tab === 'insights') renderInsights();
     if (tab === 'goals') { renderThemes(); renderGoals(); }
+    if (tab === 'correlations') renderCorrelations();
 };
 
 window.setStrategy = (wantsPlanned) => {
@@ -1326,6 +1332,135 @@ const getThemeForDate = (dateKey) => {
     return logData.themes.find(t => t.startDate && dateKey >= t.startDate && (!t.endDate || dateKey <= t.endDate));
 };
 
+// --- CORRELATIONS ---
+const pearsonR = (xs, ys) => {
+    const n = xs.length;
+    if (n < 5) return null;
+    const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+    let num=0, dx=0, dy=0;
+    for (let i=0; i<n; i++) { num+=(xs[i]-mx)*(ys[i]-my); dx+=(xs[i]-mx)**2; dy+=(ys[i]-my)**2; }
+    return (dx===0||dy===0) ? null : num/Math.sqrt(dx*dy);
+};
+
+const renderCorrelations = () => {
+    const container = document.getElementById('correlationsContainer');
+    if (!container) return;
+    Object.keys(chartInstances).filter(k => k.startsWith('corrsc-')).forEach(k => destroyChart(k));
+    container.innerHTML = '';
+
+    const completed = logData.entries.filter(e => !e.isPlanned);
+    const sliders = logData.customMetrics.filter(m => m.type === 'slider');
+    const numbers = logData.customMetrics.filter(m => m.type === 'number');
+
+    if (!completed.length || (!sliders.length && !numbers.length)) {
+        container.innerHTML = '<p class="neutral-msg">Not enough data to compute correlations yet — keep logging!</p>';
+        return;
+    }
+
+    const byDate = {};
+    completed.forEach(e => {
+        if (!byDate[e.date]) byDate[e.date] = { metrics: {}, sessions: 0, distance: 0 };
+        if (e.customMetricData) Object.assign(byDate[e.date].metrics, e.customMetricData);
+        if (e.type && e.type !== 'NONE') { byDate[e.date].sessions++; if (e.distance) byDate[e.date].distance += e.distance; }
+    });
+    const allDates = Object.keys(byDate).sort();
+
+    const candidates = [];
+
+    // Same-day: slider vs slider
+    for (let i=0; i<sliders.length; i++) for (let j=i+1; j<sliders.length; j++) {
+        const xs=[], ys=[];
+        allDates.forEach(d => { const x=byDate[d].metrics[sliders[i].name], y=byDate[d].metrics[sliders[j].name]; if (x!=null&&y!=null){xs.push(x);ys.push(y);} });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: titleCase(sliders[i].name), yLabel: titleCase(sliders[j].name), title: `${titleCase(sliders[i].name)} vs ${titleCase(sliders[j].name)}` });
+    }
+
+    // Same-day: slider vs number metric (carry-forward last known number value)
+    sliders.forEach(s => numbers.forEach(n => {
+        const xs=[], ys=[];
+        let last=null;
+        allDates.forEach(d => { const nv=byDate[d].metrics[n.name]; if(nv!=null)last=nv; const sv=byDate[d].metrics[s.name]; if(sv!=null&&last!=null){xs.push(sv);ys.push(last);} });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: titleCase(s.name), yLabel: titleCase(n.name), title: `${titleCase(s.name)} vs ${titleCase(n.name)}` });
+    }));
+
+    // Lag-1: slider today → sessions tomorrow
+    sliders.forEach(s => {
+        const xs=[], ys=[];
+        for (let i=0; i<allDates.length-1; i++) {
+            const diff = Math.round((new Date(allDates[i+1])-new Date(allDates[i]))/86400000);
+            const sv = byDate[allDates[i]].metrics[s.name];
+            if (diff===1 && sv!=null) { xs.push(sv); ys.push(byDate[allDates[i+1]].sessions); }
+        }
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: titleCase(s.name), yLabel: 'Next-day sessions', title: `${titleCase(s.name)} → Next-day activity` });
+    });
+
+    // Weekly: sessions/week vs avg slider that week
+    const weeklyData = {};
+    completed.forEach(e => {
+        const w = getWeekStart(e.date);
+        if (!weeklyData[w]) weeklyData[w] = { sessions: 0, metrics: {} };
+        if (e.type && e.type !== 'NONE') weeklyData[w].sessions++;
+        if (e.customMetricData) sliders.forEach(s => {
+            if (e.customMetricData[s.name]!=null) { if(!weeklyData[w].metrics[s.name]) weeklyData[w].metrics[s.name]=[]; weeklyData[w].metrics[s.name].push(e.customMetricData[s.name]); }
+        });
+    });
+    sliders.forEach(s => {
+        const xs=[], ys=[];
+        Object.values(weeklyData).forEach(w => { const vals=w.metrics[s.name]; if(vals?.length){xs.push(w.sessions);ys.push(vals.reduce((a,b)=>a+b,0)/vals.length);} });
+        if (xs.length>=5) candidates.push({ xs, ys, r: pearsonR(xs,ys), xLabel: 'Sessions/week', yLabel: `Avg ${titleCase(s.name)}`, title: `Weekly sessions vs ${titleCase(s.name)}` });
+    });
+
+    candidates.sort((a, b) => Math.abs(b.r||0) - Math.abs(a.r||0));
+    const top5 = candidates.slice(0, 5);
+
+    if (!top5.length) {
+        container.innerHTML = '<p class="neutral-msg">Not enough overlapping data yet — keep logging both metrics and activity!</p>';
+        return;
+    }
+
+    const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899'];
+    top5.forEach((pair, idx) => {
+        const key = `corrsc-${idx}`;
+        const r = pair.r != null ? pair.r.toFixed(2) : '—';
+        const absR = Math.abs(pair.r||0);
+        const strength = absR > 0.6 ? 'strong' : absR > 0.3 ? 'moderate' : 'weak';
+        const direction = (pair.r||0) >= 0 ? 'positive' : 'negative';
+        const color = colors[idx % colors.length];
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'insights-section-title';
+        titleEl.textContent = pair.title;
+        container.appendChild(titleEl);
+
+        const desc = document.createElement('p');
+        desc.className = 'neutral-msg';
+        desc.style.marginBottom = '12px';
+        desc.textContent = `r = ${r}  ·  ${strength} ${direction} correlation  ·  ${pair.xs.length} data points`;
+        container.appendChild(desc);
+
+        if (pair.xs.length < 5) { const empty = document.createElement('div'); empty.className='chart-container chart-empty-state'; empty.innerHTML='<p>Not enough data points yet</p>'; container.appendChild(empty); return; }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-container';
+        const canvas = document.createElement('canvas');
+        canvas.id = key;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        chartInstances[key] = new Chart(canvas, {
+            type: 'scatter',
+            data: { datasets: [{ data: pair.xs.map((x,i)=>({x,y:pair.ys[i]})), backgroundColor: `${color}80`, borderColor: color, pointRadius: 5 }] },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: pair.xLabel, font: { size: 11 }, color: '#8a8a8a' }, grid: { color: '#f1f5f9' } },
+                    y: { title: { display: true, text: pair.yLabel, font: { size: 11 }, color: '#8a8a8a' }, grid: { color: '#f1f5f9' } }
+                }
+            }
+        });
+    });
+};
+
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
@@ -1385,14 +1520,6 @@ const computeHealthScore = (completed, asOfDateStr) => {
             });
         }
     }
-
-    // Consistency: how many of the last 10 days have any logging activity
-    const daysLogged = new Set(last10.map(e => e.date)).size;
-    const consistencyScore = Math.min(100, Math.round((daysLogged / 10) * 100));
-    components.push({
-        name: 'Consistency', score: consistencyScore, weight: 0.25,
-        detail: `Logged ${daysLogged} of the last 10 days`
-    });
 
     // Goal progress: movement toward a target value (e.g. body weight) over the last 10 days
     const weightGoal = (logData.goals || []).find(g => g.category === 'metric');
