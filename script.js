@@ -47,7 +47,11 @@ const aggregateExerciseLabel = (entries, cat) => {
         case 'cardio': {
             const total = entries.reduce((s, e) => s + (e.distance || 0), 0);
             const unit = entries.find(e => e.distanceUnit)?.distanceUnit || 'km';
-            return total ? `${fmtNum(total)}${unit}` : '';
+            const totalDur = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            const parts = [];
+            if (total) parts.push(`${fmtNum(total)}${unit}`);
+            if (totalDur) parts.push(`${totalDur}min`);
+            return parts.join(' / ');
         }
         case 'bodyweight': {
             const total = entries.reduce((s, e) => s + (e.reps || 0), 0);
@@ -535,7 +539,7 @@ window.saveExercise = async () => {
         reps: cat === 'bodyweight' && !isNaN(repsVal) && repsVal > 0 ? repsVal : null,
         weight: cat === 'gym' && !isNaN(weightVal) && weightVal > 0 ? weightVal : null,
         weightUnit: document.getElementById('modalWeightUnit').value,
-        duration: (cat === 'time' || cat === 'pacing') && !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
+        duration: !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
         otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
         learnings: [0,1,2].map(i => document.getElementById(`learning${i}`).value.trim()).filter(Boolean),
         id: editingId || Date.now()
@@ -2241,6 +2245,9 @@ window.logStravaActivity = (activity) => {
     if (activity.distance) {
         document.getElementById('modalDistance').value = activity.distance;
         document.getElementById('modalDistanceUnit').value = 'km';
+    }
+    if (activity.duration) {
+        document.getElementById('modalDuration').value = Math.round(activity.duration / 60);
     }
     window.selectMark(2);
     document.getElementById('inputModal').style.display = 'flex';
