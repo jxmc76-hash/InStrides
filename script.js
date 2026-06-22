@@ -1375,7 +1375,7 @@ const renderLearnings = () => {
                 <label class="learning-item${item.isDone ? ' learning-done' : ''}">
                     <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
                     <span class="learning-text">${item.text}</span>
-                    <span class="learning-date">${new Date(item.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
+                    <span class="learning-date">${titleCase(type)} · ${new Date(item.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
                 </label>
             `).join('')}
         </div>
