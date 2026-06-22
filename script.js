@@ -398,17 +398,15 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'goals', 'correlations', 'learnings', 'help'].forEach(t => {
+    ['log', 'insights', 'goals', 'learnings', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.getElementById('tabLog')?.classList.toggle('active', tab === 'log');
     document.getElementById('tabInsights')?.classList.toggle('active', tab === 'insights');
     document.getElementById('tabGoals')?.classList.toggle('active', tab === 'goals');
-    document.getElementById('tabCorrelations')?.classList.toggle('active', tab === 'correlations');
     document.getElementById('tabLearnings')?.classList.toggle('active', tab === 'learnings');
     if (tab === 'insights') renderInsights();
     if (tab === 'goals') { renderThemes(); renderGoals(); }
-    if (tab === 'correlations') renderCorrelations();
     if (tab === 'learnings') renderLearnings();
 };
 
@@ -1504,16 +1502,40 @@ const renderCorrelations = () => {
             : `Your ${x} and ${y} seem to pull in opposite directions — when your ${x} is high, your ${y} tends to be lower on the same day.`;
     };
 
-    container.innerHTML = `
-        <div class="correlation-list">
-            ${strong.map((pair, i) => `
-                <div class="correlation-item">
-                    <span class="correlation-num">${i + 1}</span>
-                    <p class="correlation-sentence">${toSentence(pair)}</p>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    Object.keys(chartInstances).filter(k => k.startsWith('corrsc-')).forEach(k => destroyChart(k));
+    container.innerHTML = '';
+
+    const colors = ['#ff5500', '#6366f1', '#10b981', '#f59e0b', '#ec4899'];
+    strong.forEach((pair, idx) => {
+        const key = `corrsc-${idx}`;
+        const color = colors[idx % colors.length];
+
+        const item = document.createElement('div');
+        item.className = 'correlation-item';
+        item.innerHTML = `<span class="correlation-num">${idx + 1}</span><p class="correlation-sentence">${toSentence(pair)}</p>`;
+        container.appendChild(item);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-container';
+        wrap.style.marginBottom = '30px';
+        const canvas = document.createElement('canvas');
+        canvas.id = key;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        chartInstances[key] = new Chart(canvas, {
+            type: 'scatter',
+            data: { datasets: [{ data: pair.xs.map((x, i) => ({ x, y: pair.ys[i] })), backgroundColor: `${color}55`, borderColor: color, pointRadius: 5, pointHoverRadius: 7 }] },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: pair.xLabel, font: { size: 11 }, color: '#8a8a8a' }, grid: { color: '#f1f5f9' } },
+                    y: { title: { display: true, text: pair.yLabel, font: { size: 11 }, color: '#8a8a8a' }, grid: { color: '#f1f5f9' } }
+                }
+            }
+        });
+    });
 };
 
 // --- INSIGHTS RENDERER ---
@@ -1525,6 +1547,7 @@ const renderInsights = () => {
     renderWeekCompare(completed);
     renderDistanceChart(completed);
     renderTrailingCharts(completed);
+    renderCorrelations();
 };
 
 const computeHealthScore = (completed, asOfDateStr) => {
