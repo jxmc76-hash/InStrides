@@ -332,6 +332,18 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Goals & Projects */
+.learning-type-group { margin-bottom: 20px; }
+.learning-type-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: var(--primary); }
+.learning-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: #fff; margin-bottom: 6px; cursor: pointer; transition: background 0.1s; }
+.learning-item:hover { background: #f9f6f4; }
+.learning-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+.learning-text { flex: 1; font-size: 0.9rem; font-weight: 500; color: var(--text-main); }
+.learning-date { font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; }
+.learning-done .learning-text { text-decoration: line-through; opacity: 0.5; }
+.learning-done { opacity: 0.7; }
+[data-theme="dark"] .learning-item { background: #1d2027; }
+[data-theme="dark"] .learning-item:hover { background: #23262e; }
+
 .goal-card { cursor: pointer; text-align: left !important; display: flex; flex-direction: column; gap: 8px; }
 .goal-title { font-weight: 800; font-size: 0.85rem; color: var(--text-main); }
 .goal-desc { font-size: 0.7rem; color: var(--text-muted); }
