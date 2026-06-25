@@ -11,10 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Write service account credentials
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: in-strides
-          channelId: live
+        run: npx --yes firebase-tools@latest deploy --only hosting --project in-strides
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
