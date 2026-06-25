@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=123">
+    <link rel="stylesheet" href="style.css?v=124">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -149,6 +149,14 @@
                 </div>
             </div>
 
+            <div id="viewOverview" class="view-pane">
+                <div class="overview-container">
+                    <div class="overview-scroll">
+                        <table class="overview-table" id="overviewTable"></table>
+                    </div>
+                </div>
+            </div>
+
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
 
@@ -221,6 +229,12 @@
                     <line x1="3" y1="6" x2="19" y2="6"/><line x1="3" y1="11" x2="19" y2="11"/><line x1="3" y1="16" x2="19" y2="16"/>
                 </svg>
                 <span class="bottom-nav-label">Log</span>
+            </button>
+            <button class="bottom-nav-item" data-tab="overview" onclick="window.switchTab('overview')">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="8" height="8" rx="1.5"/><rect x="12" y="2" width="8" height="8" rx="1.5"/><rect x="2" y="12" width="8" height="8" rx="1.5"/><rect x="12" y="12" width="8" height="8" rx="1.5"/>
+                </svg>
+                <span class="bottom-nav-label">Overview</span>
             </button>
             <button class="bottom-nav-item" data-tab="insights" onclick="window.switchTab('insights')">
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -560,7 +574,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=159"></script>
+    <script type="module" src="script.js?v=160"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
