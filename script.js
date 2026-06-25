@@ -1609,6 +1609,51 @@ const renderCorrelations = () => {
     });
 };
 
+// --- MASCOT ---
+const bearSVG = (expr = 'happy') => {
+    const b = '#C8866A', tan = '#E8C9A8', dark = '#1A1016', org = '#ff5500';
+    const cfg = {
+        happy: {
+            eyes: `<circle cx="39" cy="44" r="7.5" fill="${dark}"/><circle cx="61" cy="44" r="7.5" fill="${dark}"/>
+                   <circle cx="42" cy="41" r="2.5" fill="white"/><circle cx="64" cy="41" r="2.5" fill="white"/>`,
+            mouth: `<path d="M 43 64 Q 50 71 57 64" stroke="${dark}" stroke-width="2.2" stroke-linecap="round" fill="none"/>`,
+            arms: `<ellipse cx="27" cy="83" rx="9" ry="13" fill="${b}" transform="rotate(-15 27 83)"/>
+                   <ellipse cx="73" cy="83" rx="9" ry="13" fill="${b}" transform="rotate(15 73 83)"/>`,
+        },
+        excited: {
+            eyes: `<circle cx="39" cy="43" r="8" fill="${dark}"/><circle cx="61" cy="43" r="8" fill="${dark}"/>
+                   <circle cx="42.5" cy="40" r="3" fill="white"/><circle cx="64.5" cy="40" r="3" fill="white"/>
+                   <ellipse cx="33" cy="52" rx="6" ry="4" fill="#FFB5A3" opacity="0.55"/>
+                   <ellipse cx="67" cy="52" rx="6" ry="4" fill="#FFB5A3" opacity="0.55"/>`,
+            mouth: `<path d="M 41 64 Q 50 73 59 64" stroke="${dark}" stroke-width="2.5" stroke-linecap="round" fill="none"/>`,
+            arms: `<ellipse cx="20" cy="68" rx="9" ry="13" fill="${b}" transform="rotate(-55 20 68)"/>
+                   <ellipse cx="80" cy="68" rx="9" ry="13" fill="${b}" transform="rotate(55 80 68)"/>`,
+        },
+        tired: {
+            eyes: `<circle cx="39" cy="46" r="7.5" fill="${dark}"/><circle cx="61" cy="46" r="7.5" fill="${dark}"/>
+                   <path d="M 31.5 43 Q 39 40 46.5 43" fill="${b}"/><path d="M 53.5 43 Q 61 40 68.5 43" fill="${b}"/>
+                   <circle cx="42" cy="45" r="2" fill="white"/><circle cx="64" cy="45" r="2" fill="white"/>`,
+            mouth: `<path d="M 44 66 Q 50 62 56 66" stroke="${dark}" stroke-width="2" stroke-linecap="round" fill="none"/>`,
+            arms: `<ellipse cx="27" cy="87" rx="9" ry="13" fill="${b}" transform="rotate(-5 27 87)"/>
+                   <ellipse cx="73" cy="87" rx="9" ry="13" fill="${b}" transform="rotate(5 73 87)"/>`,
+        },
+    };
+    const c = cfg[expr] || cfg.happy;
+    return `<svg class="bear-svg" viewBox="0 0 100 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="22" r="12" fill="${b}"/><circle cx="76" cy="22" r="12" fill="${b}"/>
+        <circle cx="24" cy="22" r="7" fill="${org}"/><circle cx="76" cy="22" r="7" fill="${org}"/>
+        <ellipse cx="50" cy="90" rx="24" ry="20" fill="${b}"/>
+        <ellipse cx="50" cy="92" rx="14" ry="12" fill="${tan}"/>
+        ${c.arms}
+        <ellipse cx="40" cy="107" rx="12" ry="7" fill="${b}"/><ellipse cx="60" cy="107" rx="12" ry="7" fill="${b}"/>
+        <circle cx="50" cy="48" r="30" fill="${b}"/>
+        <ellipse cx="50" cy="60" rx="12" ry="9" fill="${tan}"/>
+        ${c.eyes}
+        <ellipse cx="50" cy="55" rx="4" ry="3" fill="${dark}"/>
+        ${c.mouth}
+    </svg>`;
+};
+
 // --- OVERVIEW RENDERER ---
 const OVERVIEW_CAT_COLORS = {
     cardio: '#3b82f6', gym: '#8b5cf6', bodyweight: '#10b981',
@@ -1836,8 +1881,11 @@ const renderHealthScore = (completed) => {
         else trendArrow = `<span class="hs-trend hs-trend-flat" title="Steady vs 7 days ago">▬ 0</span>`;
     }
 
+    const bearExpr = score >= 70 ? 'excited' : score >= 40 ? 'happy' : 'tired';
+
     el.innerHTML = `
         <div class="health-score-main">
+            <div class="hs-bear">${bearSVG(bearExpr)}</div>
             <div class="health-score-ring" style="background: conic-gradient(${color} ${score * 3.6}deg, var(--border) 0deg);">
                 <div class="health-score-ring-inner">
                     <span class="health-score-num">${score}</span>

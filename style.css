@@ -284,6 +284,10 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .help-logo { height: 52px; margin-bottom: 16px; }
 .help-hero h2 { font-size: 1.8rem; font-weight: 900; margin-bottom: 10px; }
 .help-hero p { color: var(--text-muted); font-size: 0.95rem; }
+.mascot-tagline { font-size: 0.9rem !important; font-weight: 700 !important; color: var(--primary) !important; margin-bottom: 6px !important; }
+.bear-svg { display: block; }
+.bear-hero-svg { width: 130px; height: auto; margin: 0 auto 12px; }
+.hs-bear { width: 72px; height: auto; flex-shrink: 0; }
 .help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
 .help-card { background: white; border-radius: 20px; border: 1px solid var(--border); padding: 28px; }
 .help-icon { font-size: 1.6rem; margin-bottom: 12px; }
