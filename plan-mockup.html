@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Tab — Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+:root { --primary: #ff5500; --bg: #f8f7f5; --text-main: #1a1a1a; --text-muted: #8a8a8a; --border: #e8e4e0; --success: #22c55e; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); -webkit-font-smoothing: antialiased; padding-bottom: 100px; }
+
+/* Header */
+.app-header { background: rgba(255,255,255,0.96); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.logo { font-weight: 900; font-size: 1.1rem; }
+.logo span { color: var(--primary); }
+.streak { background: linear-gradient(120deg,#fff4ee,#ffe4d6); color: var(--primary); font-weight: 800; font-size: 0.78rem; padding: 5px 12px; border-radius: 20px; border: 1px solid #ffd5c0; }
+
+/* Strapline */
+.strapline { margin: 12px 16px; background: #fff; border: 1px solid var(--border); border-left: 5px solid var(--primary); border-radius: 14px; padding: 13px 18px; font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+
+/* Content */
+.content { padding: 16px; }
+
+/* Plan header card */
+.plan-header-card { background: linear-gradient(135deg, #fff8f4, #fff); border: 1px solid #ffe2d1; border-radius: 20px; padding: 20px 22px; margin-bottom: 20px; }
+.plan-title { font-size: 1.2rem; font-weight: 900; color: var(--text-main); margin-bottom: 4px; }
+.plan-dates { font-size: 0.78rem; color: var(--text-muted); font-weight: 700; margin-bottom: 14px; }
+.plan-progress-bar-wrap { background: #f1f5f9; border-radius: 99px; height: 8px; overflow: hidden; margin-bottom: 6px; }
+.plan-progress-bar-fill { height: 100%; background: linear-gradient(135deg, var(--primary), #ff2e8c); border-radius: 99px; width: 38%; }
+.plan-progress-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; }
+.plan-progress-label span:first-child { color: var(--primary); }
+
+/* Week group */
+.week-group { margin-bottom: 28px; }
+.week-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.week-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.week-done-badge { font-size: 0.6rem; font-weight: 800; background: rgba(34,197,94,0.12); color: #16a34a; padding: 2px 8px; border-radius: 99px; text-transform: none; letter-spacing: 0; }
+
+/* Session card */
+.session-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; transition: box-shadow 0.15s; }
+.session-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.session-card.done { opacity: 0.6; }
+.session-tick { width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--border); background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.15s; font-size: 1.1rem; }
+.session-tick.ticked { background: linear-gradient(135deg, var(--primary), #ff2e8c); border-color: transparent; color: white; }
+.session-tick:not(.ticked):hover { border-color: var(--primary); }
+.session-info { flex: 1; min-width: 0; }
+.session-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.session-type { font-weight: 900; font-size: 0.95rem; color: var(--text-main); }
+.session-cat-badge { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; padding: 2px 8px; border-radius: 99px; }
+.cat-cardio { background: rgba(255,85,0,0.1); color: #ff5500; }
+.cat-gym { background: rgba(99,102,241,0.1); color: #6366f1; }
+.cat-time { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.cat-other { background: rgba(138,138,138,0.1); color: #8a8a8a; }
+.session-date { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+.session-target { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+.session-target strong { color: var(--primary); font-weight: 800; }
+.session-actual { font-size: 0.78rem; color: #16a34a; font-weight: 700; }
+.session-menu { color: var(--text-muted); font-size: 1.1rem; cursor: pointer; padding: 4px; }
+
+/* Today highlight */
+.session-card.today { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), 0 4px 16px rgba(255,85,0,0.12); }
+.session-card.today .session-tick { border-color: var(--primary); }
+
+/* Add session button */
+.add-session-btn { width: 100%; padding: 13px; border: 2px dashed var(--border); border-radius: 14px; background: none; font-family: inherit; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.add-session-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(255,85,0,0.03); }
+
+/* New plan button */
+.btn-new-plan { width: 100%; padding: 14px; background: linear-gradient(135deg, #ff7a1a, var(--primary), #ff2e8c); color: white; border: none; border-radius: 14px; font-family: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px 14px rgba(255,85,0,0.3); }
+
+/* Bottom nav */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: rgba(255,255,255,0.96); border-top: 1px solid var(--border); display: flex; align-items: stretch; box-shadow: 0 -2px 16px rgba(0,0,0,0.06); }
+.bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; background: none; gap: 3px; cursor: pointer; color: var(--text-muted); font-family: inherit; }
+.bottom-nav-item.active { color: var(--primary); }
+.bottom-nav-label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; }
+.bottom-nav-item svg { transition: transform 0.2s; }
+.bottom-nav-item.active svg { transform: scale(1.12); }
+
+/* FAB */
+.fab { position: fixed; bottom: 84px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #ff7a1a, var(--primary), #ff2e8c); color: white; font-size: 1.8rem; border: none; cursor: pointer; box-shadow: 0 6px 20px rgba(255,85,0,0.45); display: flex; align-items: center; justify-content: center; }
+
+/* No plan state */
+.empty-plan { text-align: center; padding: 50px 20px; }
+.empty-plan-icon { font-size: 3rem; margin-bottom: 16px; }
+.empty-plan h3 { font-weight: 900; font-size: 1.1rem; margin-bottom: 8px; }
+.empty-plan p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+
+/* Toggle between views */
+.view { display: none; }
+.view.active { display: block; }
+.toggle-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.toggle-btn { flex: 1; padding: 8px; border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; background: #f1f5f9; color: var(--text-muted); }
+.toggle-btn.active { background: var(--primary); color: white; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+    <div class="logo">TRAININGLOG<span>.APP</span></div>
+    <div class="streak">🔥 27 day streak</div>
+</div>
+
+<div class="strapline">🔥 27-day streak — you're on a roll.</div>
+
+<div class="content">
+
+    <div class="toggle-bar">
+        <button class="toggle-btn active" onclick="showView('active')">Active Plan</button>
+        <button class="toggle-btn" onclick="showView('history')">Past Plans</button>
+    </div>
+
+    <!-- ACTIVE PLAN VIEW -->
+    <div id="view-active" class="view active">
+
+        <!-- Plan header -->
+        <div class="plan-header-card">
+            <div class="plan-title">Base Building — June</div>
+            <div class="plan-dates">16 Jun – 13 Jul 2026 · 4 weeks</div>
+            <div class="plan-progress-bar-wrap">
+                <div class="plan-progress-bar-fill"></div>
+            </div>
+            <div class="plan-progress-label">
+                <span>12 of 32 sessions done</span>
+                <span>38%</span>
+            </div>
+        </div>
+
+        <!-- Week 1 — complete -->
+        <div class="week-group">
+            <div class="week-label">Week 1 · 16–22 Jun <span class="week-done-badge">✓ 8/8 done</span></div>
+
+            <div class="session-card done">
+                <div class="session-tick ticked">✓</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Run</span>
+                        <span class="session-cat-badge cat-cardio">Cardio</span>
+                    </div>
+                    <div class="session-date">Mon 16 Jun</div>
+                    <div class="session-target">Target <strong>8km easy</strong></div>
+                    <div class="session-actual">✓ Logged: 8.2km · 42min</div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <div class="session-card done">
+                <div class="session-tick ticked">✓</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Gym</span>
+                        <span class="session-cat-badge cat-gym">Weight</span>
+                    </div>
+                    <div class="session-date">Tue 17 Jun</div>
+                    <div class="session-target">Target <strong>Upper body</strong></div>
+                    <div class="session-actual">✓ Logged: 20min · 60kg</div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+        </div>
+
+        <!-- Week 2 — in progress -->
+        <div class="week-group">
+            <div class="week-label">Week 2 · 23–29 Jun <span style="font-size:0.6rem;font-weight:700;color:var(--primary);background:rgba(255,85,0,0.08);padding:2px 8px;border-radius:99px;text-transform:none;letter-spacing:0;">4/8 done</span></div>
+
+            <div class="session-card done">
+                <div class="session-tick ticked">✓</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Run</span>
+                        <span class="session-cat-badge cat-cardio">Cardio</span>
+                    </div>
+                    <div class="session-date">Mon 23 Jun</div>
+                    <div class="session-target">Target <strong>6km easy</strong></div>
+                    <div class="session-actual">✓ Logged: 6.01km · 30min</div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <div class="session-card done">
+                <div class="session-tick ticked">✓</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Sit</span>
+                        <span class="session-cat-badge cat-other">Other</span>
+                    </div>
+                    <div class="session-date">Tue 24 Jun</div>
+                    <div class="session-target">Target <strong>20min meditation</strong></div>
+                    <div class="session-actual">✓ Logged: 3/10</div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <!-- TODAY -->
+            <div class="session-card today">
+                <div class="session-tick">○</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Run</span>
+                        <span class="session-cat-badge cat-cardio">Cardio</span>
+                        <span style="font-size:0.6rem;font-weight:800;background:rgba(255,85,0,0.12);color:var(--primary);padding:2px 8px;border-radius:99px;">Today</span>
+                    </div>
+                    <div class="session-date">Thu 25 Jun</div>
+                    <div class="session-target">Target <strong>13km long run</strong></div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <!-- UPCOMING -->
+            <div class="session-card">
+                <div class="session-tick">○</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Gym</span>
+                        <span class="session-cat-badge cat-gym">Weight</span>
+                    </div>
+                    <div class="session-date">Fri 26 Jun</div>
+                    <div class="session-target">Target <strong>Lower body · 45min</strong></div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <div class="session-card">
+                <div class="session-tick">○</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Yoga</span>
+                        <span class="session-cat-badge cat-time">Time</span>
+                    </div>
+                    <div class="session-date">Sun 28 Jun</div>
+                    <div class="session-target">Target <strong>30min recovery</strong></div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <button class="add-session-btn">+ Add session to this week</button>
+        </div>
+
+        <!-- Week 3 — future -->
+        <div class="week-group">
+            <div class="week-label">Week 3 · 30 Jun – 6 Jul <span style="font-size:0.6rem;font-weight:700;color:var(--text-muted);background:#f1f5f9;padding:2px 8px;border-radius:99px;text-transform:none;letter-spacing:0;">0/8 · upcoming</span></div>
+
+            <div class="session-card" style="opacity:0.5">
+                <div class="session-tick">○</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Run</span>
+                        <span class="session-cat-badge cat-cardio">Cardio</span>
+                    </div>
+                    <div class="session-date">Mon 30 Jun</div>
+                    <div class="session-target">Target <strong>10km tempo</strong></div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <div class="session-card" style="opacity:0.5">
+                <div class="session-tick">○</div>
+                <div class="session-info">
+                    <div class="session-top">
+                        <span class="session-type">Gym</span>
+                        <span class="session-cat-badge cat-gym">Weight</span>
+                    </div>
+                    <div class="session-date">Wed 2 Jul</div>
+                    <div class="session-target">Target <strong>Full body · 50min</strong></div>
+                </div>
+                <div class="session-menu">···</div>
+            </div>
+
+            <button class="add-session-btn">+ Add session to this week</button>
+        </div>
+
+        <button class="btn-new-plan">+ Create New Plan</button>
+
+    </div>
+
+    <!-- NO PLAN STATE (hidden) -->
+    <div id="view-history" class="view">
+        <div class="empty-plan">
+            <div class="empty-plan-icon">📋</div>
+            <h3>No past plans yet</h3>
+            <p>Completed plans will appear here so you can review what you achieved.</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- FAB -->
+<button class="fab">+</button>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+    <button class="bottom-nav-item">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="19" y2="6"/><line x1="3" y1="11" x2="19" y2="11"/><line x1="3" y1="16" x2="19" y2="16"/>
+        </svg>
+        <span class="bottom-nav-label">Log</span>
+    </button>
+    <button class="bottom-nav-item">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="13" width="5" height="7" rx="1"/><rect x="8.5" y="8" width="5" height="12" rx="1"/><rect x="15" y="3" width="5" height="17" rx="1"/>
+        </svg>
+        <span class="bottom-nav-label">Insights</span>
+    </button>
+    <button class="bottom-nav-item active">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="4" width="16" height="15" rx="2"/>
+            <line x1="3" y1="9" x2="19" y2="9"/>
+            <line x1="8" y1="4" x2="8" y2="9"/>
+            <line x1="14" y1="4" x2="14" y2="9"/>
+            <line x1="7" y1="13" x2="9" y2="13"/>
+            <line x1="7" y1="16" x2="9" y2="16"/>
+            <line x1="11" y1="13" x2="15" y2="13"/>
+            <line x1="11" y1="16" x2="15" y2="16"/>
+        </svg>
+        <span class="bottom-nav-label">Plan</span>
+    </button>
+    <button class="bottom-nav-item">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="11" cy="11" r="9"/><circle cx="11" cy="11" r="5"/><circle cx="11" cy="11" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="bottom-nav-label">Progress</span>
+    </button>
+</nav>
+
+<script>
+function showView(v) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + v).classList.add('active');
+    event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
