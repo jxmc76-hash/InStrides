@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=122">
+    <link rel="stylesheet" href="style.css?v=123">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -153,15 +153,15 @@
                 <div class="insights-container">
 
                     <div class="isect">
-                        <div class="isect-header">Health Score</div>
-                        <div id="healthScoreCard" class="health-score-card"></div>
-                        <div id="healthScoreChartWrap" class="chart-container" style="display:none"><canvas id="healthScoreChart"></canvas></div>
-                    </div>
-
-                    <div class="isect">
                         <div class="isect-header">This Week</div>
                         <div id="weeklyRecap" class="recap-card"></div>
                         <div id="weekCompare" class="week-compare-grid"></div>
+                    </div>
+
+                    <div class="isect">
+                        <div class="isect-header">Health Score</div>
+                        <div id="healthScoreCard" class="health-score-card"></div>
+                        <div id="healthScoreChartWrap" class="chart-container" style="display:none"><canvas id="healthScoreChart"></canvas></div>
                     </div>
 
                     <div class="isect">
@@ -560,7 +560,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=158"></script>
+    <script type="module" src="script.js?v=159"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

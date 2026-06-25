@@ -190,7 +190,9 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .recap-num { font-size: 1.6rem; font-weight: 900; background: linear-gradient(135deg, var(--primary), #ff2e8c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .recap-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
-.achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; margin-bottom: 30px; }
+.achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.achievements-show-more { grid-column: 1 / -1; background: none; border: 1px dashed var(--border); border-radius: 12px; padding: 10px; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: color 0.15s, border-color 0.15s; margin-bottom: 14px; }
+.achievements-show-more:hover { color: var(--primary); border-color: var(--primary); }
 .achievement-card { border-radius: 16px; padding: 18px 14px; text-align: center; border: 1px solid var(--border); transition: transform 0.15s ease, box-shadow 0.15s ease; }
 .achievement-card.unlocked { background: linear-gradient(135deg, #fff8f4, #fff4ee); border-color: #ffd5c0; box-shadow: 0 4px 14px rgba(255,85,0,0.12); }
 .achievement-card.unlocked:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,85,0,0.2); }

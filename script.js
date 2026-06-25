@@ -1826,15 +1826,11 @@ const renderWeeklyRecap = (completed) => {
     if (!el) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const thisWeekStart = new Date(getWeekStart(todayStr));
-    const lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-    const lastWeekEnd = new Date(thisWeekStart); lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
-    const lwStartKey = lastWeekStart.toISOString().split('T')[0];
-    const lwEndKey = lastWeekEnd.toISOString().split('T')[0];
+    const weekStartStr = getWeekStart(todayStr);
 
-    const weekEntries = completed.filter(e => e.date >= lwStartKey && e.date <= lwEndKey);
+    const weekEntries = completed.filter(e => e.date >= weekStartStr && e.date <= todayStr);
     if (weekEntries.length === 0) {
-        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">No data logged for last week yet.</p>`;
+        el.innerHTML = `<p class="neutral-msg" style="padding:10px 0">Nothing logged this week yet — get moving!</p>`;
         return;
     }
 
@@ -1850,10 +1846,13 @@ const renderWeeklyRecap = (completed) => {
         return { name, avg: (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) };
     }).filter(Boolean);
 
-    const weekLabel = lastWeekStart.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const weekStart = new Date(weekStartStr);
+    const weekLabel = weekStart.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const todayLabel = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const isWeekComplete = weekStartStr !== todayStr && new Date(todayStr).getDay() === 0;
 
     el.innerHTML = `
-        <div class="recap-header">Week of ${weekLabel}</div>
+        <div class="recap-header">${isWeekComplete ? `Week of ${weekLabel}` : `${weekLabel} – ${todayLabel}`}</div>
         <div class="recap-stats">
             <div class="recap-stat"><span class="recap-num">${daysLogged}</span><span class="recap-label">days logged</span></div>
             <div class="recap-stat"><span class="recap-num">${workouts.length}</span><span class="recap-label">workouts</span></div>
@@ -1874,7 +1873,7 @@ const ACHIEVEMENTS = [
     { icon: '🏆', name: 'Centurion',       desc: 'Log 100 workouts',        check: s => s.totalWorkouts >= 100 },
 ];
 
-const renderAchievements = (completed) => {
+const renderAchievements = (completed, showAll = false) => {
     const el = document.getElementById('achievementsGrid');
     if (!el) return;
 
@@ -1889,15 +1888,29 @@ const renderAchievements = (completed) => {
         longestStreak: computeLongestStreak(loggedDates),
     };
 
-    el.innerHTML = ACHIEVEMENTS.map(a => {
-        const unlocked = a.check(stats);
-        return `<div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
+    const tagged = ACHIEVEMENTS.map(a => ({ ...a, unlocked: a.check(stats) }));
+    const unlocked = tagged.filter(a => a.unlocked);
+    const locked = tagged.filter(a => !a.unlocked);
+    const lockedToShow = showAll ? locked : locked.slice(0, 2);
+    const visible = [...unlocked, ...lockedToShow];
+    const hiddenCount = locked.length - lockedToShow.length;
+
+    const cardHtml = visible.map(a => `
+        <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">
             <div class="achievement-icon">${a.icon}</div>
             <div class="achievement-name">${a.name}</div>
             <div class="achievement-desc">${a.desc}</div>
-        </div>`;
-    }).join('');
+        </div>`).join('');
+
+    const toggleHtml = hiddenCount > 0
+        ? `<button class="achievements-show-more" onclick="window._renderAchievementsAll()">+${hiddenCount} more</button>`
+        : (showAll && locked.length > 2 ? `<button class="achievements-show-more" onclick="window._renderAchievementsFew()">Show less</button>` : '');
+
+    el.innerHTML = cardHtml + toggleHtml;
 };
+
+window._renderAchievementsAll = () => renderAchievements(logData.entries.filter(e => !e.isPlanned), true);
+window._renderAchievementsFew = () => renderAchievements(logData.entries.filter(e => !e.isPlanned), false);
 
 const renderWeekCompare = (completed) => {
     const el = document.getElementById('weekCompare');
