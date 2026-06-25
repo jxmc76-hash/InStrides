@@ -1629,8 +1629,8 @@ const renderOverview = () => {
     }
 
     const done = new Set(completed.map(e => `${e.date}|${e.type}`));
-    const themeForDate = d => themes.find(t => t.startDate <= d && t.endDate >= d)?.title || '';
-    const noteForDate = d => (logData.dailyNotes || {})[d] || '';
+    const themeObjForDate = d => themes.find(t => t.startDate <= d && t.endDate >= d) || null;
+    const fmtShort = s => new Date(s + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
@@ -1654,24 +1654,35 @@ const renderOverview = () => {
         const label = type.length > 5 ? type.slice(0, 4) : type;
         html += `<th class="ov-type-th"><span class="ov-type-label" style="color:${color}">${label}</span></th>`;
     });
-    html += '<th class="ov-notes-th"></th></tr></thead><tbody>';
+    html += '</tr></thead><tbody>';
 
     // Rows (most recent first)
+    const colSpan = types.length + 1;
+    let prevThemeId = undefined;
     rows.forEach(dateStr => {
+        const theme = themeObjForDate(dateStr);
+        const themeId = theme?.id ?? null;
+
+        // Insert divider when we enter a theme block
+        if (themeId !== prevThemeId && theme) {
+            html += `<tr class="ov-theme-divider-row"><td class="ov-theme-divider-cell" colspan="${colSpan}">
+                <span class="ov-theme-divider-title">${theme.title}</span>
+                <span class="ov-theme-divider-range">${fmtShort(theme.startDate)} – ${fmtShort(theme.endDate)}</span>
+            </td></tr>`;
+        }
+        prevThemeId = themeId;
+
         const d = new Date(dateStr + 'T00:00:00');
         const dayLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         const isToday = dateStr === todayStr;
-        const theme = themeForDate(dateStr);
-        const note = noteForDate(dateStr);
 
-        html += `<tr>`;
-        html += `<td class="ov-date-td${isToday ? ' ov-today' : ''}"><span class="ov-day">${dayLabel}</span>${theme ? `<span class="ov-theme-name">${theme}</span>` : ''}</td>`;
+        html += `<tr><td class="ov-date-td${isToday ? ' ov-today' : ''}">${dayLabel}</td>`;
         types.forEach(type => {
             const active = done.has(`${dateStr}|${type}`);
             const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
             html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}></div></td>`;
         });
-        html += `<td class="ov-notes-td">${note ? `<span class="ov-note-text">${note}</span>` : ''}</td></tr>`;
+        html += `</tr>`;
     });
 
     html += '</tbody>';
