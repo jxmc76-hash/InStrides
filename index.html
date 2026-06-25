@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=121">
+    <link rel="stylesheet" href="style.css?v=122">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -205,6 +205,10 @@
 
                 </div>
             </div>
+
+            <div id="viewPlan" class="view-pane">
+                <div class="plan-container" id="planContainer"></div>
+            </div>
         </main>
 
         <!-- Floating Action Button -->
@@ -229,6 +233,12 @@
                     <circle cx="11" cy="11" r="9"/><circle cx="11" cy="11" r="5"/><circle cx="11" cy="11" r="1.5" fill="currentColor" stroke="none"/>
                 </svg>
                 <span class="bottom-nav-label">Progress</span>
+            </button>
+            <button class="bottom-nav-item" data-tab="plan" onclick="window.switchTab('plan')">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="18" height="18" rx="3"/><line x1="7" y1="1" x2="7" y2="5"/><line x1="15" y1="1" x2="15" y2="5"/><line x1="2" y1="9" x2="20" y2="9"/><polyline points="7,13 9.5,15.5 15,11"/>
+                </svg>
+                <span class="bottom-nav-label">Plan</span>
             </button>
         </nav>
 
@@ -476,6 +486,64 @@
         </div>
     </div>
 
+    <!-- Training Plan Modal -->
+    <div id="planModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="planModalTitle">New Training Plan</h2>
+                <button onclick="window.closeModal('planModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body">
+                <div class="input-row">
+                    <label>Plan Name</label>
+                    <input type="text" id="planTitle" placeholder="e.g. Base Building — June">
+                </div>
+                <div class="input-row" style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>Start Date</label>
+                        <input type="date" id="planStartDate">
+                    </div>
+                    <div style="flex:1;">
+                        <label>End Date</label>
+                        <input type="date" id="planEndDate">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="deletePlanBtn" onclick="window.deletePlan()" class="btn-delete" style="display:none;">Delete Plan</button>
+                    <button onclick="window.savePlan()" class="btn-submit">Save Plan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Session Modal -->
+    <div id="planSessionModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="planSessionModalTitle">Add Session</h2>
+                <button onclick="window.closeModal('planSessionModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body">
+                <div class="input-row">
+                    <label>Date</label>
+                    <input type="date" id="planSessionDate">
+                </div>
+                <div class="input-row">
+                    <label>Exercise Type</label>
+                    <select id="planSessionType"></select>
+                </div>
+                <div class="input-row">
+                    <label>Target / Notes</label>
+                    <textarea id="planSessionTarget" rows="2" placeholder="e.g. 5km easy, HR below 140"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button id="deletePlanSessionBtn" onclick="window.deletePlanSession()" class="btn-delete" style="display:none;">Remove Session</button>
+                    <button onclick="window.savePlanSession()" class="btn-submit">Save Session</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Strava Activity Modal -->
     <div id="stravaModal" class="modal-overlay">
         <div class="modal-card">
@@ -492,7 +560,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=157"></script>
+    <script type="module" src="script.js?v=158"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
