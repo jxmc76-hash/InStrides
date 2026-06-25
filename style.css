@@ -403,17 +403,23 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 
 /* ---- Overview Grid ---- */
 .overview-container { height: 100%; display: flex; flex-direction: column; }
-.overview-scroll { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px 80px; }
+.overview-scroll { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px 0 80px 16px; }
 .overview-table { border-collapse: separate; border-spacing: 3px; }
-.ov-date-th { min-width: 54px; position: sticky; left: 0; background: var(--bg); z-index: 3; }
+.ov-date-th { min-width: 90px; position: sticky; left: 0; background: var(--bg); z-index: 3; }
 .ov-type-th { min-width: 28px; width: 28px; padding: 0 0 4px; vertical-align: bottom; }
 .ov-type-label { writing-mode: vertical-rl; display: block; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; max-height: 72px; overflow: hidden; padding: 6px 6px 0; }
-.ov-date-td { position: sticky; left: 0; background: var(--bg); z-index: 1; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); padding: 0 8px 0 0; white-space: nowrap; text-align: right; }
-.ov-today { color: var(--primary) !important; font-weight: 900; }
-.ov-cell { width: 26px; height: 26px; border-radius: 6px; background: var(--border); padding: 0; }
-.ov-cell-on { opacity: 0.9; }
+.ov-date-td { position: sticky; left: 0; background: var(--bg); z-index: 1; padding: 2px 8px 2px 0; white-space: nowrap; vertical-align: middle; }
+.ov-day { display: block; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-align: right; }
+.ov-theme-name { display: block; font-size: 0.55rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.2px; text-align: right; max-width: 86px; overflow: hidden; text-overflow: ellipsis; }
+.ov-today .ov-day { color: var(--primary); font-weight: 900; }
+.ov-cell-wrap { padding: 0; vertical-align: middle; }
+.ov-sq { width: 26px; height: 26px; border-radius: 6px; background: var(--border); }
+.ov-sq-on { opacity: 0.9; }
+.ov-notes-th { min-width: 140px; }
+.ov-notes-td { padding-left: 10px; vertical-align: middle; max-width: 200px; }
+.ov-note-text { font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 200px; }
 [data-theme="dark"] .ov-date-th, [data-theme="dark"] .ov-date-td { background: var(--bg); }
-[data-theme="dark"] .ov-cell { background: #2a2d36; }
+[data-theme="dark"] .ov-sq { background: #2a2d36; }
 
 /* ---- Insights Section Grouping ---- */
 .isect { margin-bottom: 36px; }
