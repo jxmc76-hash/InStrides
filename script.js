@@ -1621,6 +1621,7 @@ const renderOverview = () => {
 
     const types = logData.types.filter(t => t !== 'NONE');
     const completed = logData.entries.filter(e => !e.isPlanned);
+    const themes = logData.themes || [];
 
     if (!types.length) {
         el.innerHTML = '<tr><td style="padding:24px;color:var(--text-muted);font-size:0.85rem">No exercise types defined yet. Add some in Settings → Manage Types.</td></tr>';
@@ -1628,6 +1629,8 @@ const renderOverview = () => {
     }
 
     const done = new Set(completed.map(e => `${e.date}|${e.type}`));
+    const themeForDate = d => themes.find(t => t.startDate <= d && t.endDate >= d)?.title || '';
+    const noteForDate = d => (logData.dailyNotes || {})[d] || '';
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
@@ -1651,20 +1654,24 @@ const renderOverview = () => {
         const label = type.length > 5 ? type.slice(0, 4) : type;
         html += `<th class="ov-type-th"><span class="ov-type-label" style="color:${color}">${label}</span></th>`;
     });
-    html += '</tr></thead><tbody>';
+    html += '<th class="ov-notes-th"></th></tr></thead><tbody>';
 
     // Rows (most recent first)
     rows.forEach(dateStr => {
         const d = new Date(dateStr + 'T00:00:00');
         const dayLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         const isToday = dateStr === todayStr;
-        html += `<tr><td class="ov-date-td${isToday ? ' ov-today' : ''}">${dayLabel}</td>`;
+        const theme = themeForDate(dateStr);
+        const note = noteForDate(dateStr);
+
+        html += `<tr>`;
+        html += `<td class="ov-date-td${isToday ? ' ov-today' : ''}"><span class="ov-day">${dayLabel}</span>${theme ? `<span class="ov-theme-name">${theme}</span>` : ''}</td>`;
         types.forEach(type => {
             const active = done.has(`${dateStr}|${type}`);
             const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
-            html += `<td class="ov-cell${active ? ' ov-cell-on' : ''}"${active ? ` style="background:${color}"` : ''}></td>`;
+            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}></div></td>`;
         });
-        html += '</tr>';
+        html += `<td class="ov-notes-td">${note ? `<span class="ov-note-text">${note}</span>` : ''}</td></tr>`;
     });
 
     html += '</tbody>';
