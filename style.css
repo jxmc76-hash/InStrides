@@ -468,3 +468,63 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 [data-theme="dark"] .pill-amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
 [data-theme="dark"] .pill-red { background: rgba(239,68,68,0.15); color: #f87171; }
 [data-theme="dark"] .date-num { color: var(--primary); }
+
+/* ---- Training Plan View ---- */
+.plan-container { max-width: 680px; margin: 0 auto; }
+
+.plan-header { background: white; border: 1px solid var(--border); border-radius: 20px; padding: 22px 24px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
+.plan-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.plan-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 4px; }
+.plan-name { font-size: 1.1rem; font-weight: 900; color: var(--text-main); cursor: pointer; }
+.plan-name:hover { color: var(--primary); }
+.plan-progress-bar-outer { height: 8px; background: var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+.plan-progress-bar-inner { height: 100%; background: linear-gradient(90deg, #ff7a1a, var(--primary), #ff2e8c); border-radius: 6px; transition: width 0.4s ease; }
+.plan-progress-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+
+.plan-week { background: white; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 14px; overflow: hidden; }
+.plan-week-past { opacity: 0.65; }
+.plan-week-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.plan-week-current .plan-week-header { background: rgba(255,85,0,0.03); border-bottom-color: rgba(255,85,0,0.12); }
+.plan-week-label { font-size: 0.8rem; font-weight: 800; color: var(--text-main); }
+.plan-week-count { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+
+.plan-session-card { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+.plan-session-card:last-of-type { border-bottom: none; }
+.plan-session-card:hover { background: #fdf9f7; }
+.plan-session-today { border-left: 3px solid var(--primary); }
+.plan-session-done { opacity: 0.7; }
+
+.plan-tick { width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--border); background: white; font-size: 0.95rem; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); flex-shrink: 0; transition: all 0.18s cubic-bezier(.34,1.56,.64,1); line-height: 1; padding: 0; font-family: inherit; }
+.plan-tick:not(.plan-tick-done):not(.plan-tick-missed):hover { border-color: var(--primary); color: var(--primary); transform: scale(1.1); }
+.plan-tick:active { transform: scale(0.9); }
+.plan-tick-done { background: linear-gradient(135deg, #ff7a1a, var(--primary)); border-color: var(--primary); color: white; cursor: pointer; }
+.plan-tick-done:hover { transform: scale(1.05); }
+.plan-tick-missed { border-color: #ddd; color: #ccc; cursor: default; font-size: 1rem; }
+
+.plan-session-info { flex: 1; min-width: 0; }
+.plan-session-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+.plan-session-type { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.plan-session-date { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.plan-today-badge { background: var(--primary); color: white; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; }
+.plan-session-target { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+.plan-session-actual { font-size: 0.78rem; font-weight: 700; color: #16a34a; margin-top: 2px; }
+
+.plan-session-edit { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted); padding: 4px 6px; border-radius: 6px; flex-shrink: 0; line-height: 1; }
+.plan-session-edit:hover { background: var(--border); color: var(--text-main); }
+
+.plan-add-session { display: block; width: calc(100% - 32px); margin: 12px 16px; padding: 10px; border: 2px dashed var(--border); border-radius: 10px; background: none; font-family: inherit; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); cursor: pointer; text-align: center; transition: all 0.15s; }
+.plan-add-session:hover { border-color: var(--primary); color: var(--primary); background: rgba(255,85,0,0.02); }
+
+.plan-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.plan-empty h3 { font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin: 12px 0 8px; }
+.plan-empty p { font-size: 0.85rem; line-height: 1.5; }
+.plan-empty-icon { font-size: 2.8rem; }
+
+[data-theme="dark"] .plan-header,
+[data-theme="dark"] .plan-week { background: #1d2027; border-color: #2c2f38; }
+[data-theme="dark"] .plan-week-current .plan-week-header { background: rgba(255,85,0,0.05); }
+[data-theme="dark"] .plan-session-card:hover { background: #23262e; }
+[data-theme="dark"] .plan-tick { background: #14161c; border-color: #3c3f48; }
+[data-theme="dark"] .plan-tick-missed { border-color: #3c3f48; color: #444; }
+[data-theme="dark"] .plan-add-session { border-color: #2c2f38; color: var(--text-muted); }
+[data-theme="dark"] .plan-add-session:hover { border-color: var(--primary); color: var(--primary); }

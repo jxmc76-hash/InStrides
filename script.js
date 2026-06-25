@@ -24,7 +24,7 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [], completedLearnings: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [], completedLearnings: [], trainingPlans: [] };
 let editingGoalId = null;
 let editingThemeId = null;
 
@@ -286,16 +286,17 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [], trainingPlans: data.trainingPlans || [] };
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
             if(document.getElementById('viewGoals').classList.contains('active')) { renderThemes(); renderGoals(); }
+            if(document.getElementById('viewPlan').classList.contains('active')) renderPlan();
         } else if (!snap.metadata.fromCache) {
             // Only create a fresh log if the server has confirmed no document exists.
             // A cache-only "not found" can happen before the server responds, and must
             // never trigger an overwrite of real data.
-            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [], dailyNotes: {} });
+            setDoc(doc(db, "logs", LOG_ID), { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: { RUN: 'cardio', YOGA: 'other', GYM: 'gym', SWIM: 'cardio' }, customMetrics: [{ name: 'SLEEP', type: 'slider' }, { name: 'ENERGY', type: 'slider' }], entries: [], dailyNotes: {}, trainingPlans: [] });
         }
     });
 };
@@ -436,7 +437,7 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'goals', 'help'].forEach(t => {
+    ['log', 'insights', 'goals', 'help', 'plan'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.querySelectorAll('.bottom-nav-item').forEach(btn => {
@@ -444,6 +445,7 @@ window.switchTab = (tab) => {
     });
     if (tab === 'insights') renderInsights();
     if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); }
+    if (tab === 'plan') renderPlan();
 };
 
 window.setStrategy = (wantsPlanned) => {
@@ -471,6 +473,7 @@ window.toggleDistanceRow = () => {
 
 window.showInputModal = () => {
     editingId = null;
+    window._pendingPlanLink = null;
     document.getElementById('deleteEntryBtn').style.display = "none";
     document.getElementById('markDoneBtn').style.display = "none";
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
@@ -586,6 +589,22 @@ window.saveExercise = async () => {
     }
     await setDoc(doc(db, "logs", LOG_ID), logData);
     window.closeModal('inputModal');
+
+    // If this log was triggered by ticking a plan session, mark it complete
+    if (window._pendingPlanLink) {
+        const { planId, sessionId } = window._pendingPlanLink;
+        window._pendingPlanLink = null;
+        const planIdx = (logData.trainingPlans || []).findIndex(p => p.id === planId);
+        if (planIdx !== -1) {
+            const sessIdx = (logData.trainingPlans[planIdx].sessions || []).findIndex(s => s.id === sessionId);
+            if (sessIdx !== -1) {
+                logData.trainingPlans[planIdx].sessions[sessIdx].isComplete = true;
+                logData.trainingPlans[planIdx].sessions[sessIdx].logEntryId = entryData.id;
+                await setDoc(doc(db, 'logs', LOG_ID), logData);
+                if (document.getElementById('viewPlan')?.classList.contains('active')) renderPlan();
+            }
+        }
+    }
 };
 
 window.deleteEntry = async () => {
@@ -2647,7 +2666,8 @@ window.handleImportFile = async (event) => {
         entries: imported.entries || [],
         dailyNotes: imported.dailyNotes || {},
         goals: imported.goals || [],
-        themes: imported.themes || []
+        themes: imported.themes || [],
+        trainingPlans: imported.trainingPlans || [],
     };
 
     try {
@@ -2656,6 +2676,236 @@ window.handleImportFile = async (event) => {
     } catch (err) {
         alert('Import failed: ' + err.message);
     }
+};
+
+// --- TRAINING PLAN ---
+let editingPlanId = null;
+let editingPlanSessionId = null;
+window._pendingPlanLink = null;
+
+const buildActualLabel = (entry) => {
+    if (!entry || entry.type === 'NONE') return '';
+    const cat = getTypeCategory(entry.type);
+    return aggregateExerciseLabel([entry], cat) || titleCase(entry.type);
+};
+
+const renderPlan = () => {
+    const container = document.getElementById('planContainer');
+    if (!container) return;
+    const plans = logData.trainingPlans || [];
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (!plans.length) {
+        container.innerHTML = `
+            <div class="plan-empty">
+                <div class="plan-empty-icon">📋</div>
+                <h3>No training plans yet</h3>
+                <p>Create a plan to organise your sessions and track completion.</p>
+                <button onclick="window.showPlanModal()" class="btn-primary nav-btn" style="margin-top:20px; font-size:0.85rem">+ Create your first plan</button>
+            </div>`;
+        return;
+    }
+
+    const activePlan = plans.find(p => p.startDate <= todayStr && (!p.endDate || p.endDate >= todayStr)) || plans[plans.length - 1];
+    const totalSessions = (activePlan.sessions || []).length;
+    const doneSessions = (activePlan.sessions || []).filter(s => s.isComplete).length;
+    const progressPct = totalSessions > 0 ? Math.round((doneSessions / totalSessions) * 100) : 0;
+
+    const byWeek = {};
+    (activePlan.sessions || []).forEach(s => {
+        const w = getWeekStart(s.date);
+        if (!byWeek[w]) byWeek[w] = [];
+        byWeek[w].push(s);
+    });
+    const sortedWeeks = Object.keys(byWeek).sort();
+
+    let html = `
+        <div class="plan-header">
+            <div class="plan-header-top">
+                <div>
+                    <div class="plan-label">Active Plan</div>
+                    <div class="plan-name" onclick="window.showPlanModal(${activePlan.id})">${activePlan.title}</div>
+                </div>
+                <button onclick="window.showPlanModal()" class="nav-btn btn-secondary" style="font-size:0.75rem; white-space:nowrap">+ New Plan</button>
+            </div>
+            <div class="plan-progress-bar-outer"><div class="plan-progress-bar-inner" style="width:${progressPct}%"></div></div>
+            <div class="plan-progress-label">${progressPct}% complete — ${doneSessions} of ${totalSessions} sessions done</div>
+        </div>`;
+
+    if (!sortedWeeks.length) {
+        html += `<div class="plan-week">
+            <div class="plan-week-header"><span class="plan-week-label">No sessions yet</span></div>
+            <button class="plan-add-session" onclick="window.showPlanSessionModal(${activePlan.id},null,null)">+ Add your first session</button>
+        </div>`;
+    }
+
+    sortedWeeks.forEach(weekStart => {
+        const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+        const weekEndStr = weekEnd.toISOString().split('T')[0];
+        const isPast = weekEndStr < todayStr;
+        const isCurrent = weekStart <= todayStr && weekEndStr >= todayStr;
+        const sessions = byWeek[weekStart].slice().sort((a, b) => a.date.localeCompare(b.date));
+        const weekDone = sessions.filter(s => s.isComplete).length;
+        const weekLabel = new Date(weekStart).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+        html += `<div class="plan-week${isPast ? ' plan-week-past' : ''}${isCurrent ? ' plan-week-current' : ''}">
+            <div class="plan-week-header">
+                <span class="plan-week-label">W/C ${weekLabel}</span>
+                <span class="plan-week-count">${weekDone}/${sessions.length}</span>
+            </div>`;
+
+        sessions.forEach(s => {
+            const isToday = s.date === todayStr;
+            const isPastDay = s.date < todayStr && !isToday;
+            const cat = s.type && s.type !== 'NONE' ? getTypeCategory(s.type) : 'other';
+            const sDate = new Date(s.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+            const logEntry = s.logEntryId ? logData.entries.find(e => e.id === s.logEntryId) : null;
+            const actual = logEntry ? buildActualLabel(logEntry) : '';
+
+            const tickCls = s.isComplete
+                ? 'plan-tick plan-tick-done'
+                : isPastDay ? 'plan-tick plan-tick-missed' : 'plan-tick';
+            const tickOnclick = s.isComplete
+                ? (s.logEntryId ? `onclick="window.editEntry(${s.logEntryId})"` : '')
+                : isPastDay ? '' : `onclick="window.logPlanSession(${activePlan.id},${s.id})"`;
+
+            html += `<div class="plan-session-card${isToday ? ' plan-session-today' : ''}${s.isComplete ? ' plan-session-done' : ''}">
+                <button class="${tickCls}" ${tickOnclick}>${s.isComplete ? '✓' : isPastDay ? '–' : '○'}</button>
+                <div class="plan-session-info">
+                    <div class="plan-session-top">
+                        ${s.type && s.type !== 'NONE' ? `<span class="plan-session-type cat-${cat}">${titleCase(s.type)}</span>` : ''}
+                        <span class="plan-session-date">${sDate}</span>
+                        ${isToday ? '<span class="plan-today-badge">Today</span>' : ''}
+                    </div>
+                    ${s.target ? `<div class="plan-session-target">${s.target}</div>` : ''}
+                    ${actual ? `<div class="plan-session-actual">✓ ${actual}</div>` : ''}
+                </div>
+                <button class="plan-session-edit" onclick="window.showPlanSessionModal(${activePlan.id},${s.id})">⋯</button>
+            </div>`;
+        });
+
+        html += `<button class="plan-add-session" onclick="window.showPlanSessionModal(${activePlan.id},null,'${weekStart}')">+ Add session</button>
+        </div>`;
+    });
+
+    if (plans.length > 1) {
+        const others = plans.filter(p => p.id !== activePlan.id);
+        html += `<div class="isect" style="margin-top:24px"><div class="isect-header">Other Plans</div>
+            <div class="achievements-grid">${others.map(p => {
+                const d = (p.sessions||[]).filter(s=>s.isComplete).length;
+                const t = (p.sessions||[]).length;
+                return `<div class="achievement-card unlocked goal-card" onclick="window.showPlanModal(${p.id})">
+                    <div class="goal-title">${p.title}</div>
+                    <div class="goal-desc">${d}/${t} sessions done</div>
+                </div>`;
+            }).join('')}</div></div>`;
+    }
+
+    container.innerHTML = html;
+};
+
+window.showPlanModal = (planId) => {
+    editingPlanId = planId || null;
+    const existing = planId ? (logData.trainingPlans || []).find(p => p.id === planId) : null;
+    document.getElementById('planModalTitle').textContent = existing ? 'Edit Plan' : 'New Training Plan';
+    document.getElementById('deletePlanBtn').style.display = existing ? 'block' : 'none';
+    document.getElementById('planTitle').value = existing ? existing.title : '';
+    document.getElementById('planStartDate').value = existing ? (existing.startDate || '') : '';
+    document.getElementById('planEndDate').value = existing ? (existing.endDate || '') : '';
+    document.getElementById('planModal').style.display = 'flex';
+};
+
+window.savePlan = async () => {
+    const title = document.getElementById('planTitle').value.trim();
+    if (!title) return alert('Please enter a plan name.');
+    if (!logData.trainingPlans) logData.trainingPlans = [];
+    if (editingPlanId) {
+        const idx = logData.trainingPlans.findIndex(p => p.id === editingPlanId);
+        if (idx !== -1) {
+            logData.trainingPlans[idx].title = title;
+            logData.trainingPlans[idx].startDate = document.getElementById('planStartDate').value;
+            logData.trainingPlans[idx].endDate = document.getElementById('planEndDate').value;
+        }
+    } else {
+        logData.trainingPlans.push({ id: Date.now(), title, startDate: document.getElementById('planStartDate').value, endDate: document.getElementById('planEndDate').value, sessions: [] });
+    }
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    window.closeModal('planModal');
+    renderPlan();
+};
+
+window.deletePlan = async () => {
+    if (!confirm('Delete this plan and all its sessions?')) return;
+    logData.trainingPlans = (logData.trainingPlans || []).filter(p => p.id !== editingPlanId);
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    window.closeModal('planModal');
+    renderPlan();
+};
+
+window.showPlanSessionModal = (planId, sessionId, defaultDate) => {
+    editingPlanId = planId;
+    editingPlanSessionId = sessionId || null;
+    const plan = (logData.trainingPlans || []).find(p => p.id === planId);
+    const session = sessionId ? (plan?.sessions || []).find(s => s.id === sessionId) : null;
+    document.getElementById('planSessionModalTitle').textContent = session ? 'Edit Session' : 'Add Session';
+    document.getElementById('deletePlanSessionBtn').style.display = session ? 'block' : 'none';
+    document.getElementById('planSessionDate').value = session ? session.date : (defaultDate || new Date().toISOString().split('T')[0]);
+    const typeSelect = document.getElementById('planSessionType');
+    typeSelect.innerHTML = `<option value="NONE">No type</option>` + logData.types.map(t => `<option value="${t}" ${t === session?.type ? 'selected' : ''}>${t}</option>`).join('');
+    document.getElementById('planSessionTarget').value = session ? (session.target || '') : '';
+    document.getElementById('planSessionModal').style.display = 'flex';
+};
+
+window.savePlanSession = async () => {
+    const plan = (logData.trainingPlans || []).find(p => p.id === editingPlanId);
+    if (!plan) return;
+    const date = document.getElementById('planSessionDate').value;
+    if (!date) return alert('Please select a date.');
+    const existing = editingPlanSessionId ? (plan.sessions || []).find(s => s.id === editingPlanSessionId) : null;
+    const sessionData = {
+        id: editingPlanSessionId || Date.now(),
+        date,
+        type: document.getElementById('planSessionType').value,
+        target: document.getElementById('planSessionTarget').value.trim(),
+        isComplete: existing ? existing.isComplete : false,
+        logEntryId: existing ? existing.logEntryId : null,
+    };
+    if (!plan.sessions) plan.sessions = [];
+    if (editingPlanSessionId) {
+        const idx = plan.sessions.findIndex(s => s.id === editingPlanSessionId);
+        if (idx !== -1) plan.sessions[idx] = sessionData;
+    } else {
+        plan.sessions.push(sessionData);
+    }
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    window.closeModal('planSessionModal');
+    renderPlan();
+};
+
+window.deletePlanSession = async () => {
+    if (!confirm('Remove this session from the plan?')) return;
+    const plan = (logData.trainingPlans || []).find(p => p.id === editingPlanId);
+    if (!plan) return;
+    plan.sessions = (plan.sessions || []).filter(s => s.id !== editingPlanSessionId);
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    window.closeModal('planSessionModal');
+    renderPlan();
+};
+
+window.logPlanSession = (planId, sessionId) => {
+    const plan = (logData.trainingPlans || []).find(p => p.id === planId);
+    const session = (plan?.sessions || []).find(s => s.id === sessionId);
+    if (!session) return;
+    window.showInputModal();
+    document.getElementById('modalDate').value = session.date;
+    if (session.type && session.type !== 'NONE') {
+        const typeSelect = document.getElementById('modalType');
+        if ([...typeSelect.options].some(o => o.value === session.type)) typeSelect.value = session.type;
+    }
+    if (session.target) document.getElementById('modalDetails').value = session.target;
+    window.toggleDistanceRow();
+    // Set AFTER showInputModal (which clears _pendingPlanLink)
+    window._pendingPlanLink = { planId, sessionId };
 };
 
 // --- EXPORT DATA ---
