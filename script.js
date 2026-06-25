@@ -90,31 +90,58 @@ const renderWeekStrapline = () => {
 
     const todayStr = new Date().toISOString().split('T')[0];
     const weekStart = getWeekStart(todayStr);
-    const thisWeek = logData.entries.filter(e => !e.isPlanned && e.date >= weekStart && e.date <= todayStr && e.type && e.type !== 'NONE');
+    const completed = logData.entries.filter(e => !e.isPlanned);
+    const thisWeek = completed.filter(e => e.date >= weekStart && e.date <= todayStr && e.type && e.type !== 'NONE');
+    const todayPlanned = logData.entries.filter(e => e.date === todayStr && e.isPlanned && e.type && e.type !== 'NONE');
+    const todayDone = completed.filter(e => e.date === todayStr && e.type && e.type !== 'NONE');
 
-    if (!thisWeek.length) {
-        el.textContent = "No sessions logged yet this week — let's get moving! 💪";
-        el.style.display = 'block';
-        return;
+    // Streak count
+    const activeDates = new Set(completed.filter(e => e.type && e.type !== 'NONE').map(e => e.date));
+    let streak = 0;
+    const sd = new Date(todayStr);
+    while (activeDates.has(sd.toISOString().split('T')[0])) { streak++; sd.setDate(sd.getDate() - 1); }
+
+    let nudge = '';
+
+    // Priority 1: PR this week
+    const prLine = buildPersonalRecordsLine(thisWeek);
+    if (prLine) {
+        nudge = prLine;
+    }
+    // Priority 2: Planned session today, not yet done
+    else if (todayPlanned.length && !todayDone.length) {
+        const types = [...new Set(todayPlanned.map(e => titleCase(e.type)))].join(' & ');
+        nudge = `${types} on the plan for today — ready? 💪`;
+    }
+    // Priority 3: Notable streak
+    else if (streak >= 5) {
+        nudge = `🔥 ${streak}-day streak — you're on a roll.`;
+    }
+    // Priority 4: Health score context
+    else if (completed.length >= 5) {
+        const { score, label } = computeHealthScore(completed, todayStr);
+        const prev = new Date(todayStr); prev.setDate(prev.getDate() - 7);
+        const prevScore = computeHealthScore(completed, prev.toISOString().split('T')[0]).score;
+        if (score >= 80) {
+            nudge = `Health Score ${score} — you're in ${label.toLowerCase()} form right now.`;
+        } else if (score - prevScore >= 6) {
+            nudge = `Health Score up ${score - prevScore} points this week — momentum building ▲`;
+        } else if (thisWeek.length === 0) {
+            nudge = `No sessions yet this week — time to get moving 💪`;
+        } else {
+            const restDays = 7 - new Set(thisWeek.map(e => e.date)).size;
+            nudge = restDays >= 1
+                ? `${thisWeek.length} session${thisWeek.length > 1 ? 's' : ''} this week with ${restDays} rest day${restDays > 1 ? 's' : ''} — well balanced.`
+                : `${thisWeek.length} session${thisWeek.length > 1 ? 's' : ''} this week · Health Score ${score}`;
+        }
+    }
+    else if (thisWeek.length === 0) {
+        nudge = `No sessions yet this week — let's get moving 💪`;
+    } else {
+        nudge = `${thisWeek.length} session${thisWeek.length > 1 ? 's' : ''} logged this week — keep it up.`;
     }
 
-    const segments = [];
-    logData.types.forEach(type => {
-        const entries = thisWeek.filter(e => e.type === type);
-        if (!entries.length) return;
-        const cat = getTypeCategory(type);
-        const label = aggregateExerciseLabel(entries, cat);
-        const count = `${entries.length}× ${titleCase(type)}`;
-        segments.push(label ? `${count} (${label})` : count);
-    });
-
-    const sessionWord = thisWeek.length === 1 ? 'session' : 'sessions';
-    let html = `<strong>This week:</strong> ${thisWeek.length} ${sessionWord} logged — ${segments.join(' · ')}`;
-
-    const prLine = buildPersonalRecordsLine(thisWeek);
-    if (prLine) html += `<div class="pr-line">${prLine}</div>`;
-
-    el.innerHTML = html;
+    el.textContent = nudge;
     el.style.display = 'block';
 };
 
@@ -1578,14 +1605,24 @@ const computeHealthScore = (completed, asOfDateStr) => {
 
     const components = [];
 
-    // Activity: sessions logged in the last 10 days vs. the 10 days before that
-    const sessionCount = entries => entries.filter(e => e.type && e.type !== 'NONE').length;
-    const recentSessions = sessionCount(last10);
-    const priorSessions = sessionCount(prior10);
-    const activityScore = priorSessions ? Math.min(100, Math.round((recentSessions / priorSessions) * 100)) : (recentSessions > 0 ? 100 : 50);
+    // Activity: training load (duration × category weight) vs prior period
+    // Rest days: 1–3 in 10 days treated as healthy recovery (small bonus)
+    const catLoadWeight = { cardio: 1.2, gym: 1.1, bodyweight: 0.9, pacing: 1.2, time: 0.8, other: 0.7 };
+    const trainingLoad = entries => entries
+        .filter(e => e.type && e.type !== 'NONE')
+        .reduce((sum, e) => sum + (e.duration || 30) * (catLoadWeight[getTypeCategory(e.type)] || 1.0), 0);
+    const recentLoad = trainingLoad(last10);
+    const priorLoad = trainingLoad(prior10);
+    const recentActiveDays = new Set(last10.filter(e => e.type && e.type !== 'NONE').map(e => e.date)).size;
+    const restDays10 = 10 - recentActiveDays;
+    const restBonus = (restDays10 >= 1 && restDays10 <= 3) ? 5 : 0;
+    const activityScore = priorLoad
+        ? Math.min(100, Math.round((recentLoad / priorLoad) * 100) + restBonus)
+        : (recentLoad > 0 ? 100 : 50);
+    const recentSessions = last10.filter(e => e.type && e.type !== 'NONE').length;
     components.push({
         name: 'Activity', score: activityScore, weight: 0.4,
-        detail: priorSessions ? `${recentSessions} sessions in the last 10 days vs ${priorSessions} in the 10 days before` : `${recentSessions} sessions in the last 10 days`
+        detail: `${recentSessions} sessions · ${Math.round(recentLoad)}min weighted load${restDays10 > 0 ? ` · ${restDays10} rest day${restDays10 > 1 ? 's' : ''}` : ''}`
     });
 
     // Recovery: average of slider metrics (e.g. SLEEP, ENERGY) over the last 10 days vs. the 10 days before
@@ -2095,7 +2132,9 @@ const renderMatrix = () => {
         }
 
         const activeData = dayData || { customVals: {}, exercises: {} };
-        const displayDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
+        const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+        const dateNum = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const displayDate = `<span class="date-day">${dayName}</span> <span class="date-num">${dateNum}</span>`;
         const dayTheme = getThemeForDate(dateKey);
         const dayThemeLabel = dayTheme ? `<div class="day-theme-tag">${dayTheme.title}</div>` : '';
 
@@ -2146,9 +2185,14 @@ const renderMatrix = () => {
             } else if (m.type === 'number' && mVal !== undefined && mVal !== null && mVal !== '') {
                 cellContent = `<div class="dist-label${isCarried ? ' carried-value' : ''}" title="${isCarried ? 'Carried forward from a previous entry' : ''}">${mVal}</div>`;
             } else if (mVal !== undefined && mVal !== null) {
-                cellContent = m.type === 'slider'
-                    ? `<div class="happy-pill">${mVal}</div>`
-                    : (mVal ? '✅' : '❌');
+                if (m.type === 'slider' || m.type === 'slider100') {
+                    const scale = m.scale || (m.type === 'slider100' ? 100 : 10);
+                    const pct = mVal / scale;
+                    const pillCls = pct >= 0.7 ? 'pill-green' : pct >= 0.4 ? 'pill-amber' : 'pill-red';
+                    cellContent = `<div class="happy-pill ${pillCls}">${mVal}</div>`;
+                } else {
+                    cellContent = mVal ? '✅' : '❌';
+                }
             } else {
                 cellContent = `<div class="cell-empty">+</div>`;
             }
