@@ -95,11 +95,16 @@ const renderWeekStrapline = () => {
     const todayPlanned = logData.entries.filter(e => e.date === todayStr && e.isPlanned && e.type && e.type !== 'NONE');
     const todayDone = completed.filter(e => e.date === todayStr && e.type && e.type !== 'NONE');
 
-    // Streak count
+    // Streak count — use UTC methods to avoid timezone skipping days
     const activeDates = new Set(completed.filter(e => e.type && e.type !== 'NONE').map(e => e.date));
     let streak = 0;
-    const sd = new Date(todayStr);
-    while (activeDates.has(sd.toISOString().split('T')[0])) { streak++; sd.setDate(sd.getDate() - 1); }
+    let checkDate = todayStr;
+    while (activeDates.has(checkDate)) {
+        streak++;
+        const sd = new Date(checkDate);
+        sd.setUTCDate(sd.getUTCDate() - 1);
+        checkDate = sd.toISOString().split('T')[0];
+    }
 
     let nudge = '';
 
@@ -129,7 +134,8 @@ const renderWeekStrapline = () => {
         } else if (thisWeek.length === 0) {
             nudge = `No sessions yet this week — time to get moving 💪`;
         } else {
-            const restDays = 7 - new Set(thisWeek.map(e => e.date)).size;
+            const daysElapsed = Math.round((new Date(todayStr) - new Date(weekStart)) / 86400000) + 1;
+            const restDays = daysElapsed - new Set(thisWeek.map(e => e.date)).size;
             nudge = restDays >= 1
                 ? `${thisWeek.length} session${thisWeek.length > 1 ? 's' : ''} this week with ${restDays} rest day${restDays > 1 ? 's' : ''} — well balanced.`
                 : `${thisWeek.length} session${thisWeek.length > 1 ? 's' : ''} this week · Health Score ${score}`;
