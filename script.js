@@ -289,6 +289,7 @@ const attachRealtimeListener = () => {
             logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [], trainingPlans: data.trainingPlans || [] };
             renderMatrix();
             renderStreak();
+            if(document.getElementById('viewOverview').classList.contains('active')) renderOverview();
             if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
             if(document.getElementById('viewGoals').classList.contains('active')) { renderThemes(); renderGoals(); }
             if(document.getElementById('viewPlan').classList.contains('active')) renderPlan();
@@ -437,12 +438,13 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'goals', 'help', 'plan'].forEach(t => {
+    ['log', 'overview', 'insights', 'goals', 'help', 'plan'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.querySelectorAll('.bottom-nav-item').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
+    if (tab === 'overview') renderOverview();
     if (tab === 'insights') renderInsights();
     if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); }
     if (tab === 'plan') renderPlan();
@@ -1605,6 +1607,68 @@ const renderCorrelations = () => {
             }
         });
     });
+};
+
+// --- OVERVIEW RENDERER ---
+const OVERVIEW_CAT_COLORS = {
+    cardio: '#3b82f6', gym: '#8b5cf6', bodyweight: '#10b981',
+    time: '#f59e0b', pacing: '#06b6d4', other: '#ff5500',
+};
+
+const renderOverview = () => {
+    const el = document.getElementById('overviewTable');
+    if (!el) return;
+
+    const types = logData.types.filter(t => t !== 'NONE');
+    const completed = logData.entries.filter(e => !e.isPlanned);
+
+    if (!types.length) {
+        el.innerHTML = '<tr><td style="padding:24px;color:var(--text-muted);font-size:0.85rem">No exercise types defined yet. Add some in Settings → Manage Types.</td></tr>';
+        return;
+    }
+
+    const done = new Set(completed.map(e => `${e.date}|${e.type}`));
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const firstEntry = completed.length
+        ? completed.reduce((a, b) => a.date < b.date ? a : b).date
+        : todayStr;
+
+    const rows = [];
+    for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const s = d.toISOString().split('T')[0];
+        if (s < firstEntry) break;
+        rows.push(s);
+    }
+
+    // Header
+    let html = '<thead><tr><th class="ov-date-th"></th>';
+    types.forEach(type => {
+        const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
+        const label = type.length > 5 ? type.slice(0, 4) : type;
+        html += `<th class="ov-type-th"><span class="ov-type-label" style="color:${color}">${label}</span></th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    // Rows (most recent first)
+    rows.forEach(dateStr => {
+        const d = new Date(dateStr + 'T00:00:00');
+        const dayLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const isToday = dateStr === todayStr;
+        html += `<tr><td class="ov-date-td${isToday ? ' ov-today' : ''}">${dayLabel}</td>`;
+        types.forEach(type => {
+            const active = done.has(`${dateStr}|${type}`);
+            const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
+            html += `<td class="ov-cell${active ? ' ov-cell-on' : ''}"${active ? ` style="background:${color}"` : ''}></td>`;
+        });
+        html += '</tr>';
+    });
+
+    html += '</tbody>';
+    el.innerHTML = html;
 };
 
 // --- INSIGHTS RENDERER ---
