@@ -95,10 +95,15 @@ const renderWeekStrapline = () => {
     const todayPlanned = logData.entries.filter(e => e.date === todayStr && e.isPlanned && e.type && e.type !== 'NONE');
     const todayDone = completed.filter(e => e.date === todayStr && e.type && e.type !== 'NONE');
 
-    // Streak count — use UTC methods to avoid timezone skipping days
-    const activeDates = new Set(completed.filter(e => e.type && e.type !== 'NONE').map(e => e.date));
+    // Streak count — match badge: any logged day counts (metrics or exercise)
+    const activeDates = new Set(completed.map(e => e.date));
     let streak = 0;
     let checkDate = todayStr;
+    // If nothing logged today, start from yesterday (same as badge)
+    if (!activeDates.has(checkDate)) {
+        const y = new Date(checkDate); y.setUTCDate(y.getUTCDate() - 1);
+        checkDate = y.toISOString().split('T')[0];
+    }
     while (activeDates.has(checkDate)) {
         streak++;
         const sd = new Date(checkDate);
