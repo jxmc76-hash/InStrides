@@ -13,8 +13,6 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         env:
-          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          printf '%s' "$SA_JSON" > /tmp/sa.json
-          npx --yes firebase-tools@latest deploy --only hosting --project in-strides
+          npx --yes firebase-tools@latest deploy --only hosting --project in-strides --token "$FIREBASE_TOKEN"
