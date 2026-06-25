@@ -398,16 +398,14 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'insights', 'goals', 'learnings', 'help'].forEach(t => {
+    ['log', 'insights', 'goals', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
-    document.getElementById('tabLog')?.classList.toggle('active', tab === 'log');
-    document.getElementById('tabInsights')?.classList.toggle('active', tab === 'insights');
-    document.getElementById('tabGoals')?.classList.toggle('active', tab === 'goals');
-    document.getElementById('tabLearnings')?.classList.toggle('active', tab === 'learnings');
+    document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
     if (tab === 'insights') renderInsights();
-    if (tab === 'goals') { renderThemes(); renderGoals(); }
-    if (tab === 'learnings') renderLearnings();
+    if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); }
 };
 
 window.setStrategy = (wantsPlanned) => {
