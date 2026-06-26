@@ -15,10 +15,10 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          output=$(npx --yes firebase-tools@latest deploy --only hosting --project in-strides --token "$FIREBASE_TOKEN" 2>&1)
-          code=$?
-          echo "$output"
-          if [ $code -ne 0 ] && echo "$output" | grep -q "is the current active version"; then
+          set +e
+          npx --yes firebase-tools@latest deploy --only hosting --project in-strides --token "$FIREBASE_TOKEN" 2>&1 | tee /tmp/fb-out.txt
+          code=${PIPESTATUS[0]}
+          if [ $code -ne 0 ] && grep -q "is the current active version" /tmp/fb-out.txt; then
             echo "Already up to date — nothing new to release."
             exit 0
           fi
