@@ -307,24 +307,61 @@ const renderStreak = () => {
     const badge = document.getElementById('streakBadge');
     if (!badge) return;
 
-    const loggedDates = new Set();
-    logData.entries.forEach(e => { if (!e.isPlanned) loggedDates.add(e.date); });
+    const completed = logData.entries.filter(e => !e.isPlanned);
+    const loggedDates = new Set(completed.map(e => e.date));
 
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Calculate current streak
     let streak = 0;
-    const d = new Date();
-    const todayKey = d.toISOString().split('T')[0];
-    if (!loggedDates.has(todayKey)) d.setDate(d.getDate() - 1);
-    while (loggedDates.has(d.toISOString().split('T')[0])) {
+    const sd = new Date(today);
+    if (!loggedDates.has(todayStr)) sd.setDate(sd.getDate() - 1);
+    while (loggedDates.has(sd.toISOString().split('T')[0])) {
         streak++;
-        d.setDate(d.getDate() - 1);
+        sd.setDate(sd.getDate() - 1);
     }
 
-    if (streak >= 2) {
-        badge.style.display = 'flex';
-        badge.innerHTML = `🔥 <span>${streak} day streak</span>`;
-    } else {
-        badge.style.display = 'none';
-    }
+    // This week's sessions (Mon–today)
+    const dow = today.getDay();
+    const mondayOffset = dow === 0 ? 6 : dow - 1;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - mondayOffset);
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekSessions = completed.filter(e => e.date >= weekStart && e.date <= todayStr).length;
+
+    // Current theme
+    const theme = (logData.themes || []).find(t => t.startDate <= todayStr && t.endDate >= todayStr);
+
+    // Day-of-year for deterministic daily rotation
+    const jan1 = new Date(today.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((today - jan1) / 86400000);
+
+    // Build candidate messages
+    const msgs = [];
+    if (streak >= 2) msgs.push(`🔥 ${streak} day streak`);
+    if (streak >= 7) msgs.push(`🔥 ${streak} days strong`);
+    if (completed.length > 0) msgs.push(`💪 ${completed.length} sessions logged`);
+    if (weekSessions > 0) msgs.push(`📅 ${weekSessions} session${weekSessions > 1 ? 's' : ''} this week`);
+    if (theme) msgs.push(`🎯 ${theme.title}`);
+    if (weekSessions >= 3) msgs.push(`⚡ Strong week so far`);
+    if (streak === 0 && loggedDates.has(todayStr)) msgs.push(`✅ Logged today`);
+
+    // Motivational fallbacks always available
+    const motivational = [
+        `🏃 Every session counts`, `💥 Show up. Put in the work.`,
+        `🎯 Consistency beats intensity`, `🌱 Progress is progress`,
+        `⚡ Make today count`, `🏆 Champions train every day`,
+        `💪 One more rep`, `🔑 Stay the course`,
+    ];
+    // Pick a motivational message based on day so it's stable per day
+    msgs.push(motivational[dayOfYear % motivational.length]);
+
+    // Rotate through data-driven messages by day, falling back to motivational
+    const pick = msgs[dayOfYear % msgs.length];
+
+    badge.style.display = 'flex';
+    badge.innerHTML = `<span>${pick}</span>`;
 };
 
 // --- DYNAMIC CUSTOM METRIC IMPLEMENTATIONS ---
