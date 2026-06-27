@@ -1697,7 +1697,7 @@ const renderOverview = () => {
     // Rows (most recent first)
     const colSpan = types.length + 1;
     let prevThemeId = undefined;
-    rows.forEach(dateStr => {
+    rows.forEach((dateStr, idx) => {
         const theme = themeObjForDate(dateStr);
         const themeId = theme?.id ?? null;
 
@@ -1710,7 +1710,12 @@ const renderOverview = () => {
         }
         prevThemeId = themeId;
 
+        // Dashed week separator before Monday rows (skip very first row)
         const d = new Date(dateStr + 'T00:00:00');
+        if (idx > 0 && d.getDay() === 1) {
+            html += `<tr class="ov-week-sep"><td colspan="${colSpan}"></td></tr>`;
+        }
+
         const dayLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         const isToday = dateStr === todayStr;
 

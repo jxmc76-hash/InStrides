@@ -411,6 +411,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 }
 @media (min-width: 769px) {
     #viewOverview.active { margin: -30px -30px 0; width: calc(100% + 60px); }
+    .overview-scroll { max-width: 50vw; }
     .ov-sq { width: 34px; height: 34px; border-radius: 8px; }
     .ov-type-th { min-width: 36px; width: 36px; }
     .ov-date-th { min-width: 72px; }
@@ -426,6 +427,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .ov-cell-wrap { padding: 0; vertical-align: middle; }
 .ov-sq { width: 26px; height: 26px; border-radius: 6px; background: var(--border); }
 .ov-sq-on { opacity: 0.9; }
+.ov-week-sep td { height: 6px; padding: 0 !important; border: none !important; border-bottom: 1.5px dashed var(--border) !important; }
 .ov-theme-divider-row td { padding: 14px 0 4px; }
 .ov-theme-divider-cell { border-bottom: 2px solid var(--primary) !important; padding-bottom: 6px !important; }
 .ov-theme-divider-title { font-size: 0.75rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
