@@ -445,7 +445,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 
 /* Overview sidebar cards */
 .ov-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px; }
-.ov-card-title { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 14px; }
+.ov-card-title { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 10px; }
+.ov-sentence { font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 14px; line-height: 1.4; }
 /* Summary top row */
 .ov-summary-top { display: flex; gap: 0; margin-bottom: 18px; }
 .ov-summary-top .ov-stat { flex: 1; padding-right: 12px; border-right: 1px solid var(--border); margin-right: 12px; }
