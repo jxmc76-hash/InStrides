@@ -1730,6 +1730,15 @@ const renderOverview = () => {
 
     html += '</tbody>';
     el.innerHTML = html;
+
+    // Sticky header — Safari doesn't support position:sticky on <th> inside overflow:auto
+    const scrollEl = el.closest('.overview-scroll');
+    const thead = el.querySelector('thead');
+    if (scrollEl && thead) {
+        if (scrollEl._ovHeaderScroll) scrollEl.removeEventListener('scroll', scrollEl._ovHeaderScroll);
+        scrollEl._ovHeaderScroll = () => { thead.style.transform = `translateY(${scrollEl.scrollTop}px)`; };
+        scrollEl.addEventListener('scroll', scrollEl._ovHeaderScroll, { passive: true });
+    }
 };
 
 // --- INSIGHTS RENDERER ---
