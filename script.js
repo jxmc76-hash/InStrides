@@ -1739,6 +1739,90 @@ const renderOverview = () => {
         scrollEl._ovHeaderScroll = () => { thead.style.transform = `translateY(${scrollEl.scrollTop}px)`; };
         scrollEl.addEventListener('scroll', scrollEl._ovHeaderScroll, { passive: true });
     }
+
+    // Sidebar
+    const sidebar = document.getElementById('overviewSidebar');
+    if (!sidebar) return;
+
+    // Streak
+    const loggedDates = new Set(completed.map(e => e.date));
+    let streak = 0;
+    const sd = new Date(today);
+    if (!loggedDates.has(todayStr)) sd.setDate(sd.getDate() - 1);
+    while (loggedDates.has(sd.toISOString().split('T')[0])) { streak++; sd.setDate(sd.getDate() - 1); }
+
+    // Sessions this week
+    const dow = today.getDay();
+    const mondayOffset = dow === 0 ? 6 : dow - 1;
+    const weekStart = new Date(today); weekStart.setDate(today.getDate() - mondayOffset);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekSessions = completed.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
+
+    // Most active type
+    const typeCounts = {};
+    completed.forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+
+    // Active theme
+    const activeTheme = themes.find(t => t.startDate <= todayStr && t.endDate >= todayStr) || null;
+
+    let sideHtml = `<div class="ov-card">
+        <div class="ov-card-title">Summary</div>
+        <div class="ov-stats-grid">
+            <div class="ov-stat">
+                <span class="ov-stat-value">${completed.length}</span>
+                <span class="ov-stat-label">Total sessions</span>
+            </div>
+            <div class="ov-stat">
+                <span class="ov-stat-value">${streak}</span>
+                <span class="ov-stat-label">Day streak</span>
+            </div>
+            <div class="ov-stat">
+                <span class="ov-stat-value">${weekSessions}</span>
+                <span class="ov-stat-label">This week</span>
+            </div>
+            <div class="ov-stat">
+                <span class="ov-stat-value">${topType ? topType[1] : '—'}</span>
+                <span class="ov-stat-label">Most sessions</span>
+                ${topType ? `<span class="ov-stat-sub">${topType[0]}</span>` : ''}
+            </div>
+        </div>
+    </div>`;
+
+    if (activeTheme) {
+        const start = new Date(activeTheme.startDate + 'T00:00:00');
+        const end = new Date(activeTheme.endDate + 'T00:00:00');
+        const totalDays = Math.round((end - start) / 86400000) + 1;
+        const elapsed = Math.round((today - start) / 86400000) + 1;
+        const pct = Math.min(100, Math.round((elapsed / totalDays) * 100));
+        const daysLeft = Math.max(0, Math.round((end - today) / 86400000));
+        const themeSessions = completed.filter(e => e.date >= activeTheme.startDate && e.date <= activeTheme.endDate).length;
+
+        sideHtml += `<div class="ov-card">
+            <div class="ov-card-title">Current Theme</div>
+            <div class="ov-theme-name">${activeTheme.title}</div>
+            <div class="ov-theme-dates">${fmtShort(activeTheme.startDate)} – ${fmtShort(activeTheme.endDate)}</div>
+            <div class="ov-progress-track"><div class="ov-progress-fill" style="width:${pct}%"></div></div>
+            <div class="ov-theme-stats">
+                <div class="ov-theme-stat">
+                    <span class="ov-theme-stat-value">${pct}%</span>
+                    <span class="ov-theme-stat-label">Complete</span>
+                </div>
+                <div class="ov-theme-stat">
+                    <span class="ov-theme-stat-value">${themeSessions}</span>
+                    <span class="ov-theme-stat-label">Sessions logged</span>
+                </div>
+                <div class="ov-theme-stat">
+                    <span class="ov-theme-stat-value">${daysLeft}</span>
+                    <span class="ov-theme-stat-label">Days left</span>
+                </div>
+            </div>
+        </div>`;
+    } else {
+        sideHtml += `<div class="ov-card"><div class="ov-card-title">Current Theme</div><p class="ov-no-theme">No active theme. Set one up in Goals.</p></div>`;
+    }
+
+    sidebar.innerHTML = sideHtml;
 };
 
 // --- INSIGHTS RENDERER ---
