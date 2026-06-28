@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=142">
+    <link rel="stylesheet" href="style.css?v=143">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -151,10 +151,16 @@
 
             <div id="viewOverview" class="view-pane active">
                 <div class="overview-container">
-                    <div class="overview-scroll">
-                        <table class="overview-table" id="overviewTable"></table>
+                    <div class="overview-sidebar-wrap">
+                        <div class="ov-panel-heading">Stats</div>
+                        <div class="overview-sidebar" id="overviewSidebar"></div>
                     </div>
-                    <div class="overview-sidebar" id="overviewSidebar"></div>
+                    <div class="overview-table-wrap">
+                        <div class="ov-panel-heading">Activity</div>
+                        <div class="overview-scroll">
+                            <table class="overview-table" id="overviewTable"></table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
