@@ -445,14 +445,24 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 
 /* Overview sidebar cards */
 .ov-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px; }
-.ov-card-title { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 16px; }
-.ov-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ov-card-title { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 14px; }
+/* Summary top row */
+.ov-summary-top { display: flex; gap: 0; margin-bottom: 18px; }
+.ov-summary-top .ov-stat { flex: 1; padding-right: 12px; border-right: 1px solid var(--border); margin-right: 12px; }
+.ov-summary-top .ov-stat:last-child { border-right: none; margin-right: 0; padding-right: 0; }
 .ov-stat { display: flex; flex-direction: column; gap: 2px; }
-.ov-stat-value { font-size: 1.8rem; font-weight: 900; line-height: 1; color: var(--text-main); }
-.ov-stat-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
-.ov-stat-sub { font-size: 0.72rem; font-weight: 700; color: var(--primary); margin-top: 2px; }
+.ov-stat-value { font-size: 1.6rem; font-weight: 900; line-height: 1; color: var(--text-main); }
+.ov-stat-label { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
+/* Type breakdown */
+.ov-type-breakdown { display: flex; flex-direction: column; gap: 7px; }
+.ov-type-row { display: flex; align-items: center; gap: 8px; }
+.ov-type-name { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); width: 44px; flex-shrink: 0; }
+.ov-type-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.ov-type-bar-fill { height: 100%; border-radius: 99px; }
+.ov-type-count { font-size: 0.72rem; font-weight: 700; color: var(--text-main); width: 24px; text-align: right; flex-shrink: 0; }
+/* Theme card */
 .ov-theme-name { font-size: 1.1rem; font-weight: 900; color: var(--primary); margin-bottom: 4px; }
-.ov-theme-dates { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 16px; }
+.ov-theme-dates { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 14px; }
 .ov-progress-track { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: 12px; }
 .ov-progress-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.4s ease; }
 .ov-theme-stats { display: flex; gap: 20px; }
@@ -460,6 +470,14 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .ov-theme-stat-value { font-size: 1.3rem; font-weight: 900; color: var(--text-main); }
 .ov-theme-stat-label { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); }
 .ov-no-theme { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+/* Goals card */
+.ov-goals-list { display: flex; flex-direction: column; gap: 14px; }
+.ov-goal-row { display: flex; flex-direction: column; gap: 4px; }
+.ov-goal-name { font-size: 0.82rem; font-weight: 800; color: var(--text-main); }
+.ov-goal-sub { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+.ov-goal-bar-wrap { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.ov-goal-bar-wrap .ov-progress-track { flex: 1; margin-bottom: 0; }
+.ov-goal-pct { font-size: 0.72rem; font-weight: 800; color: var(--primary); width: 32px; text-align: right; flex-shrink: 0; }
 [data-theme="dark"] .ov-card { background: #1c1f27; }
 
 /* ---- Insights Section Grouping ---- */
