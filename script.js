@@ -1758,37 +1758,37 @@ const renderOverview = () => {
     const weekStartStr = weekStart.toISOString().split('T')[0];
     const weekSessions = completed.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
 
-    // Most active type
+    // Type breakdown (exclude NONE)
     const typeCounts = {};
-    completed.forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
-    const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+    completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    const typeEntries = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+    const maxCount = typeEntries.length ? typeEntries[0][1] : 1;
 
     // Active theme
     const activeTheme = themes.find(t => t.startDate <= todayStr && t.endDate >= todayStr) || null;
 
+    // Summary card — compact figures + type breakdown
+    const typeBreakdownHtml = typeEntries.map(([type, count]) => {
+        const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
+        const barPct = Math.round((count / maxCount) * 100);
+        return `<div class="ov-type-row">
+            <span class="ov-type-name">${type}</span>
+            <div class="ov-type-bar-track"><div class="ov-type-bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+            <span class="ov-type-count">${count}</span>
+        </div>`;
+    }).join('');
+
     let sideHtml = `<div class="ov-card">
         <div class="ov-card-title">Summary</div>
-        <div class="ov-stats-grid">
-            <div class="ov-stat">
-                <span class="ov-stat-value">${completed.length}</span>
-                <span class="ov-stat-label">Total sessions</span>
-            </div>
-            <div class="ov-stat">
-                <span class="ov-stat-value">${streak}</span>
-                <span class="ov-stat-label">Day streak</span>
-            </div>
-            <div class="ov-stat">
-                <span class="ov-stat-value">${weekSessions}</span>
-                <span class="ov-stat-label">This week</span>
-            </div>
-            <div class="ov-stat">
-                <span class="ov-stat-value">${topType ? topType[1] : '—'}</span>
-                <span class="ov-stat-label">Most sessions</span>
-                ${topType ? `<span class="ov-stat-sub">${topType[0]}</span>` : ''}
-            </div>
+        <div class="ov-summary-top">
+            <div class="ov-stat"><span class="ov-stat-value">${completed.length}</span><span class="ov-stat-label">Total sessions</span></div>
+            <div class="ov-stat"><span class="ov-stat-value">${streak}</span><span class="ov-stat-label">Day streak</span></div>
+            <div class="ov-stat"><span class="ov-stat-value">${weekSessions}</span><span class="ov-stat-label">This week</span></div>
         </div>
+        ${typeEntries.length ? `<div class="ov-type-breakdown">${typeBreakdownHtml}</div>` : ''}
     </div>`;
 
+    // Theme card
     if (activeTheme) {
         const start = new Date(activeTheme.startDate + 'T00:00:00');
         const end = new Date(activeTheme.endDate + 'T00:00:00');
@@ -1804,22 +1804,30 @@ const renderOverview = () => {
             <div class="ov-theme-dates">${fmtShort(activeTheme.startDate)} – ${fmtShort(activeTheme.endDate)}</div>
             <div class="ov-progress-track"><div class="ov-progress-fill" style="width:${pct}%"></div></div>
             <div class="ov-theme-stats">
-                <div class="ov-theme-stat">
-                    <span class="ov-theme-stat-value">${pct}%</span>
-                    <span class="ov-theme-stat-label">Complete</span>
-                </div>
-                <div class="ov-theme-stat">
-                    <span class="ov-theme-stat-value">${themeSessions}</span>
-                    <span class="ov-theme-stat-label">Sessions logged</span>
-                </div>
-                <div class="ov-theme-stat">
-                    <span class="ov-theme-stat-value">${daysLeft}</span>
-                    <span class="ov-theme-stat-label">Days left</span>
-                </div>
+                <div class="ov-theme-stat"><span class="ov-theme-stat-value">${pct}%</span><span class="ov-theme-stat-label">Complete</span></div>
+                <div class="ov-theme-stat"><span class="ov-theme-stat-value">${themeSessions}</span><span class="ov-theme-stat-label">Sessions</span></div>
+                <div class="ov-theme-stat"><span class="ov-theme-stat-value">${daysLeft}</span><span class="ov-theme-stat-label">Days left</span></div>
             </div>
         </div>`;
     } else {
         sideHtml += `<div class="ov-card"><div class="ov-card-title">Current Theme</div><p class="ov-no-theme">No active theme. Set one up in Goals.</p></div>`;
+    }
+
+    // Goals card
+    const goals = logData.goals || [];
+    if (goals.length) {
+        const goalsHtml = goals.map(g => {
+            const { pct, currentLabel } = computeGoalProgress(g);
+            return `<div class="ov-goal-row">
+                <div class="ov-goal-name">${g.title}</div>
+                ${currentLabel ? `<div class="ov-goal-sub">${currentLabel}</div>` : ''}
+                <div class="ov-goal-bar-wrap">
+                    <div class="ov-progress-track" style="margin-bottom:0"><div class="ov-progress-fill" style="width:${pct}%"></div></div>
+                    <span class="ov-goal-pct">${pct}%</span>
+                </div>
+            </div>`;
+        }).join('');
+        sideHtml += `<div class="ov-card"><div class="ov-card-title">Goals</div><div class="ov-goals-list">${goalsHtml}</div></div>`;
     }
 
     sidebar.innerHTML = sideHtml;
