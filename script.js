@@ -1758,16 +1758,33 @@ const renderOverview = () => {
     const weekStartStr = weekStart.toISOString().split('T')[0];
     const weekSessions = completed.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
 
-    // Type breakdown (exclude NONE)
+    // Past 7 days
+    const d7ago = new Date(today); d7ago.setDate(d7ago.getDate() - 6);
+    const d7agoStr = d7ago.toISOString().split('T')[0];
+    const last7 = completed.filter(e => e.type && e.type !== 'NONE' && e.date >= d7agoStr && e.date <= todayStr);
+    const days7active = new Set(last7.map(e => e.date)).size;
+
+    // Type breakdown for last 7 days (exclude NONE)
     const typeCounts = {};
-    completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    last7.forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
     const typeEntries = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
     const maxCount = typeEntries.length ? typeEntries[0][1] : 1;
+    const topType7 = typeEntries[0];
+
+    // Sentence summary
+    let sentenceSummary;
+    if (last7.length === 0) {
+        sentenceSummary = 'No sessions logged in the past 7 days.';
+    } else {
+        const tone = last7.length >= 6 ? 'Strong week' : last7.length >= 4 ? 'Solid week' : last7.length >= 2 ? 'Steady week' : 'Light week';
+        const typeStr = topType7 ? `, with a focus on ${topType7[0].toLowerCase()}` : '';
+        sentenceSummary = `${tone} — ${last7.length} session${last7.length > 1 ? 's' : ''} across ${days7active} day${days7active > 1 ? 's' : ''}${typeStr}.`;
+    }
 
     // Active theme
     const activeTheme = themes.find(t => t.startDate <= todayStr && t.endDate >= todayStr) || null;
 
-    // Summary card — compact figures + type breakdown
+    // Summary card — sentence + compact figures + type breakdown (all last 7 days)
     const typeBreakdownHtml = typeEntries.map(([type, count]) => {
         const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
         const barPct = Math.round((count / maxCount) * 100);
@@ -1779,11 +1796,12 @@ const renderOverview = () => {
     }).join('');
 
     let sideHtml = `<div class="ov-card">
-        <div class="ov-card-title">Summary</div>
+        <div class="ov-card-title">Last 7 Days</div>
+        <p class="ov-sentence">${sentenceSummary}</p>
         <div class="ov-summary-top">
-            <div class="ov-stat"><span class="ov-stat-value">${completed.length}</span><span class="ov-stat-label">Total sessions</span></div>
+            <div class="ov-stat"><span class="ov-stat-value">${last7.length}</span><span class="ov-stat-label">Sessions</span></div>
+            <div class="ov-stat"><span class="ov-stat-value">${days7active}</span><span class="ov-stat-label">Active days</span></div>
             <div class="ov-stat"><span class="ov-stat-value">${streak}</span><span class="ov-stat-label">Day streak</span></div>
-            <div class="ov-stat"><span class="ov-stat-value">${weekSessions}</span><span class="ov-stat-label">This week</span></div>
         </div>
         ${typeEntries.length ? `<div class="ov-type-breakdown">${typeBreakdownHtml}</div>` : ''}
     </div>`;
