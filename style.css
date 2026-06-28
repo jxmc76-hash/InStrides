@@ -432,13 +432,11 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
     .overview-scroll { width: 50vw; overflow-x: auto; }
     .overview-table { width: 100%; table-layout: fixed; border-spacing: 0; }
     .ov-date-th { width: 90px; min-width: 90px; }
-    .ov-date-td { min-width: 90px; font-size: 0.85rem; }
+    .ov-date-td { min-width: 90px; font-size: 0.72rem; }
     .ov-type-th { min-width: 0; width: auto; padding: 0 2px 6px; }
-    .ov-type-label { font-size: 0.75rem; max-height: 100px; }
-    .ov-cell-wrap { padding: 2px 1px; }
-    .ov-sq { width: 100%; height: 52px; border-radius: 8px; }
-    .ov-theme-divider-title { font-size: 0.9rem; }
-    .ov-theme-divider-range { font-size: 0.8rem; }
+    .ov-type-label { font-size: 0.65rem; max-height: 80px; }
+    .ov-cell-wrap { padding: 1px; }
+    .ov-sq { width: 100%; height: 30px; border-radius: 6px; }
 }
 
 /* ---- Insights Section Grouping ---- */
