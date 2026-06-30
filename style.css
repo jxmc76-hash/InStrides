@@ -480,17 +480,18 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .ov-theme-stat-label { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); }
 .ov-no-theme { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
 /* 4-period comparison table */
-.ov-cmp-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-.ov-cmp-table thead th { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); text-align: center; padding: 0 2px 8px; }
+.ov-cmp-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 4px; }
+.ov-cmp-table colgroup col:first-child { width: 52px; }
+.ov-cmp-table thead th { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); text-align: center; padding: 0 0 8px; overflow: hidden; }
 .ov-cmp-table thead th:first-child { text-align: left; }
 .ov-cmp-table thead th.ov-cmp-now { color: var(--primary); }
-.ov-cmp-table td { text-align: center; padding: 5px 2px; font-size: 0.82rem; font-weight: 700; color: var(--text-muted); }
+.ov-cmp-table td { text-align: center; padding: 5px 0; font-size: 0.82rem; font-weight: 700; color: var(--text-muted); overflow: hidden; }
 .ov-cmp-table td:first-child { text-align: left; }
 .ov-cmp-table td.ov-cmp-now { color: var(--text-main); font-weight: 900; }
 .ov-cmp-total-row td { font-size: 0.95rem; padding-bottom: 8px; }
 .ov-cmp-total-row td.ov-cmp-now { font-size: 1.1rem; color: var(--primary) !important; }
-.ov-cmp-metric { font-size: 0.65rem !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted) !important; }
-.ov-cmp-type { font-size: 0.65rem !important; font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.3px; }
+.ov-cmp-metric { font-size: 0.62rem !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted) !important; }
+.ov-cmp-type { font-size: 0.62rem !important; font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-cmp-zero { opacity: 0.3; }
 .ov-cmp-divider td { padding: 0 !important; height: 1px; background: var(--border); }
 .ov-cmp-streak { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-top: 12px; }
