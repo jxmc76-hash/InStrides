@@ -1787,7 +1787,7 @@ const renderOverview = () => {
 
     const sessionsRow = `<tr class="ov-cmp-total-row">
         <td class="ov-cmp-metric">Sessions</td>
-        ${periods.map((p, i) => `<td class="${i === 3 ? 'ov-cmp-now' : ''}">${p.sessions || '—'}</td>`).join('')}
+        ${periods.map((p, i) => `<td class="${i === 3 ? 'ov-cmp-now' : ''}">${p.sessions}</td>`).join('')}
     </tr>`;
 
     const typeRows = activeTypes.map(type => {
@@ -1796,7 +1796,7 @@ const renderOverview = () => {
             <td class="ov-cmp-type" style="color:${color}">${type}</td>
             ${periods.map((p, i) => {
                 const n = p.byType[type] || 0;
-                return `<td class="${i === 3 ? 'ov-cmp-now' : ''}${n === 0 ? ' ov-cmp-zero' : ''}">${n || '—'}</td>`;
+                return `<td class="${i === 3 ? 'ov-cmp-now' : ''}${n === 0 ? ' ov-cmp-zero' : ''}">${n}</td>`;
             }).join('')}
         </tr>`;
     }).join('');
