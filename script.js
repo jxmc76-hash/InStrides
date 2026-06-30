@@ -1803,7 +1803,6 @@ const renderOverview = () => {
 
     let sideHtml = `<div class="ov-card">
         <div class="ov-card-title">Last 28 Days</div>
-        <p class="ov-sentence">${sentenceSummary}</p>
         <table class="ov-cmp-table">
             <colgroup><col style="width:52px"><col><col><col><col></colgroup>
             <thead><tr><th></th>${periodHeaders}</tr></thead>
