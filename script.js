@@ -1751,59 +1751,68 @@ const renderOverview = () => {
     if (!loggedDates.has(todayStr)) sd.setDate(sd.getDate() - 1);
     while (loggedDates.has(sd.toISOString().split('T')[0])) { streak++; sd.setDate(sd.getDate() - 1); }
 
-    // Sessions this week
-    const dow = today.getDay();
-    const mondayOffset = dow === 0 ? 6 : dow - 1;
-    const weekStart = new Date(today); weekStart.setDate(today.getDate() - mondayOffset);
-    const weekStartStr = weekStart.toISOString().split('T')[0];
-    const weekSessions = completed.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
+    // 4 rolling 7-day periods (oldest → newest)
+    const periods = [3, 2, 1, 0].map(w => {
+        const end = new Date(today); end.setDate(end.getDate() - w * 7);
+        const start = new Date(end); start.setDate(start.getDate() - 6);
+        const endStr = end.toISOString().split('T')[0];
+        const startStr = start.toISOString().split('T')[0];
+        const entries = completed.filter(e => e.type && e.type !== 'NONE' && e.date >= startStr && e.date <= endStr);
+        const byType = {};
+        entries.forEach(e => { byType[e.type] = (byType[e.type] || 0) + 1; });
+        return { sessions: entries.length, activeDays: new Set(entries.map(e => e.date)).size, byType, label: w === 0 ? 'Now' : `${w}w` };
+    });
 
-    // Past 7 days
-    const d7ago = new Date(today); d7ago.setDate(d7ago.getDate() - 6);
-    const d7agoStr = d7ago.toISOString().split('T')[0];
-    const last7 = completed.filter(e => e.type && e.type !== 'NONE' && e.date >= d7agoStr && e.date <= todayStr);
-    const days7active = new Set(last7.map(e => e.date)).size;
+    const cur = periods[3], prev = periods[2];
+    const topTypeCur = Object.entries(cur.byType).sort((a, b) => b[1] - a[1])[0];
 
-    // Type breakdown for last 7 days (exclude NONE)
-    const typeCounts = {};
-    last7.forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
-    const typeEntries = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
-    const maxCount = typeEntries.length ? typeEntries[0][1] : 1;
-    const topType7 = typeEntries[0];
-
-    // Sentence summary
+    // Sentence based on current 7-day period
     let sentenceSummary;
-    if (last7.length === 0) {
+    if (cur.sessions === 0) {
         sentenceSummary = 'No sessions logged in the past 7 days.';
     } else {
-        const tone = last7.length >= 6 ? 'Strong week' : last7.length >= 4 ? 'Solid week' : last7.length >= 2 ? 'Steady week' : 'Light week';
-        const typeStr = topType7 ? `, with a focus on ${topType7[0].toLowerCase()}` : '';
-        sentenceSummary = `${tone} — ${last7.length} session${last7.length > 1 ? 's' : ''} across ${days7active} day${days7active > 1 ? 's' : ''}${typeStr}.`;
+        const tone = cur.sessions >= 6 ? 'Strong week' : cur.sessions >= 4 ? 'Solid week' : cur.sessions >= 2 ? 'Steady week' : 'Light week';
+        const vs = cur.sessions > prev.sessions ? ', up on last week' : cur.sessions < prev.sessions ? ', down on last week' : ', same as last week';
+        const typeStr = topTypeCur ? `, with a focus on ${topTypeCur[0].toLowerCase()}` : '';
+        sentenceSummary = `${tone}${typeStr}${vs}.`;
     }
 
     // Active theme
     const activeTheme = themes.find(t => t.startDate <= todayStr && t.endDate >= todayStr) || null;
 
-    // Summary card — sentence + compact figures + type breakdown (all last 7 days)
-    const typeBreakdownHtml = typeEntries.map(([type, count]) => {
+    // Comparison table
+    const activeTypes = logData.types.filter(t => t !== 'NONE');
+    const periodHeaders = periods.map((p, i) =>
+        `<th class="${i === 3 ? 'ov-cmp-now' : ''}">${p.label}</th>`).join('');
+
+    const sessionsRow = `<tr class="ov-cmp-total-row">
+        <td class="ov-cmp-metric">Sessions</td>
+        ${periods.map((p, i) => `<td class="${i === 3 ? 'ov-cmp-now' : ''}">${p.sessions || '—'}</td>`).join('')}
+    </tr>`;
+
+    const typeRows = activeTypes.map(type => {
         const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
-        const barPct = Math.round((count / maxCount) * 100);
-        return `<div class="ov-type-row">
-            <span class="ov-type-name">${type}</span>
-            <div class="ov-type-bar-track"><div class="ov-type-bar-fill" style="width:${barPct}%;background:${color}"></div></div>
-            <span class="ov-type-count">${count}</span>
-        </div>`;
+        return `<tr>
+            <td class="ov-cmp-type" style="color:${color}">${type}</td>
+            ${periods.map((p, i) => {
+                const n = p.byType[type] || 0;
+                return `<td class="${i === 3 ? 'ov-cmp-now' : ''}${n === 0 ? ' ov-cmp-zero' : ''}">${n || '—'}</td>`;
+            }).join('')}
+        </tr>`;
     }).join('');
 
     let sideHtml = `<div class="ov-card">
-        <div class="ov-card-title">Last 7 Days</div>
+        <div class="ov-card-title">Last 28 Days</div>
         <p class="ov-sentence">${sentenceSummary}</p>
-        <div class="ov-summary-top">
-            <div class="ov-stat"><span class="ov-stat-value">${last7.length}</span><span class="ov-stat-label">Sessions</span></div>
-            <div class="ov-stat"><span class="ov-stat-value">${days7active}</span><span class="ov-stat-label">Active days</span></div>
-            <div class="ov-stat"><span class="ov-stat-value">${streak}</span><span class="ov-stat-label">Day streak</span></div>
-        </div>
-        ${typeEntries.length ? `<div class="ov-type-breakdown">${typeBreakdownHtml}</div>` : ''}
+        <table class="ov-cmp-table">
+            <thead><tr><th></th>${periodHeaders}</tr></thead>
+            <tbody>
+                ${sessionsRow}
+                <tr class="ov-cmp-divider"><td colspan="5"></td></tr>
+                ${typeRows}
+            </tbody>
+        </table>
+        <div class="ov-cmp-streak">🔥 ${streak} day streak</div>
     </div>`;
 
     // Theme card
