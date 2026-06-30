@@ -436,9 +436,11 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
     #viewOverview.active { margin: -30px -30px 0; width: calc(100% + 60px); }
     .overview-container { flex-direction: row; }
     .ov-panel-heading { display: block; font-size: 0.72rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); padding: 20px 24px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .overview-sidebar-wrap { display: flex; flex-direction: column; flex: 1; min-width: 0; border-right: 1px solid var(--border); }
-    .overview-sidebar { flex: 1; padding: 20px 24px; }
-    .overview-table-wrap { display: flex; flex-direction: column; width: 50vw; flex: none; }
+    .overview-sidebar-wrap { display: flex; flex-direction: column; width: 300px; flex: none; border-right: 1px solid var(--border); }
+    .overview-sidebar { flex: 1; padding: 0; gap: 0; overflow-y: auto; }
+    .overview-table-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .ov-card { background: none; border: none; border-radius: 0; border-top: 1px solid var(--border); padding: 16px 20px; }
+    .ov-card:first-child { border-top: none; }
     .overview-scroll { overflow-x: auto; padding: 12px 0 20px 16px; }
     .overview-table { width: 100%; table-layout: fixed; border-spacing: 0; }
     .ov-date-th { width: 90px; min-width: 90px; }
@@ -485,7 +487,6 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .ov-goal-bar-wrap { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 .ov-goal-bar-wrap .ov-progress-track { flex: 1; margin-bottom: 0; }
 .ov-goal-pct { font-size: 0.72rem; font-weight: 800; color: var(--primary); width: 32px; text-align: right; flex-shrink: 0; }
-[data-theme="dark"] .ov-card { background: #1c1f27; }
 
 /* ---- Insights Section Grouping ---- */
 .isect { margin-bottom: 36px; }
