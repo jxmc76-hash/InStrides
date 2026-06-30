@@ -1859,6 +1859,51 @@ const renderOverview = () => {
     }
 
     sidebar.innerHTML = sideHtml;
+
+    // Strapline — random pick from data-driven pool, changes on each render
+    const ovStrapline = document.getElementById('ovStrapline');
+    if (ovStrapline) {
+        const pool = [];
+        if (streak >= 30) {
+            pool.push(`${streak} days straight — that's not a habit, that's a lifestyle.`);
+            pool.push(`A solid month without a missed day. ${streak} sessions in a row.`);
+        } else if (streak >= 14) {
+            pool.push(`${streak} days on the trot. Keep the chain intact.`);
+        } else if (streak >= 7) {
+            pool.push(`Seven days in a row — you're in a proper rhythm right now.`);
+        } else if (streak >= 3) {
+            pool.push(`${streak} days running — the habit is forming.`);
+        }
+        if (cur.sessions > prev.sessions) {
+            pool.push(`Already ahead of last week — ${cur.sessions} sessions vs ${prev.sessions}. Keep it going.`);
+            pool.push(`This week is going better than last — ${cur.sessions} sessions and climbing.`);
+        } else if (cur.sessions < prev.sessions) {
+            pool.push(`${prev.sessions - cur.sessions} sessions behind last week's pace — still time to close the gap.`);
+        } else if (cur.sessions > 0) {
+            pool.push(`Perfectly matched with last week — ${cur.sessions} sessions apiece so far.`);
+        }
+        const maxS = Math.max(...periods.map(p => p.sessions));
+        if (cur.sessions === maxS && cur.sessions > 0 && periods.filter(p => p.sessions === maxS).length === 1) {
+            pool.push(`Best week in the past month — ${cur.sessions} sessions. You're peaking.`);
+        }
+        if (cur.activeDays === 7) pool.push(`Every single day this week. No rest for the relentless.`);
+        else if (cur.activeDays >= 5) pool.push(`Active ${cur.activeDays} out of 7 days this week — solid commitment.`);
+        if (activeTheme) {
+            const thEnd = new Date(activeTheme.endDate + 'T00:00:00');
+            const thStart = new Date(activeTheme.startDate + 'T00:00:00');
+            const thPct = Math.min(100, Math.round(((today - thStart) / (thEnd - thStart)) * 100));
+            const thLeft = Math.max(0, Math.round((thEnd - today) / 86400000));
+            if (thLeft <= 7) pool.push(`Final week of ${activeTheme.title}. Leave nothing on the table.`);
+            else if (thPct >= 75) pool.push(`Three quarters through ${activeTheme.title}. Finish strong.`);
+            else pool.push(`${thPct}% into ${activeTheme.title} — ${thLeft} days left to make it count.`);
+        }
+        if (topTypeCur && topTypeCur[1] >= 3) {
+            pool.push(`${topTypeCur[0].toLowerCase()} is front and centre this week — ${topTypeCur[1]} sessions and going.`);
+        }
+        if (cur.sessions >= 10) pool.push(`${cur.sessions} sessions in 7 days. Proper graft.`);
+        if (pool.length === 0) pool.push('Keep showing up — every session counts.');
+        ovStrapline.textContent = pool[Math.floor(Math.random() * pool.length)];
+    }
 };
 
 // --- INSIGHTS RENDERER ---
