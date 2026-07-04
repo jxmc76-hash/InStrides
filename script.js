@@ -281,12 +281,36 @@ window.handleAuth = async (action) => {
 
 window.handleSignOut = () => signOut(auth);
 
+const LOCAL_BACKUP_KEY = () => `tl-backup-${LOG_ID}`;
+
+const saveLocalBackup = (data) => {
+    if (!data.entries || data.entries.length === 0) return;
+    try {
+        localStorage.setItem(LOCAL_BACKUP_KEY(), JSON.stringify({ ts: new Date().toISOString(), data }));
+    } catch (_) {}
+};
+
+window.restoreLocalBackup = () => {
+    const raw = localStorage.getItem(LOCAL_BACKUP_KEY());
+    if (!raw) return alert('No local backup found for this account.');
+    let backup;
+    try { backup = JSON.parse(raw); } catch (_) { return alert('Backup data is unreadable.'); }
+    const ts = backup.ts ? new Date(backup.ts).toLocaleString() : 'unknown time';
+    const count = backup.data?.entries?.length ?? 0;
+    if (!confirm(`Restore backup from ${ts}?\nThis backup contains ${count} entries and will REPLACE your current data.`)) return;
+    setDoc(doc(db, "logs", LOG_ID), backup.data)
+        .then(() => alert('Backup restored successfully.'))
+        .catch(err => alert('Restore failed: ' + err.message));
+};
+
 const attachRealtimeListener = () => {
     if(unsubSnapshot) unsubSnapshot();
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
             logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [], trainingPlans: data.trainingPlans || [] };
+            // Keep a rolling local backup whenever real data arrives from the server
+            if (!snap.metadata.fromCache && logData.entries.length > 0) saveLocalBackup(logData);
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewOverview').classList.contains('active')) renderOverview();
@@ -2968,7 +2992,12 @@ window.handleImportFile = async (event) => {
 
     if (!Array.isArray(imported.entries)) return alert('That file does not look like a valid TrainingLog export (missing "entries").');
 
-    if (!confirm(`Import this file? It contains ${imported.entries.length} entries and will REPLACE all data currently stored for your account. This cannot be undone.`)) return;
+    if (imported.entries.length === 0 && !confirm(`Warning: this file contains 0 entries. Importing it will erase all your current data. Are you sure?`)) return;
+
+    if (!confirm(`Import this file? It contains ${imported.entries.length} entries and will REPLACE all data currently stored for your account.\n\nA local backup of your current data will be saved first so you can recover if needed.`)) return;
+
+    // Save current data as local backup before overwriting
+    saveLocalBackup(logData);
 
     const newData = {
         types: imported.types || [],
