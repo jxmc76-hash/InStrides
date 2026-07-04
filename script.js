@@ -3156,30 +3156,50 @@ window.handleImportFile = async (event) => {
 
 // --- IMPORT APPLE HEALTH ---
 
-// Stream-parse Workout elements from a ZIP using fflate — never loads the full XML into memory.
-const streamWorkoutsFromZip = (file) => new Promise((resolve, reject) => {
+// Stream-parse Workout and relevant Record elements from a ZIP using fflate.
+// Returns { workouts: string[], records: string[] } without loading the full XML into memory.
+const RECORD_TYPES_WANTED = new Set(['HKQuantityTypeIdentifierVO2Max', 'HKCategoryTypeIdentifierSleepAnalysis', 'HKQuantityTypeIdentifierBodyMass']);
+
+const streamHealthDataFromZip = (file) => new Promise((resolve, reject) => {
     if (typeof fflate === 'undefined') { reject(new Error('fflate not loaded')); return; }
     const workoutStrings = [];
+    const recordStrings = [];
     let found = false;
     let buf = '';
     const dec = new TextDecoder('utf-8');
 
-    const flush = (isFinal) => {
+    const flush = () => {
         let from = 0;
         for (;;) {
-            const s = buf.indexOf('<Workout ', from);
-            if (s === -1) break;
-            const sc = buf.indexOf('/>', s);
-            const et = buf.indexOf('</Workout>', s);
-            let end;
-            if (sc !== -1 && (et === -1 || sc < et)) end = sc + 2;
-            else if (et !== -1) end = et + '</Workout>'.length;
-            else { buf = buf.slice(s); return; }  // tag not complete yet
-            workoutStrings.push(buf.slice(s, end));
-            from = end;
+            const wPos = buf.indexOf('<Workout ', from);
+            const rPos = buf.indexOf('<Record ', from);
+            if (wPos === -1 && rPos === -1) break;
+
+            const isWorkout = rPos === -1 || (wPos !== -1 && wPos < rPos);
+            const s = isWorkout ? wPos : rPos;
+
+            if (isWorkout) {
+                const sc = buf.indexOf('/>', s);
+                const et = buf.indexOf('</Workout>', s);
+                let end;
+                if (sc !== -1 && (et === -1 || sc < et)) end = sc + 2;
+                else if (et !== -1) end = et + '</Workout>'.length;
+                else { buf = buf.slice(s); return; }
+                workoutStrings.push(buf.slice(s, end));
+                from = end;
+            } else {
+                const end = buf.indexOf('/>', s);
+                if (end === -1) { buf = buf.slice(s); return; }
+                const str = buf.slice(s, end + 2);
+                const tm = str.match(/type="([^"]*)"/);
+                if (tm && RECORD_TYPES_WANTED.has(tm[1])) recordStrings.push(str);
+                from = end + 2;
+            }
         }
-        // keep from last possible open tag to handle chunk boundaries
-        const last = buf.lastIndexOf('<Workout ', from);
+        // retain any partial tag that starts after the last complete element
+        const lastW = buf.lastIndexOf('<Workout ', from);
+        const lastR = buf.lastIndexOf('<Record ', from);
+        const last = Math.max(lastW, lastR);
         buf = last >= from ? buf.slice(last) : '';
     };
 
@@ -3191,8 +3211,8 @@ const streamWorkoutsFromZip = (file) => new Promise((resolve, reject) => {
         f.ondata = (err, data, isFinal) => {
             if (err) { reject(err); return; }
             buf += dec.decode(data, { stream: !isFinal });
-            flush(isFinal);
-            if (isFinal) resolve(workoutStrings);
+            flush();
+            if (isFinal) resolve({ workouts: workoutStrings, records: recordStrings });
         };
         f.start();
     };
@@ -3246,14 +3266,17 @@ window.handleAppleHealthImport = async (event) => {
 
     let rawWorkouts; // array of either DOM Element or raw XML string
     let useAttr;     // function(w, name) => string value
+    let recordStrings = [];
 
     if (looksLikeZip) {
-        let workoutStrings;
+        let result;
         try {
-            workoutStrings = await streamWorkoutsFromZip(file);
+            result = await streamHealthDataFromZip(file);
         } catch (err) {
             return alert('Could not read the ZIP file: ' + err.message + '\n\nIf the error persists, try sharing just the export.xml file from inside the ZIP.');
         }
+        const { workouts: workoutStrings, records } = result;
+        recordStrings = records;
         if (!workoutStrings.length) return alert('No workouts found in the export ZIP.');
         rawWorkouts = workoutStrings;
         useAttr = attr;
@@ -3292,19 +3315,70 @@ window.handleAppleHealthImport = async (event) => {
         if (seenKeys.has(key)) return;
         seenKeys.add(key);
 
-        const duration = Math.round(parseFloat(useAttr(w, 'duration') || '0') * 10) / 10;
+        const durationRaw = parseFloat(useAttr(w, 'duration') || '0');
+        const durationUnit = (useAttr(w, 'durationUnit') || 'min').toLowerCase();
+        const durationMin = durationUnit === 's' ? durationRaw / 60 : durationUnit === 'hr' ? durationRaw * 60 : durationRaw;
+
         const rawDist  = parseFloat(useAttr(w, 'totalDistance') || '0');
-        const distUnit = (useAttr(w, 'totalDistanceUnit') || 'km').toLowerCase();
+        const distUnit = (useAttr(w, 'totalDistanceUnit') || '').toLowerCase();
+        const distKm = distUnit === 'm' ? rawDist / 1000 : distUnit === 'mi' ? rawDist * 1.60934 : rawDist;
 
         const entry = { _id: i, selected: true, id: ts + i, date: startDate, type: mapped, isPlanned: false };
-        if (duration > 0) entry.duration = Math.round(duration);
-        if (rawDist > 0) { entry.distance = Math.round(rawDist * 100) / 100; entry.distanceUnit = distUnit; }
+        if (durationMin > 0) entry.duration = Math.round(durationMin);
+        if (distKm > 0) { entry.distance = Math.round(distKm * 100) / 100; entry.distanceUnit = 'km'; }
         newEntries.push(entry);
     });
 
     if (newEntries.length === 0) {
         const detail = skippedExisting > 0 ? `${skippedExisting} already in your log.` : unmappedTypes.size > 0 ? `Types not recognised: ${[...unmappedTypes].join(', ')}` : 'No matching workout types found.';
         return alert('Nothing to import. ' + detail);
+    }
+
+    // Enrich entries with health metrics from Record elements
+    if (recordStrings.length > 0) {
+        const vo2Metric    = logData.customMetrics.find(m => m.name.toLowerCase().includes('vo2'));
+        const sleepMetric  = logData.customMetrics.find(m => m.name.toLowerCase().includes('sleep'));
+        const weightMetric = logData.customMetrics.find(m => m.name.toLowerCase().includes('weight'));
+
+        const vo2ByDate    = {};
+        const sleepByDate  = {};
+        const weightByDate = {};
+
+        recordStrings.forEach(r => {
+            const rType = attr(r, 'type');
+
+            if (vo2Metric && rType === 'HKQuantityTypeIdentifierVO2Max') {
+                const date = attr(r, 'startDate').split(' ')[0];
+                const val  = parseFloat(attr(r, 'value') || '0');
+                if (/^\d{4}-\d{2}-\d{2}$/.test(date) && val > 0)
+                    if (!vo2ByDate[date] || val > vo2ByDate[date]) vo2ByDate[date] = val;
+
+            } else if (sleepMetric && rType === 'HKCategoryTypeIdentifierSleepAnalysis') {
+                const val = attr(r, 'value');
+                if (!val.includes('Asleep')) return; // skip InBed / Awake
+                const startMs = Date.parse(attr(r, 'startDate'));
+                const endStr  = attr(r, 'endDate');
+                const endMs   = Date.parse(endStr);
+                if (!endStr || isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return;
+                const date = endStr.split(' ')[0]; // attribute to the wake-up date
+                if (/^\d{4}-\d{2}-\d{2}$/.test(date))
+                    sleepByDate[date] = (sleepByDate[date] || 0) + (endMs - startMs) / 60000;
+
+            } else if (weightMetric && rType === 'HKQuantityTypeIdentifierBodyMass') {
+                const date = attr(r, 'startDate').split(' ')[0];
+                const val  = parseFloat(attr(r, 'value') || '0');
+                const unit = (attr(r, 'unit') || 'kg').toLowerCase();
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || val <= 0) return;
+                const kg = unit === 'lb' ? val * 0.453592 : unit === 'st' ? val * 6.35029 : val;
+                if (!weightByDate[date]) weightByDate[date] = kg;
+            }
+        });
+
+        newEntries.forEach(e => {
+            if (vo2Metric    && vo2ByDate[e.date]    != null) e[vo2Metric.name]    = Math.round(vo2ByDate[e.date] * 10) / 10;
+            if (sleepMetric  && sleepByDate[e.date]  != null) e[sleepMetric.name]  = Math.round(sleepByDate[e.date] / 6) / 10; // minutes→hours 1dp
+            if (weightMetric && weightByDate[e.date] != null) e[weightMetric.name] = Math.round(weightByDate[e.date] * 10) / 10;
+        });
     }
 
     newEntries.sort((a, b) => b.date.localeCompare(a.date));
