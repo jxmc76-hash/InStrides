@@ -3160,7 +3160,7 @@ window.handleImportFile = async (event) => {
 // Returns { workouts: string[], records: string[] } without loading the full XML into memory.
 const RECORD_TYPES_WANTED = new Set(['HKQuantityTypeIdentifierVO2Max', 'HKCategoryTypeIdentifierSleepAnalysis', 'HKQuantityTypeIdentifierBodyMass']);
 
-const streamHealthDataFromZip = (file) => new Promise((resolve, reject) => {
+const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reject) => {
     if (typeof fflate === 'undefined') { reject(new Error('fflate not loaded')); return; }
     const workoutStrings = [];
     const recordStrings = [];
@@ -3218,6 +3218,9 @@ const streamHealthDataFromZip = (file) => new Promise((resolve, reject) => {
     };
 
     const reader = file.stream().getReader();
+    const total = file.size;
+    let bytesRead = 0;
+    let chunkCount = 0;
     (async () => {
         try {
             for (;;) {
@@ -3227,11 +3230,48 @@ const streamHealthDataFromZip = (file) => new Promise((resolve, reject) => {
                     if (!found) reject(new Error('export.xml not found in ZIP'));
                     break;
                 }
+                bytesRead += value.length;
+                chunkCount++;
                 unzip.push(value);
+                // yield to the browser every 25 chunks so the UI can repaint
+                if (onProgress && chunkCount % 25 === 0) {
+                    onProgress(bytesRead / total, workoutStrings.length);
+                    await new Promise(r => setTimeout(r, 0));
+                }
             }
         } catch (e) { reject(e); }
     })();
 });
+
+// --- AH IMPORT PROGRESS OVERLAY ---
+const showAHProgress = () => {
+    const el = document.createElement('div');
+    el.id = 'ahProgressOverlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:500;';
+    el.innerHTML = `
+        <div style="background:var(--card);border-radius:20px;padding:28px 28px 24px;width:min(320px,88vw);box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+            <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:4px;">Importing Apple Health</div>
+            <div id="ahProgStatus" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em;">Reading ZIP…</div>
+            <div style="background:var(--border);border-radius:6px;height:6px;overflow:hidden;">
+                <div id="ahProgBar" style="height:100%;width:0%;background:var(--accent);border-radius:6px;transition:width 0.25s ease;"></div>
+            </div>
+        </div>`;
+    document.body.appendChild(el);
+    return el;
+};
+
+const updateAHProgress = (fraction, workoutCount) => {
+    const pct = Math.min(Math.round(fraction * 100), 99); // hold at 99 until fully done
+    const bar = document.getElementById('ahProgBar');
+    const status = document.getElementById('ahProgStatus');
+    if (bar) bar.style.width = pct + '%';
+    if (status) {
+        const found = workoutCount > 0 ? ` · ${workoutCount} workout${workoutCount !== 1 ? 's' : ''} found` : '';
+        status.textContent = `Reading ZIP… ${pct}%${found}`;
+    }
+};
+
+const hideAHProgress = () => document.getElementById('ahProgressOverlay')?.remove();
 
 const AH_TYPE_MAP = {
     'HKWorkoutActivityTypeRunning':                     'RUN',
@@ -3269,12 +3309,15 @@ window.handleAppleHealthImport = async (event) => {
     let recordStrings = [];
 
     if (looksLikeZip) {
+        showAHProgress();
         let result;
         try {
-            result = await streamHealthDataFromZip(file);
+            result = await streamHealthDataFromZip(file, updateAHProgress);
         } catch (err) {
+            hideAHProgress();
             return alert('Could not read the ZIP file: ' + err.message + '\n\nIf the error persists, try sharing just the export.xml file from inside the ZIP.');
         }
+        hideAHProgress();
         const { workouts: workoutStrings, records } = result;
         recordStrings = records;
         if (!workoutStrings.length) return alert('No workouts found in the export ZIP.');
