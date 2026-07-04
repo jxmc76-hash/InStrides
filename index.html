@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>TrainingLog</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="manifest" href="manifest.json">
@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=156">
+    <link rel="stylesheet" href="style.css?v=157">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -605,6 +605,7 @@
     <!-- Apple Health Import Preview -->
     <div id="ahPreviewModal" class="ah-modal-overlay" style="display:none" onclick="if(event.target===this)window.closeAHPreview()">
         <div class="ah-modal-sheet">
+            <div class="sheet-handle"></div>
             <div class="ah-modal-header">
                 <div>
                     <div class="ah-modal-title">Import from Apple Health</div>
@@ -638,7 +639,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=184"></script>
+    <script type="module" src="script.js?v=185"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
