@@ -3184,16 +3184,18 @@ window.handleAppleHealthImport = async (event) => {
     let xmlText;
     const looksLikeZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
     if (looksLikeZip) {
-        // Try ZIP extraction first; iOS sometimes delivers the file as raw XML with a .zip name, so fall back to plain text
+        // Read as ArrayBuffer first — more reliable than passing the File object to JSZip
         let zipOk = false;
         try {
-            const zip = await JSZip.loadAsync(file);
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
             const xmlEntry = zip.file(/export\.xml$/i)[0];
             if (xmlEntry) { xmlText = await xmlEntry.async('string'); zipOk = true; }
         } catch (_) {}
         if (!zipOk) {
-            try { xmlText = await file.text(); }
-            catch (err) { return alert('Could not read file: ' + err.message); }
+            // Apple Health exports can be very large; if JSZip can't handle it,
+            // ask the user to open the ZIP and share just export.xml instead.
+            return alert('Could not extract export.xml from the ZIP.\n\nPlease open the ZIP file on your iPhone, find export.xml inside the "apple_health_export" folder, and share that file directly instead.');
         }
     } else {
         try { xmlText = await file.text(); }
