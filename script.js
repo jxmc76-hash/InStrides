@@ -3155,6 +3155,64 @@ window.handleImportFile = async (event) => {
 };
 
 // --- IMPORT APPLE HEALTH ---
+
+// Stream-parse Workout elements from a ZIP using fflate — never loads the full XML into memory.
+const streamWorkoutsFromZip = (file) => new Promise((resolve, reject) => {
+    if (typeof fflate === 'undefined') { reject(new Error('fflate not loaded')); return; }
+    const workoutStrings = [];
+    let found = false;
+    let buf = '';
+    const dec = new TextDecoder('utf-8');
+
+    const flush = (isFinal) => {
+        let from = 0;
+        for (;;) {
+            const s = buf.indexOf('<Workout ', from);
+            if (s === -1) break;
+            const sc = buf.indexOf('/>', s);
+            const et = buf.indexOf('</Workout>', s);
+            let end;
+            if (sc !== -1 && (et === -1 || sc < et)) end = sc + 2;
+            else if (et !== -1) end = et + '</Workout>'.length;
+            else { buf = buf.slice(s); return; }  // tag not complete yet
+            workoutStrings.push(buf.slice(s, end));
+            from = end;
+        }
+        // keep from last possible open tag to handle chunk boundaries
+        const last = buf.lastIndexOf('<Workout ', from);
+        buf = last >= from ? buf.slice(last) : '';
+    };
+
+    const unzip = new fflate.Unzip();
+    unzip.register(fflate.UnzipInflate);
+    unzip.onfile = (f) => {
+        if (found || !/export\.xml$/i.test(f.name)) return;
+        found = true;
+        f.ondata = (err, data, isFinal) => {
+            if (err) { reject(err); return; }
+            buf += dec.decode(data, { stream: !isFinal });
+            flush(isFinal);
+            if (isFinal) resolve(workoutStrings);
+        };
+        f.start();
+    };
+
+    const reader = file.stream().getReader();
+    (async () => {
+        try {
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    unzip.push(new Uint8Array(0), true);
+                    if (!found) reject(new Error('export.xml not found in ZIP'));
+                    break;
+                }
+                unzip.push(value);
+            }
+        } catch (e) { reject(e); }
+    })();
+});
+
 const AH_TYPE_MAP = {
     'HKWorkoutActivityTypeRunning':                     'RUN',
     'HKWorkoutActivityTypeWalking':                     'WALK',
@@ -3181,35 +3239,37 @@ window.handleAppleHealthImport = async (event) => {
     if (!file) return;
     window.closeSettings();
 
-    let xmlText;
     const looksLikeZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
+
+    // attr() extracts an XML attribute value from a raw element string
+    const attr = (str, name) => { const m = str.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : ''; };
+
+    let rawWorkouts; // array of either DOM Element or raw XML string
+    let useAttr;     // function(w, name) => string value
+
     if (looksLikeZip) {
-        // Read as ArrayBuffer first — more reliable than passing the File object to JSZip
-        let zipOk = false;
+        let workoutStrings;
         try {
-            const buf = await file.arrayBuffer();
-            const zip = await JSZip.loadAsync(buf);
-            const xmlEntry = zip.file(/export\.xml$/i)[0];
-            if (xmlEntry) { xmlText = await xmlEntry.async('string'); zipOk = true; }
-        } catch (_) {}
-        if (!zipOk) {
-            // Apple Health exports can be very large; if JSZip can't handle it,
-            // ask the user to open the ZIP and share just export.xml instead.
-            return alert('The ZIP file is too large to extract in the browser (Apple Health exports can be several GB).\n\nTo import:\n1. Open the Files app on your iPhone\n2. Tap the export.zip to unzip it\n3. Open the "apple_health_export" folder\n4. Long-press export.xml → Share → open in Safari\n5. Then use "Import Apple Health" and select that file');
+            workoutStrings = await streamWorkoutsFromZip(file);
+        } catch (err) {
+            return alert('Could not read the ZIP file: ' + err.message + '\n\nIf the error persists, try sharing just the export.xml file from inside the ZIP.');
         }
+        if (!workoutStrings.length) return alert('No workouts found in the export ZIP.');
+        rawWorkouts = workoutStrings;
+        useAttr = attr;
     } else {
+        let xmlText;
         try { xmlText = await file.text(); }
         catch (err) { return alert('Could not read file: ' + err.message); }
+        let xmlDoc;
+        try {
+            xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
+            if (xmlDoc.querySelector('parsererror')) throw new Error('Invalid XML');
+        } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml or the Apple Health export ZIP.'); }
+        rawWorkouts = Array.from(xmlDoc.querySelectorAll('Workout'));
+        if (!rawWorkouts.length) return alert('No workouts found in the export.');
+        useAttr = (w, name) => w.getAttribute(name) || '';
     }
-
-    let xmlDoc;
-    try {
-        xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
-        if (xmlDoc.querySelector('parsererror')) throw new Error('Invalid XML');
-    } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml or the Apple Health export ZIP.'); }
-
-    const workouts = Array.from(xmlDoc.querySelectorAll('Workout'));
-    if (workouts.length === 0) return alert('No workouts found in the export.');
 
     const existingKeys = new Set(logData.entries.filter(e => !e.isPlanned).map(e => `${e.date}__${e.type}`));
     const newEntries = [];
@@ -3218,13 +3278,13 @@ window.handleAppleHealthImport = async (event) => {
     const seenKeys = new Set(existingKeys);
     const ts = Date.now();
 
-    workouts.forEach((w, i) => {
-        const ahType = w.getAttribute('workoutActivityType') || '';
+    rawWorkouts.forEach((w, i) => {
+        const ahType = useAttr(w, 'workoutActivityType');
         const mapped = AH_TYPE_MAP[ahType];
         if (!mapped) { unmappedTypes.add(ahType.replace('HKWorkoutActivityType', '')); return; }
         if (!logData.types.includes(mapped)) return;
 
-        const startDate = (w.getAttribute('startDate') || '').split(' ')[0];
+        const startDate = useAttr(w, 'startDate').split(' ')[0];
         if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return;
 
         const key = `${startDate}__${mapped}`;
@@ -3232,9 +3292,9 @@ window.handleAppleHealthImport = async (event) => {
         if (seenKeys.has(key)) return;
         seenKeys.add(key);
 
-        const duration = Math.round(parseFloat(w.getAttribute('duration') || '0') * 10) / 10;
-        const rawDist  = parseFloat(w.getAttribute('totalDistance') || '0');
-        const distUnit = (w.getAttribute('totalDistanceUnit') || 'km').toLowerCase();
+        const duration = Math.round(parseFloat(useAttr(w, 'duration') || '0') * 10) / 10;
+        const rawDist  = parseFloat(useAttr(w, 'totalDistance') || '0');
+        const distUnit = (useAttr(w, 'totalDistanceUnit') || 'km').toLowerCase();
 
         const entry = { _id: i, selected: true, id: ts + i, date: startDate, type: mapped, isPlanned: false };
         if (duration > 0) entry.duration = Math.round(duration);
