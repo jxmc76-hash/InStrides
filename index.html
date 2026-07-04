@@ -66,6 +66,8 @@
                             <button onclick="window.exportData()">⬇ Export Data</button>
                             <button onclick="document.getElementById('importFileInput').click()">⬆ Import Data</button>
                             <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="window.handleImportFile(event)">
+                            <button onclick="document.getElementById('ahImportInput').click()"> Import Apple Health</button>
+                            <input type="file" id="ahImportInput" accept=".xml,text/xml,application/xml" style="display:none" onchange="window.handleAppleHealthImport(event)">
                             <button onclick="window.showBackupHistory()">↩ Backup History</button>
                             <button onclick="window.switchTab('help'); window.closeSettings()">Help</button>
                             <div class="settings-divider"></div>
@@ -597,7 +599,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=177"></script>
+    <script type="module" src="script.js?v=178"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
