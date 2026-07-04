@@ -3217,34 +3217,19 @@ const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reje
         f.start();
     };
 
-    const reader = file.stream().getReader();
+    // file.slice().arrayBuffer() gives a genuine async I/O boundary per chunk
+    // so Safari actually repaints between reads (file.stream() does not).
     const total = file.size;
-    let bytesRead = 0;
-    let lastYield = 0;
-    // Safari can deliver the whole file as a single chunk, so we sub-chunk
-    // to keep each synchronous fflate call short and allow browser repaints.
-    const SUBCHUNK = 131072; // 128 KB
+    const CHUNK = 1048576; // 1 MB per read
     (async () => {
         try {
-            for (;;) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    unzip.push(new Uint8Array(0), true);
-                    if (!found) reject(new Error('export.xml not found in ZIP'));
-                    break;
-                }
-                for (let i = 0; i < value.length; i += SUBCHUNK) {
-                    const slice = value.subarray(i, Math.min(i + SUBCHUNK, value.length));
-                    unzip.push(slice);
-                    bytesRead += slice.length;
-                    const now = performance.now();
-                    if (onProgress && now - lastYield > 50) {
-                        onProgress(bytesRead / total, workoutStrings.length);
-                        await new Promise(r => setTimeout(r, 0));
-                        lastYield = performance.now();
-                    }
-                }
+            for (let offset = 0; offset < total; offset += CHUNK) {
+                const end = Math.min(offset + CHUNK, total);
+                const data = new Uint8Array(await file.slice(offset, end).arrayBuffer());
+                unzip.push(data, end >= total);
+                if (onProgress) onProgress(end / total, workoutStrings.length);
             }
+            if (!found) reject(new Error('export.xml not found in ZIP'));
         } catch (e) { reject(e); }
     })();
 });
