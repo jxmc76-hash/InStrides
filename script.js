@@ -3085,6 +3085,100 @@ window.handleImportFile = async (event) => {
     }
 };
 
+// --- IMPORT APPLE HEALTH ---
+const AH_TYPE_MAP = {
+    'HKWorkoutActivityTypeRunning':                     'RUN',
+    'HKWorkoutActivityTypeWalking':                     'WALK',
+    'HKWorkoutActivityTypeHiking':                      'HIKE',
+    'HKWorkoutActivityTypeCycling':                     'CYCLE',
+    'HKWorkoutActivityTypeSwimming':                    'SWIM',
+    'HKWorkoutActivityTypeYoga':                        'YOGA',
+    'HKWorkoutActivityTypePilates':                     'YOGA',
+    'HKWorkoutActivityTypeTraditionalStrengthTraining': 'GYM',
+    'HKWorkoutActivityTypeFunctionalStrengthTraining':  'GYM',
+    'HKWorkoutActivityTypeCrossTraining':               'GYM',
+    'HKWorkoutActivityTypeHighIntensityIntervalTraining':'GYM',
+    'HKWorkoutActivityTypeElliptical':                  'GYM',
+    'HKWorkoutActivityTypeStairClimbing':               'GYM',
+    'HKWorkoutActivityTypeMixedCardio':                 'GYM',
+    'HKWorkoutActivityTypeBoxing':                      'GYM',
+    'HKWorkoutActivityTypeRowing':                      'GYM',
+    'HKWorkoutActivityTypeDance':                       'GYM',
+};
+
+window.handleAppleHealthImport = async (event) => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    window.closeSettings();
+
+    let xmlText;
+    try { xmlText = await file.text(); }
+    catch (err) { return alert('Could not read file: ' + err.message); }
+
+    let xmlDoc;
+    try {
+        xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
+        if (xmlDoc.querySelector('parsererror')) throw new Error('Invalid XML');
+    } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml.'); }
+
+    const workouts = Array.from(xmlDoc.querySelectorAll('Workout'));
+    if (workouts.length === 0) return alert('No workouts found. Make sure you selected export.xml from an unzipped Apple Health export.');
+
+    const existingKeys = new Set(logData.entries.filter(e => !e.isPlanned).map(e => `${e.date}__${e.type}`));
+    const newEntries = [];
+    let skippedExisting = 0;
+    const unmappedTypes = new Set();
+    const ts = Date.now();
+
+    workouts.forEach((w, i) => {
+        const ahType = w.getAttribute('workoutActivityType') || '';
+        const mapped = AH_TYPE_MAP[ahType];
+        if (!mapped) { unmappedTypes.add(ahType.replace('HKWorkoutActivityType', '')); return; }
+        if (!logData.types.includes(mapped)) { unmappedTypes.add(mapped + ' (not in your types)'); return; }
+
+        const startDate = (w.getAttribute('startDate') || '').split(' ')[0];
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return;
+
+        const key = `${startDate}__${mapped}`;
+        if (existingKeys.has(key)) { skippedExisting++; return; }
+        existingKeys.add(key);
+
+        const duration = Math.round(parseFloat(w.getAttribute('duration') || '0') * 10) / 10;
+        const rawDist  = parseFloat(w.getAttribute('totalDistance') || '0');
+        const distUnit = (w.getAttribute('totalDistanceUnit') || 'km').toLowerCase();
+
+        const entry = { id: ts + i, date: startDate, type: mapped, isPlanned: false };
+        if (duration > 0) entry.duration = Math.round(duration);
+        if (rawDist > 0) { entry.distance = Math.round(rawDist * 100) / 100; entry.distanceUnit = distUnit; }
+        newEntries.push(entry);
+    });
+
+    if (newEntries.length === 0) {
+        const detail = skippedExisting > 0 ? `${skippedExisting} already in your log.` : unmappedTypes.size > 0 ? `Types not recognised: ${[...unmappedTypes].join(', ')}` : 'No matching workout types found.';
+        return alert('Nothing to import. ' + detail);
+    }
+
+    const byType = {};
+    newEntries.forEach(e => { byType[e.type] = (byType[e.type] || 0) + 1; });
+    const summary = Object.entries(byType).map(([t, n]) => `  ${n}× ${t}`).join('\n');
+    const extras = [
+        skippedExisting > 0 ? `${skippedExisting} skipped (already in your log)` : '',
+        unmappedTypes.size > 0 ? `${unmappedTypes.size} activity type(s) not imported: ${[...unmappedTypes].slice(0, 3).join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+
+    if (!confirm(`Add ${newEntries.length} workouts to your log?\n\n${summary}${extras ? '\n\n' + extras : ''}\n\nYour existing entries will not be affected.`)) return;
+
+    saveSnapshot(logData);
+    logData.entries = [...logData.entries, ...newEntries];
+    try {
+        await setDoc(doc(db, 'logs', LOG_ID), logData);
+        alert(`${newEntries.length} workouts imported successfully.`);
+    } catch (err) {
+        alert('Import failed: ' + err.message);
+    }
+};
+
 // --- TRAINING PLAN ---
 let editingPlanId = null;
 let editingPlanSessionId = null;
