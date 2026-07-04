@@ -246,6 +246,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .reorder-btn { width: 26px; height: 22px; border: 1px solid var(--border); border-radius: 6px; background: white; font-size: 0.6rem; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0; }
 .reorder-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
 .reorder-btn:disabled { opacity: 0.3; cursor: default; }
+.metric-carry-btn { font-size: 0.7rem !important; padding: 4px 8px !important; background: var(--border) !important; color: var(--text-muted) !important; border-radius: 6px !important; }
+.metric-carry-on { background: #dcfce7 !important; color: #16a34a !important; }
 
 .dist-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-top: 3px; }
 .dist-label.carried-value { font-style: italic; opacity: 0.55; }

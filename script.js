@@ -458,17 +458,34 @@ const renderStreak = () => {
 // --- DYNAMIC CUSTOM METRIC IMPLEMENTATIONS ---
 window.showMetricModal = () => {
     const container = document.getElementById('metricList');
-    container.innerHTML = logData.customMetrics.map((m, idx) => `
+    container.innerHTML = logData.customMetrics.map((m, idx) => {
+        const canCarry = m.type === 'slider' || m.type === 'number';
+        // number metrics always carry forward; others need explicit opt-in
+        const carrying = m.type === 'number' || m.carryForward === true;
+        const carryBtn = canCarry
+            ? `<button onclick="window.toggleCarryForward(${idx})" class="nav-btn metric-carry-btn ${carrying ? 'metric-carry-on' : ''}" title="Carry forward last value to days without a new entry">↪</button>`
+            : '';
+        return `
         <div class="type-item" style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
             <div class="reorder-btns">
                 <button onclick="window.moveCustomMetric(${idx},-1)" class="reorder-btn" ${idx === 0 ? 'disabled' : ''}>▲</button>
                 <button onclick="window.moveCustomMetric(${idx},1)" class="reorder-btn" ${idx === logData.customMetrics.length - 1 ? 'disabled' : ''}>▼</button>
             </div>
             <span style="flex:1; text-align:left; font-weight:700; font-size:0.85rem; align-self:center;">${m.name} (${m.type})</span>
+            ${carryBtn}
             <button onclick="window.deleteCustomMetric(${idx})" style="background:#fee2e2; color:#ef4444; font-size:0.65rem; padding:6px 12px;" class="nav-btn">✕ Delete</button>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
     document.getElementById('metricModal').style.display = 'flex';
+};
+
+window.toggleCarryForward = async (idx) => {
+    const m = logData.customMetrics[idx];
+    if (m.type === 'number') return; // always on for number type, can't toggle
+    m.carryForward = !m.carryForward;
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    window.showMetricModal();
+    renderMatrix();
 };
 
 window.moveCustomMetric = async (idx, dir) => {
@@ -2458,8 +2475,8 @@ const renderMatrix = () => {
         }
     });
 
-    // Carry forward "number" metrics (e.g. WEIGHT) to later days that have completed activities, until a new value is logged
-    const rollForwardMetrics = logData.customMetrics.filter(m => m.type === 'number').map(m => m.name);
+    // Carry forward metrics flagged for roll-forward (number type always; slider with carryForward:true opt-in)
+    const rollForwardMetrics = logData.customMetrics.filter(m => m.type === 'number' || m.carryForward === true).map(m => m.name);
     if (rollForwardMetrics.length) {
         const ascDates = Object.keys(entriesByDate).sort((a, b) => new Date(a) - new Date(b));
         const lastVal = {};
@@ -2611,7 +2628,7 @@ const renderMatrix = () => {
         logData.customMetrics.forEach(m => {
             const mVal = activeData.customVals[m.name];
             let cellContent = "";
-            const isCarried = m.type === 'number' && activeData.customValsCarried?.[m.name];
+            const isCarried = (m.type === 'number' || m.carryForward === true) && activeData.customValsCarried?.[m.name];
             if (m.type === 'timedistance' && mVal && (mVal.time || mVal.distance)) {
                 cellContent = `<div class="dist-label">${mVal.time ? mVal.time + 'min' : ''}${mVal.time && mVal.distance ? ' / ' : ''}${mVal.distance ? mVal.distance + 'km' : ''}</div>`;
             } else if (m.type === 'number' && mVal !== undefined && mVal !== null && mVal !== '') {
@@ -2621,7 +2638,7 @@ const renderMatrix = () => {
                     const scale = m.scale || (m.type === 'slider100' ? 100 : 10);
                     const pct = mVal / scale;
                     const pillCls = pct >= 0.7 ? 'pill-green' : pct >= 0.4 ? 'pill-amber' : 'pill-red';
-                    cellContent = `<div class="happy-pill ${pillCls}">${mVal}</div>`;
+                    cellContent = `<div class="happy-pill ${pillCls}"${isCarried ? ' style="opacity:0.4" title="Carried forward"' : ''}>${mVal}</div>`;
                 } else {
                     cellContent = mVal ? '✅' : '❌';
                 }
