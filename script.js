@@ -3209,32 +3209,34 @@ window.handleAppleHealthImport = async (event) => {
     } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml or the Apple Health export ZIP.'); }
 
     const workouts = Array.from(xmlDoc.querySelectorAll('Workout'));
-    if (workouts.length === 0) return alert('No workouts found in the export. Make sure you selected the correct Apple Health export file.');
+    if (workouts.length === 0) return alert('No workouts found in the export.');
 
     const existingKeys = new Set(logData.entries.filter(e => !e.isPlanned).map(e => `${e.date}__${e.type}`));
     const newEntries = [];
     let skippedExisting = 0;
     const unmappedTypes = new Set();
+    const seenKeys = new Set(existingKeys);
     const ts = Date.now();
 
     workouts.forEach((w, i) => {
         const ahType = w.getAttribute('workoutActivityType') || '';
         const mapped = AH_TYPE_MAP[ahType];
         if (!mapped) { unmappedTypes.add(ahType.replace('HKWorkoutActivityType', '')); return; }
-        if (!logData.types.includes(mapped)) { unmappedTypes.add(mapped + ' (not in your types)'); return; }
+        if (!logData.types.includes(mapped)) return;
 
         const startDate = (w.getAttribute('startDate') || '').split(' ')[0];
         if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return;
 
         const key = `${startDate}__${mapped}`;
         if (existingKeys.has(key)) { skippedExisting++; return; }
-        existingKeys.add(key);
+        if (seenKeys.has(key)) return;
+        seenKeys.add(key);
 
         const duration = Math.round(parseFloat(w.getAttribute('duration') || '0') * 10) / 10;
         const rawDist  = parseFloat(w.getAttribute('totalDistance') || '0');
         const distUnit = (w.getAttribute('totalDistanceUnit') || 'km').toLowerCase();
 
-        const entry = { id: ts + i, date: startDate, type: mapped, isPlanned: false };
+        const entry = { _id: i, selected: true, id: ts + i, date: startDate, type: mapped, isPlanned: false };
         if (duration > 0) entry.duration = Math.round(duration);
         if (rawDist > 0) { entry.distance = Math.round(rawDist * 100) / 100; entry.distanceUnit = distUnit; }
         newEntries.push(entry);
@@ -3245,21 +3247,137 @@ window.handleAppleHealthImport = async (event) => {
         return alert('Nothing to import. ' + detail);
     }
 
-    const byType = {};
-    newEntries.forEach(e => { byType[e.type] = (byType[e.type] || 0) + 1; });
-    const summary = Object.entries(byType).map(([t, n]) => `  ${n}× ${t}`).join('\n');
-    const extras = [
-        skippedExisting > 0 ? `${skippedExisting} skipped (already in your log)` : '',
-        unmappedTypes.size > 0 ? `${unmappedTypes.size} activity type(s) not imported: ${[...unmappedTypes].slice(0, 3).join(', ')}` : '',
-    ].filter(Boolean).join('\n');
+    newEntries.sort((a, b) => b.date.localeCompare(a.date));
+    showAHPreview(newEntries, skippedExisting, unmappedTypes);
+};
 
-    if (!confirm(`Add ${newEntries.length} workouts to your log?\n\n${summary}${extras ? '\n\n' + extras : ''}\n\nYour existing entries will not be affected.`)) return;
+// --- AH IMPORT PREVIEW ---
+let ahPendingEntries = [];
+let ahVisibleTypes = new Set();
+
+const showAHPreview = (entries, skippedExisting, unmappedTypes) => {
+    ahPendingEntries = entries;
+    const allTypes = [...new Set(entries.map(e => e.type))].sort();
+    ahVisibleTypes = new Set(allTypes);
+
+    const dates = entries.map(e => e.date).sort();
+    document.getElementById('ahFilterFrom').value = dates[0] || '';
+    document.getElementById('ahFilterTo').value = dates[dates.length - 1] || '';
+
+    document.getElementById('ahTypeChips').innerHTML = allTypes.map(t =>
+        `<button class="ah-type-chip active" data-type="${t}" onclick="window.toggleAHType('${t}')">${t}</button>`
+    ).join('');
+
+    const summaryParts = [`${entries.length} new workout${entries.length !== 1 ? 's' : ''} found`];
+    if (skippedExisting > 0) summaryParts.push(`${skippedExisting} already in your log`);
+    if (unmappedTypes.size > 0) summaryParts.push(`${unmappedTypes.size} type${unmappedTypes.size !== 1 ? 's' : ''} not matched`);
+    document.getElementById('ahModalSummary').textContent = summaryParts.join(' · ');
+
+    document.getElementById('ahPreviewModal').style.display = 'flex';
+    window.renderAHList();
+};
+
+window.closeAHPreview = () => {
+    document.getElementById('ahPreviewModal').style.display = 'none';
+    ahPendingEntries = [];
+    ahVisibleTypes.clear();
+};
+
+window.toggleAHType = (type) => {
+    if (ahVisibleTypes.has(type)) ahVisibleTypes.delete(type);
+    else ahVisibleTypes.add(type);
+    document.querySelectorAll('.ah-type-chip').forEach(chip =>
+        chip.classList.toggle('active', ahVisibleTypes.has(chip.dataset.type))
+    );
+    window.renderAHList();
+};
+
+window.renderAHList = () => {
+    const from = document.getElementById('ahFilterFrom').value;
+    const to = document.getElementById('ahFilterTo').value;
+
+    const visible = ahPendingEntries.filter(e =>
+        ahVisibleTypes.has(e.type) &&
+        (!from || e.date >= from) &&
+        (!to || e.date <= to)
+    );
+
+    const selectedCount = ahPendingEntries.filter(e => e.selected).length;
+    document.getElementById('ahSelCount').textContent = `${selectedCount} selected`;
+    const btn = document.getElementById('ahImportBtn');
+    btn.textContent = selectedCount > 0 ? `Import ${selectedCount}` : 'Import';
+    btn.disabled = selectedCount === 0;
+
+    const listEl = document.getElementById('ahModalList');
+    if (visible.length === 0) {
+        listEl.innerHTML = '<div class="ah-empty">No workouts match the current filters.</div>';
+        return;
+    }
+
+    let lastMonth = '';
+    listEl.innerHTML = visible.map(e => {
+        const dateObj = new Date(e.date + 'T12:00:00');
+        const month = dateObj.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        const dateStr = dateObj.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const monthHeader = month !== lastMonth ? (lastMonth = month, `<div class="ah-month-header">${month}</div>`) : '';
+        const dur = e.duration ? `${e.duration} min` : '';
+        const dist = e.distance ? `${e.distance} ${e.distanceUnit || 'km'}` : '';
+        const meta = [dur, dist].filter(Boolean).join(' · ');
+        return `${monthHeader}<label class="ah-entry-row${e.selected ? ' ah-entry-selected' : ''}">
+            <input type="checkbox" class="ah-entry-check"${e.selected ? ' checked' : ''} onchange="window.toggleAHEntry(${e._id},this.checked,this)">
+            <div class="ah-entry-info">
+                <div class="ah-entry-top">
+                    <span class="ah-entry-type">${e.type}</span>
+                    <span class="ah-entry-date">${dateStr}</span>
+                </div>
+                ${meta ? `<div class="ah-entry-meta">${meta}</div>` : ''}
+            </div>
+        </label>`;
+    }).join('');
+};
+
+window.toggleAHEntry = (id, checked, el) => {
+    const entry = ahPendingEntries.find(e => e._id === id);
+    if (entry) entry.selected = checked;
+    el.closest('.ah-entry-row')?.classList.toggle('ah-entry-selected', checked);
+    const selectedCount = ahPendingEntries.filter(e => e.selected).length;
+    document.getElementById('ahSelCount').textContent = `${selectedCount} selected`;
+    const btn = document.getElementById('ahImportBtn');
+    btn.textContent = selectedCount > 0 ? `Import ${selectedCount}` : 'Import';
+    btn.disabled = selectedCount === 0;
+};
+
+window.toggleAllAH = (select) => {
+    const from = document.getElementById('ahFilterFrom').value;
+    const to = document.getElementById('ahFilterTo').value;
+    ahPendingEntries.forEach(e => {
+        if (ahVisibleTypes.has(e.type) && (!from || e.date >= from) && (!to || e.date <= to))
+            e.selected = select;
+    });
+    window.renderAHList();
+};
+
+window.importSelectedAH = async () => {
+    const toImport = ahPendingEntries.filter(e => e.selected);
+    if (toImport.length === 0) return;
+    if (!confirm(`Import ${toImport.length} workout${toImport.length !== 1 ? 's' : ''}? Your existing entries will not be affected.`)) return;
 
     saveSnapshot(logData);
-    logData.entries = [...logData.entries, ...newEntries];
+    const existingKeys = new Set(logData.entries.filter(e => !e.isPlanned).map(e => `${e.date}__${e.type}`));
+    let added = 0;
+    toImport.forEach(e => {
+        const key = `${e.date}__${e.type}`;
+        if (existingKeys.has(key)) return;
+        existingKeys.add(key);
+        const { _id, selected, ...clean } = e;
+        logData.entries.push(clean);
+        added++;
+    });
+
     try {
         await setDoc(doc(db, 'logs', LOG_ID), logData);
-        alert(`${newEntries.length} workouts imported successfully.`);
+        window.closeAHPreview();
+        alert(`${added} workout${added !== 1 ? 's' : ''} imported.`);
     } catch (err) {
         alert('Import failed: ' + err.message);
     }

@@ -602,7 +602,43 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=183"></script>
+    <!-- Apple Health Import Preview -->
+    <div id="ahPreviewModal" class="ah-modal-overlay" style="display:none" onclick="if(event.target===this)window.closeAHPreview()">
+        <div class="ah-modal-sheet">
+            <div class="ah-modal-header">
+                <div>
+                    <div class="ah-modal-title">Import from Apple Health</div>
+                    <div id="ahModalSummary" class="ah-modal-summary"></div>
+                </div>
+                <button class="ah-modal-close" onclick="window.closeAHPreview()">✕</button>
+            </div>
+            <div class="ah-modal-filters">
+                <div class="ah-date-row">
+                    <div class="ah-date-group">
+                        <label>From</label>
+                        <input type="date" id="ahFilterFrom" class="ah-date-input" onchange="window.renderAHList()">
+                    </div>
+                    <div class="ah-date-group">
+                        <label>To</label>
+                        <input type="date" id="ahFilterTo" class="ah-date-input" onchange="window.renderAHList()">
+                    </div>
+                </div>
+                <div id="ahTypeChips" class="ah-type-chips"></div>
+            </div>
+            <div class="ah-modal-controls">
+                <button class="ah-ctrl-btn" onclick="window.toggleAllAH(true)">Select all</button>
+                <button class="ah-ctrl-btn" onclick="window.toggleAllAH(false)">Deselect all</button>
+                <span id="ahSelCount" class="ah-sel-count"></span>
+            </div>
+            <div class="ah-modal-list" id="ahModalList"></div>
+            <div class="ah-modal-footer">
+                <button class="ah-cancel-btn" onclick="window.closeAHPreview()">Cancel</button>
+                <button class="ah-import-btn" id="ahImportBtn" onclick="window.importSelectedAH()">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js?v=184"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
