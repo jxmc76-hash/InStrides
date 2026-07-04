@@ -3182,14 +3182,19 @@ window.handleAppleHealthImport = async (event) => {
     window.closeSettings();
 
     let xmlText;
-    const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
-    if (isZip) {
+    const looksLikeZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
+    if (looksLikeZip) {
+        // Try ZIP extraction first; iOS sometimes delivers the file as raw XML with a .zip name, so fall back to plain text
+        let zipOk = false;
         try {
             const zip = await JSZip.loadAsync(file);
             const xmlEntry = zip.file(/export\.xml$/i)[0];
-            if (!xmlEntry) return alert('Could not find export.xml inside the ZIP. Make sure you selected the Apple Health export ZIP file.');
-            xmlText = await xmlEntry.async('string');
-        } catch (err) { return alert('Could not read ZIP file: ' + err.message); }
+            if (xmlEntry) { xmlText = await xmlEntry.async('string'); zipOk = true; }
+        } catch (_) {}
+        if (!zipOk) {
+            try { xmlText = await file.text(); }
+            catch (err) { return alert('Could not read file: ' + err.message); }
+        }
     } else {
         try { xmlText = await file.text(); }
         catch (err) { return alert('Could not read file: ' + err.message); }
