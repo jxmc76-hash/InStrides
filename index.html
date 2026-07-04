@@ -66,6 +66,7 @@
                             <button onclick="window.exportData()">⬇ Export Data</button>
                             <button onclick="document.getElementById('importFileInput').click()">⬆ Import Data</button>
                             <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="window.handleImportFile(event)">
+                            <button onclick="window.restoreLocalBackup(); window.closeSettings()">↩ Restore Local Backup</button>
                             <button onclick="window.switchTab('help'); window.closeSettings()">Help</button>
                             <div class="settings-divider"></div>
                             <button onclick="window.handleSignOut()" style="color:#ef4444">Sign Out</button>
@@ -582,7 +583,7 @@
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=175"></script>
+    <script type="module" src="script.js?v=176"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
