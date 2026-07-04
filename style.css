@@ -666,3 +666,43 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 [data-theme="dark"] .plan-tick-missed { border-color: #3c3f48; color: #444; }
 [data-theme="dark"] .plan-add-session { border-color: #2c2f38; color: var(--text-muted); }
 [data-theme="dark"] .plan-add-session:hover { border-color: var(--primary); color: var(--primary); }
+
+/* === APPLE HEALTH IMPORT PREVIEW === */
+.ah-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 900; display: flex; align-items: flex-end; justify-content: center; }
+.ah-modal-sheet { background: var(--bg); border-radius: 20px 20px 0 0; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+@media (min-width: 769px) {
+    .ah-modal-overlay { align-items: center; }
+    .ah-modal-sheet { border-radius: 16px; max-width: 560px; max-height: 88vh; }
+}
+.ah-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ah-modal-title { font-size: 1rem; font-weight: 800; color: var(--text-main); }
+.ah-modal-summary { font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+.ah-modal-close { background: var(--border); border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 0.85rem; cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ah-modal-filters { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ah-date-row { display: flex; gap: 10px; }
+.ah-date-group { flex: 1; }
+.ah-date-group label { display: block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
+.ah-date-input { width: 100%; padding: 6px 8px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.8rem; background: var(--bg); color: var(--text-main); }
+.ah-type-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ah-type-chip { padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: none; font-family: inherit; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.ah-type-chip.active { border-color: var(--primary); color: var(--primary); background: rgba(255,85,0,0.06); }
+.ah-modal-controls { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ah-ctrl-btn { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 5px 10px; font-family: inherit; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.ah-ctrl-btn:hover { border-color: var(--primary); color: var(--primary); }
+.ah-sel-count { margin-left: auto; font-size: 0.8rem; font-weight: 700; color: var(--text-main); }
+.ah-modal-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.ah-month-header { padding: 6px 16px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+.ah-entry-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.1s; user-select: none; }
+.ah-entry-row:hover { background: rgba(255,85,0,0.03); }
+.ah-entry-selected { background: rgba(255,85,0,0.05) !important; }
+.ah-entry-check { width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; cursor: pointer; }
+.ah-entry-info { flex: 1; min-width: 0; }
+.ah-entry-top { display: flex; align-items: center; gap: 8px; }
+.ah-entry-type { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: var(--primary); color: white; padding: 2px 7px; border-radius: 5px; flex-shrink: 0; }
+.ah-entry-date { font-size: 0.82rem; font-weight: 600; color: var(--text-main); }
+.ah-entry-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.ah-empty { text-align: center; padding: 40px 20px; font-size: 0.85rem; color: var(--text-muted); }
+.ah-modal-footer { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); flex-shrink: 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.ah-cancel-btn { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: 1.5px solid var(--border); background: none; color: var(--text-main); }
+.ah-import-btn { flex: 2; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none; background: var(--primary); color: white; }
+.ah-import-btn:disabled { opacity: 0.4; cursor: default; }
