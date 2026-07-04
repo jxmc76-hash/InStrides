@@ -281,26 +281,93 @@ window.handleAuth = async (action) => {
 
 window.handleSignOut = () => signOut(auth);
 
-const LOCAL_BACKUP_KEY = () => `tl-backup-${LOG_ID}`;
+// --- BACKUP SNAPSHOTS (7-day rolling, one per day per account) ---
+const SNAP_PREFIX = 'tl-snap-';
 
-const saveLocalBackup = (data) => {
-    if (!data.entries || data.entries.length === 0) return;
+const saveSnapshot = (data) => {
+    if (!data || !data.entries || data.entries.length === 0 || !LOG_ID) return;
+    const today = new Date().toISOString().split('T')[0];
+    const key = `${SNAP_PREFIX}${today}__${LOG_ID}`;
     try {
-        localStorage.setItem(LOCAL_BACKUP_KEY(), JSON.stringify({ ts: new Date().toISOString(), data }));
+        localStorage.setItem(key, JSON.stringify({ ts: new Date().toISOString(), count: data.entries.length, data }));
+        // Collect all snapshot keys for this account and drop any beyond the newest 7
+        const allKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(SNAP_PREFIX) && k.endsWith(`__${LOG_ID}`)) allKeys.push(k);
+        }
+        allKeys.sort().slice(0, -7).forEach(k => localStorage.removeItem(k));
     } catch (_) {}
 };
 
-window.restoreLocalBackup = () => {
-    const raw = localStorage.getItem(LOCAL_BACKUP_KEY());
-    if (!raw) return alert('No local backup found for this account.');
-    let backup;
-    try { backup = JSON.parse(raw); } catch (_) { return alert('Backup data is unreadable.'); }
-    const ts = backup.ts ? new Date(backup.ts).toLocaleString() : 'unknown time';
-    const count = backup.data?.entries?.length ?? 0;
-    if (!confirm(`Restore backup from ${ts}?\nThis backup contains ${count} entries and will REPLACE your current data.`)) return;
-    setDoc(doc(db, "logs", LOG_ID), backup.data)
-        .then(() => alert('Backup restored successfully.'))
-        .catch(err => alert('Restore failed: ' + err.message));
+const getSnapshots = () => {
+    if (!LOG_ID) return [];
+    const snaps = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(SNAP_PREFIX) && k.endsWith(`__${LOG_ID}`)) {
+            try {
+                const val = JSON.parse(localStorage.getItem(k));
+                const date = k.slice(SNAP_PREFIX.length, SNAP_PREFIX.length + 10);
+                snaps.push({ key: k, date, ts: val.ts, count: val.count, data: val.data });
+            } catch (_) {}
+        }
+    }
+    return snaps.sort((a, b) => b.date.localeCompare(a.date));
+};
+
+window.showBackupHistory = () => {
+    window.closeSettings();
+    const snaps = getSnapshots();
+    const list = document.getElementById('backupHistoryList');
+    if (snaps.length === 0) {
+        list.innerHTML = '<p class="backup-empty">No snapshots yet — they save automatically each time your data loads from the server. Check back after using the app for a while.</p>';
+    } else {
+        list.innerHTML = snaps.map(s => {
+            const d = new Date(s.ts);
+            const label = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            return `<div class="backup-row">
+                <div class="backup-info">
+                    <div class="backup-date">${label}</div>
+                    <div class="backup-meta">${time} · ${s.count} entries</div>
+                </div>
+                <div class="backup-actions">
+                    <button class="btn-small btn-secondary" onclick="window.downloadSnapshot('${s.key}')">Download</button>
+                    <button class="btn-small btn-primary-sm" onclick="window.restoreSnapshot('${s.key}')">Restore</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    document.getElementById('backupHistoryModal').style.display = 'flex';
+};
+
+window.downloadSnapshot = (key) => {
+    try {
+        const val = JSON.parse(localStorage.getItem(key));
+        const date = key.slice(SNAP_PREFIX.length, SNAP_PREFIX.length + 10);
+        const blob = new Blob([JSON.stringify(val.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `traininglog-backup-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    } catch (err) { alert('Download failed: ' + err.message); }
+};
+
+window.restoreSnapshot = (key) => {
+    try {
+        const val = JSON.parse(localStorage.getItem(key));
+        const date = key.slice(SNAP_PREFIX.length, SNAP_PREFIX.length + 10);
+        if (!confirm(`Restore backup from ${date}?\nThis contains ${val.count} entries and will replace your current data.`)) return;
+        saveSnapshot(logData);
+        setDoc(doc(db, 'logs', LOG_ID), val.data)
+            .then(() => { window.closeModal('backupHistoryModal'); alert('Restored successfully.'); })
+            .catch(err => alert('Restore failed: ' + err.message));
+    } catch (err) { alert('Could not restore: ' + err.message); }
 };
 
 const attachRealtimeListener = () => {
@@ -310,7 +377,7 @@ const attachRealtimeListener = () => {
             const data = snap.data();
             logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [], trainingPlans: data.trainingPlans || [] };
             // Keep a rolling local backup whenever real data arrives from the server
-            if (!snap.metadata.fromCache && logData.entries.length > 0) saveLocalBackup(logData);
+            if (!snap.metadata.fromCache && logData.entries.length > 0) saveSnapshot(logData);
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewOverview').classList.contains('active')) renderOverview();
@@ -2997,7 +3064,7 @@ window.handleImportFile = async (event) => {
     if (!confirm(`Import this file? It contains ${imported.entries.length} entries and will REPLACE all data currently stored for your account.\n\nA local backup of your current data will be saved first so you can recover if needed.`)) return;
 
     // Save current data as local backup before overwriting
-    saveLocalBackup(logData);
+    saveSnapshot(logData);
 
     const newData = {
         types: imported.types || [],

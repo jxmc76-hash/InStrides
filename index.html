@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=153">
+    <link rel="stylesheet" href="style.css?v=154">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -66,7 +66,7 @@
                             <button onclick="window.exportData()">⬇ Export Data</button>
                             <button onclick="document.getElementById('importFileInput').click()">⬆ Import Data</button>
                             <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="window.handleImportFile(event)">
-                            <button onclick="window.restoreLocalBackup(); window.closeSettings()">↩ Restore Local Backup</button>
+                            <button onclick="window.showBackupHistory()">↩ Backup History</button>
                             <button onclick="window.switchTab('help'); window.closeSettings()">Help</button>
                             <div class="settings-divider"></div>
                             <button onclick="window.handleSignOut()" style="color:#ef4444">Sign Out</button>
@@ -578,12 +578,26 @@
         </div>
     </div>
 
+    <!-- Backup History Modal -->
+    <div id="backupHistoryModal" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Backup History</h2>
+                <button onclick="window.closeModal('backupHistoryModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body">
+                <p class="backup-intro">Snapshots are saved automatically each day when you open the app. The last 7 days are kept, stored only in this browser.</p>
+                <div id="backupHistoryList"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Cell edit popover -->
     <div id="cellPopover" class="cell-popover" style="display:none">
         <div id="cellPopoverContent"></div>
     </div>
 
-    <script type="module" src="script.js?v=176"></script>
+    <script type="module" src="script.js?v=177"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
