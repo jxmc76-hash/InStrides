@@ -3220,7 +3220,10 @@ const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reje
     const reader = file.stream().getReader();
     const total = file.size;
     let bytesRead = 0;
-    let chunkCount = 0;
+    let lastYield = 0;
+    // Safari can deliver the whole file as a single chunk, so we sub-chunk
+    // to keep each synchronous fflate call short and allow browser repaints.
+    const SUBCHUNK = 131072; // 128 KB
     (async () => {
         try {
             for (;;) {
@@ -3230,13 +3233,16 @@ const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reje
                     if (!found) reject(new Error('export.xml not found in ZIP'));
                     break;
                 }
-                bytesRead += value.length;
-                chunkCount++;
-                unzip.push(value);
-                // yield to the browser every 25 chunks so the UI can repaint
-                if (onProgress && chunkCount % 25 === 0) {
-                    onProgress(bytesRead / total, workoutStrings.length);
-                    await new Promise(r => setTimeout(r, 0));
+                for (let i = 0; i < value.length; i += SUBCHUNK) {
+                    const slice = value.subarray(i, Math.min(i + SUBCHUNK, value.length));
+                    unzip.push(slice);
+                    bytesRead += slice.length;
+                    const now = performance.now();
+                    if (onProgress && now - lastYield > 50) {
+                        onProgress(bytesRead / total, workoutStrings.length);
+                        await new Promise(r => setTimeout(r, 0));
+                        lastYield = performance.now();
+                    }
                 }
             }
         } catch (e) { reject(e); }
