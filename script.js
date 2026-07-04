@@ -3182,17 +3182,27 @@ window.handleAppleHealthImport = async (event) => {
     window.closeSettings();
 
     let xmlText;
-    try { xmlText = await file.text(); }
-    catch (err) { return alert('Could not read file: ' + err.message); }
+    const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
+    if (isZip) {
+        try {
+            const zip = await JSZip.loadAsync(file);
+            const xmlEntry = zip.file(/export\.xml$/i)[0];
+            if (!xmlEntry) return alert('Could not find export.xml inside the ZIP. Make sure you selected the Apple Health export ZIP file.');
+            xmlText = await xmlEntry.async('string');
+        } catch (err) { return alert('Could not read ZIP file: ' + err.message); }
+    } else {
+        try { xmlText = await file.text(); }
+        catch (err) { return alert('Could not read file: ' + err.message); }
+    }
 
     let xmlDoc;
     try {
         xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
         if (xmlDoc.querySelector('parsererror')) throw new Error('Invalid XML');
-    } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml.'); }
+    } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml or the Apple Health export ZIP.'); }
 
     const workouts = Array.from(xmlDoc.querySelectorAll('Workout'));
-    if (workouts.length === 0) return alert('No workouts found. Make sure you selected export.xml from an unzipped Apple Health export.');
+    if (workouts.length === 0) return alert('No workouts found in the export. Make sure you selected the correct Apple Health export file.');
 
     const existingKeys = new Set(logData.entries.filter(e => !e.isPlanned).map(e => `${e.date}__${e.type}`));
     const newEntries = [];
