@@ -3195,7 +3195,7 @@ window.handleAppleHealthImport = async (event) => {
         if (!zipOk) {
             // Apple Health exports can be very large; if JSZip can't handle it,
             // ask the user to open the ZIP and share just export.xml instead.
-            return alert('Could not extract export.xml from the ZIP.\n\nPlease open the ZIP file on your iPhone, find export.xml inside the "apple_health_export" folder, and share that file directly instead.');
+            return alert('The ZIP file is too large to extract in the browser (Apple Health exports can be several GB).\n\nTo import:\n1. Open the Files app on your iPhone\n2. Tap the export.zip to unzip it\n3. Open the "apple_health_export" folder\n4. Long-press export.xml → Share → open in Safari\n5. Then use "Import Apple Health" and select that file');
         }
     } else {
         try { xmlText = await file.text(); }
