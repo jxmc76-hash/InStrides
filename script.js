@@ -583,7 +583,7 @@ window.setLocalBinMetric = (name, val) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'overview', 'insights', 'goals', 'help', 'plan'].forEach(t => {
+    ['log', 'overview', 'insights', 'goals', 'help'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.querySelectorAll('.bottom-nav-item').forEach(btn => {
@@ -591,8 +591,7 @@ window.switchTab = (tab) => {
     });
     if (tab === 'overview') renderOverview();
     if (tab === 'insights') renderInsights();
-    if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); }
-    if (tab === 'plan') renderPlan();
+    if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); renderPlan(); }
 };
 
 window.setStrategy = (wantsPlanned) => {
@@ -1874,53 +1873,49 @@ const renderOverview = () => {
     const cur = periods[3], prev = periods[2];
     const topTypeCur = Object.entries(cur.byType).sort((a, b) => b[1] - a[1])[0];
 
-    // Sentence based on current 7-day period
-    let sentenceSummary;
-    if (cur.sessions === 0) {
-        sentenceSummary = 'No sessions logged in the past 7 days.';
-    } else {
-        const tone = cur.sessions >= 6 ? 'Strong week' : cur.sessions >= 4 ? 'Solid week' : cur.sessions >= 2 ? 'Steady week' : 'Light week';
-        const vs = cur.sessions > prev.sessions ? ', up on last week' : cur.sessions < prev.sessions ? ', down on last week' : ', same as last week';
-        const typeStr = topTypeCur ? `, with a focus on ${topTypeCur[0].toLowerCase()}` : '';
-        sentenceSummary = `${tone}${typeStr}${vs}.`;
-    }
-
     // Active theme
     const activeTheme = themes.find(t => t.startDate <= todayStr && t.endDate >= todayStr) || null;
 
-    // Comparison table
-    const activeTypes = logData.types.filter(t => t !== 'NONE');
-    const periodHeaders = periods.map((p, i) =>
-        `<th class="${i === 3 ? 'ov-cmp-now' : ''}">${p.label}</th>`).join('');
+    // --- Intelligence card ---
+    const intelItems = [];
 
-    const sessionsRow = `<tr class="ov-cmp-total-row">
-        <td class="ov-cmp-metric">Sessions</td>
-        ${periods.map((p, i) => `<td class="${i === 3 ? 'ov-cmp-now' : ''}">${p.sessions}</td>`).join('')}
-    </tr>`;
+    // Week-on-week sessions
+    if (cur.sessions > prev.sessions) {
+        intelItems.push(`This week you've done <strong>${cur.sessions}</strong> session${cur.sessions !== 1 ? 's' : ''} — ${cur.sessions - prev.sessions} more than last week.`);
+    } else if (cur.sessions < prev.sessions && prev.sessions > 0) {
+        intelItems.push(`${prev.sessions} sessions last week, ${cur.sessions} so far this week — a quieter spell.`);
+    } else if (cur.sessions > 0) {
+        intelItems.push(`Matching last week — <strong>${cur.sessions}</strong> sessions apiece so far.`);
+    }
 
-    const typeRows = activeTypes.map(type => {
-        const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
-        return `<tr>
-            <td class="ov-cmp-type" style="color:${color}">${type}</td>
-            ${periods.map((p, i) => {
-                const n = p.byType[type] || 0;
-                return `<td class="${i === 3 ? 'ov-cmp-now' : ''}${n === 0 ? ' ov-cmp-zero' : ''}">${n}</td>`;
-            }).join('')}
-        </tr>`;
-    }).join('');
+    // Most frequent activity type overall
+    const allTypeCounts = {};
+    completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { allTypeCounts[e.type] = (allTypeCounts[e.type] || 0) + 1; });
+    const topTypeEntry = Object.entries(allTypeCounts).sort((a, b) => b[1] - a[1])[0];
+    if (topTypeEntry) {
+        const total = Object.values(allTypeCounts).reduce((a, b) => a + b, 0);
+        const pct = Math.round(topTypeEntry[1] / total * 100);
+        intelItems.push(`<strong>${topTypeEntry[0]}</strong> makes up ${pct}% of all your sessions.`);
+    }
+
+    // Training days in last 28
+    const last28Days = periods.reduce((acc, p) => acc + p.activeDays, 0);
+    if (last28Days > 0) {
+        intelItems.push(`You've trained on <strong>${last28Days} of the last 28 days</strong>.`);
+    }
+
+    // Streak note
+    if (streak >= 3) {
+        intelItems.push(`🔥 ${streak}-day streak — keep the chain going.`);
+    } else {
+        intelItems.push(`🔥 ${streak}-day streak.`);
+    }
 
     let sideHtml = `<div class="ov-card">
-        <div class="ov-card-title">Last 28 Days</div>
-        <table class="ov-cmp-table">
-            <colgroup><col style="width:52px"><col><col><col><col></colgroup>
-            <thead><tr><th></th>${periodHeaders}</tr></thead>
-            <tbody>
-                ${sessionsRow}
-                <tr class="ov-cmp-divider"><td colspan="5"></td></tr>
-                ${typeRows}
-            </tbody>
-        </table>
-        <div class="ov-cmp-streak">🔥 ${streak} day streak</div>
+        <div class="ov-card-title">Training Intelligence</div>
+        <ul class="ov-intel-list">
+            ${intelItems.map(item => `<li>${item}</li>`).join('')}
+        </ul>
     </div>`;
 
     // Theme card
@@ -1946,23 +1941,6 @@ const renderOverview = () => {
         </div>`;
     } else {
         sideHtml += `<div class="ov-card"><div class="ov-card-title">Current Theme</div><p class="ov-no-theme">No active theme. Set one up in Goals.</p></div>`;
-    }
-
-    // Goals card
-    const goals = logData.goals || [];
-    if (goals.length) {
-        const goalsHtml = goals.map(g => {
-            const { pct, currentLabel } = computeGoalProgress(g);
-            return `<div class="ov-goal-row">
-                <div class="ov-goal-name">${g.title}</div>
-                ${currentLabel ? `<div class="ov-goal-sub">${currentLabel}</div>` : ''}
-                <div class="ov-goal-bar-wrap">
-                    <div class="ov-progress-track" style="margin-bottom:0"><div class="ov-progress-fill" style="width:${pct}%"></div></div>
-                    <span class="ov-goal-pct">${pct}%</span>
-                </div>
-            </div>`;
-        }).join('');
-        sideHtml += `<div class="ov-card"><div class="ov-card-title">Goals</div><div class="ov-goals-list">${goalsHtml}</div></div>`;
     }
 
     sidebar.innerHTML = sideHtml;
@@ -2013,9 +1991,83 @@ const renderOverview = () => {
     }
 };
 
+// --- KEY FINDINGS ---
+const renderKeyFindings = (completed) => {
+    const container = document.getElementById('keyFindingsContainer');
+    if (!container) return;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const trained = completed.filter(e => e.type && e.type !== 'NONE');
+
+    const findings = [];
+
+    // Week-on-week load
+    const wkEnd = todayStr;
+    const wkStart = new Date(today); wkStart.setDate(wkStart.getDate() - 6);
+    const prevEnd = new Date(today); prevEnd.setDate(prevEnd.getDate() - 7);
+    const prevStart = new Date(today); prevStart.setDate(prevStart.getDate() - 13);
+    const wkSessions = trained.filter(e => e.date >= wkStart.toISOString().split('T')[0] && e.date <= wkEnd).length;
+    const prevSessions = trained.filter(e => e.date >= prevStart.toISOString().split('T')[0] && e.date <= prevEnd.toISOString().split('T')[0]).length;
+    if (wkSessions > 0 && prevSessions > 0) {
+        const diff = wkSessions - prevSessions;
+        if (diff > 0) findings.push(`Training load up — ${wkSessions} sessions this week vs ${prevSessions} last week.`);
+        else if (diff < 0) findings.push(`Training load down — ${wkSessions} sessions this week vs ${prevSessions} last week.`);
+        else findings.push(`Consistent training load — ${wkSessions} sessions this week, same as last.`);
+    }
+
+    // Most consistent day of week
+    const dayCounts = [0,0,0,0,0,0,0];
+    new Set(trained.map(e => e.date)).forEach(d => { dayCounts[new Date(d + 'T00:00:00').getDay()]++; });
+    const maxDayIdx = dayCounts.indexOf(Math.max(...dayCounts));
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    if (dayCounts[maxDayIdx] >= 3) findings.push(`You train most on ${dayNames[maxDayIdx]}s — ${dayCounts[maxDayIdx]} sessions on that day overall.`);
+
+    // Type distribution
+    const typeCounts = {};
+    trained.forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+    if (sortedTypes.length >= 2) {
+        const total = trained.length;
+        const pct = Math.round(sortedTypes[0][1] / total * 100);
+        findings.push(`${sortedTypes[0][0]} is ${pct}% of your sessions, followed by ${sortedTypes[1][0]}.`);
+    }
+
+    // Active days in last 28
+    const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate() - 27);
+    const cutoff28Str = cutoff28.toISOString().split('T')[0];
+    const activeDays28 = new Set(trained.filter(e => e.date >= cutoff28Str).map(e => e.date)).size;
+    if (activeDays28 > 0) findings.push(`You've trained on ${activeDays28} of the last 28 days.`);
+
+    // Best recent month
+    const monthCounts = {};
+    trained.forEach(e => { const m = e.date.slice(0,7); monthCounts[m] = (monthCounts[m]||0)+1; });
+    const thisMonth = todayStr.slice(0,7);
+    const pastMonths = Object.entries(monthCounts).filter(([m]) => m < thisMonth).sort((a,b) => b[0].localeCompare(a[0])).slice(0,3);
+    const thisMonthCount = monthCounts[thisMonth] || 0;
+    if (pastMonths.length >= 2 && thisMonthCount > 0 && thisMonthCount >= Math.max(...pastMonths.map(([,c]) => c))) {
+        findings.push(`This is your most active month in the last ${pastMonths.length + 1} months — ${thisMonthCount} sessions so far.`);
+    }
+
+    // Streak
+    const loggedDates = new Set(completed.map(e => e.date));
+    let streak = 0;
+    const sd = new Date(today);
+    if (!loggedDates.has(todayStr)) sd.setDate(sd.getDate()-1);
+    while (loggedDates.has(sd.toISOString().split('T')[0])) { streak++; sd.setDate(sd.getDate()-1); }
+    if (streak >= 5) findings.push(`You're on a ${streak}-day streak — don't break the chain.`);
+
+    if (findings.length === 0) {
+        container.innerHTML = '<p class="findings-empty">Log more sessions to see training insights here.</p>';
+        return;
+    }
+    container.innerHTML = `<ul class="key-findings-list">${findings.map(f => `<li>${f}</li>`).join('')}</ul>`;
+};
+
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
+    renderKeyFindings(completed);
     renderHealthScore(completed);
     renderWeeklyRecap(completed);
     renderAchievements(completed);
