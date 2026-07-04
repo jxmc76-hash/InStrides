@@ -3217,17 +3217,24 @@ const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reje
         f.start();
     };
 
-    // file.slice().arrayBuffer() gives a genuine async I/O boundary per chunk
-    // so Safari actually repaints between reads (file.stream() does not).
+    // Process in 1 MB slices. Between slices, use requestAnimationFrame to
+    // guarantee Safari actually paints the progress update before continuing.
     const total = file.size;
-    const CHUNK = 1048576; // 1 MB per read
+    const CHUNK = 1048576; // 1 MB per slice
+    const raf = () => new Promise(r => requestAnimationFrame(r));
+    let lastPaint = -Infinity;
     (async () => {
         try {
             for (let offset = 0; offset < total; offset += CHUNK) {
                 const end = Math.min(offset + CHUNK, total);
                 const data = new Uint8Array(await file.slice(offset, end).arrayBuffer());
                 unzip.push(data, end >= total);
-                if (onProgress) onProgress(end / total, workoutStrings.length);
+                const now = performance.now();
+                if (onProgress && now - lastPaint > 100) {
+                    onProgress(end / total, workoutStrings.length);
+                    await raf(); // wait for the browser to actually paint
+                    lastPaint = performance.now();
+                }
             }
             if (!found) reject(new Error('export.xml not found in ZIP'));
         } catch (e) { reject(e); }
@@ -3301,6 +3308,7 @@ window.handleAppleHealthImport = async (event) => {
 
     if (looksLikeZip) {
         showAHProgress();
+        await new Promise(r => requestAnimationFrame(r)); // ensure overlay paints before CPU work starts
         let result;
         try {
             result = await streamHealthDataFromZip(file, updateAHProgress);
