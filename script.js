@@ -2643,8 +2643,71 @@ const renderMatrix = () => {
     const prevYM = `${_prevMonthDate.getFullYear()}-${String(_prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
     let oldMonthGroupYM = null;
     let oldMonthGroupId = null;
-    let emittedMonthGroupYM = null;
     let currentWeekMonthGroupId = null;
+    // Per-month accumulator (buffered until all weeks in the month are processed)
+    let monthAccData = null;
+    let currentOldMonthBufferYM = null;
+    let monthWeeksBuffer = '';
+
+    const freshMonthAcc = () => ({
+        customVals: Object.fromEntries(logData.customMetrics.map(m => [m.name, []])),
+        typeDays: Object.fromEntries(sortedTypes.map(t => [t, 0])),
+        typeMetric: Object.fromEntries(sortedTypes.map(t => [t, { values: [], unit: '', timeValues: [] }])),
+    });
+
+    const mergeWeekIntoMonth = wkAcc => {
+        if (!monthAccData) monthAccData = freshMonthAcc();
+        logData.customMetrics.forEach(m => monthAccData.customVals[m.name].push(...(wkAcc.customVals[m.name] || [])));
+        sortedTypes.forEach(t => {
+            monthAccData.typeDays[t] = (monthAccData.typeDays[t] || 0) + (wkAcc.typeDays[t] || 0);
+            if (wkAcc.typeMetric?.[t] && monthAccData.typeMetric?.[t]) {
+                monthAccData.typeMetric[t].values.push(...wkAcc.typeMetric[t].values);
+                monthAccData.typeMetric[t].timeValues.push(...(wkAcc.typeMetric[t].timeValues || []));
+                if (wkAcc.typeMetric[t].unit) monthAccData.typeMetric[t].unit = wkAcc.typeMetric[t].unit;
+            }
+        });
+    };
+
+    const flushMonthGroup = () => {
+        if (!monthAccData || !currentOldMonthBufferYM) return '';
+        const mgId = `month-${currentOldMonthBufferYM}`;
+        const [yr, mo] = currentOldMonthBufferYM.split('-');
+        const monthDate = new Date(+yr, +mo - 1, 1);
+        const monthLabel = monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        let html = `<tr class="month-summary-row" onclick="window.toggleMonth('${mgId}')"><td class="col-date month-summary-label"><span class="week-toggle-icon" id="icon-${mgId}">▶</span> ${monthLabel}</td><td class="col-stat"></td>`;
+        logData.customMetrics.forEach(m => {
+            const vals = monthAccData.customVals[m.name] || [];
+            let cell = '';
+            if (vals.length) {
+                if (m.type === 'slider') cell = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+                else if (m.type === 'timedistance') { const cnt = vals.filter(v=>v&&(v.time||v.distance)).length; cell = cnt > 0 ? `${cnt}d` : ''; }
+                else if (m.type === 'number') cell = `${vals[0]}`;
+                else if (m.type === 'duration') { const tot = vals.reduce((a,b)=>a+(+b||0),0); cell = tot > 0 ? fmtDuration(tot) : ''; }
+                else { const cnt = vals.filter(v=>v===true).length; cell = cnt > 0 ? `${cnt}d` : ''; }
+            }
+            html += `<td class="col-stat">${cell}</td>`;
+        });
+        sortedTypes.forEach(type => {
+            const count = monthAccData.typeDays[type] || 0;
+            const tm = monthAccData.typeMetric?.[type];
+            let cell = count > 0 ? count + 'd' : '';
+            if (tm && (tm.values.length > 0 || (tm.timeValues && tm.timeValues.length > 0))) {
+                const cat = getTypeCategory(type);
+                const fmt = n => n % 1 === 0 ? n : n.toFixed(1);
+                if (cat === 'pacing') {
+                    if (tm.values.length > 0) cell += ` · ${fmt(tm.values.reduce((a,b)=>a+b,0))}${tm.unit}`;
+                    if (tm.timeValues.length > 0) cell += ` · ${fmt(tm.timeValues.reduce((a,b)=>a+b,0))}min`;
+                } else if (tm.values.length > 0) {
+                    const tot = tm.values.reduce((a,b)=>a+b,0);
+                    cell += ` · ${fmt(cat === 'other' ? tot / tm.values.length : tot)}${tm.unit}`;
+                }
+            }
+            html += `<td>${cell}</td>`;
+        });
+        html += `</tr>` + monthWeeksBuffer;
+        monthAccData = null; monthWeeksBuffer = ''; currentOldMonthBufferYM = null;
+        return html;
+    };
 
     const hideFuture = localStorage.getItem('hideFuturePlans') === '1';
     const todayKey = new Date().toISOString().split('T')[0];
@@ -2778,25 +2841,42 @@ const renderMatrix = () => {
         weekRowsHTML += row + `</tr>`;
 
         if (dayOfWeek === 1) {
-            if (currentWeekMonthGroupId && currentWeekMonthGroupId !== emittedMonthGroupYM) {
-                emittedMonthGroupYM = currentWeekMonthGroupId;
-                const mgMon = new Date(getWeekStart(weekId));
-                const monthLabel = mgMon.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-                allHTML += `<tr class="month-summary-row" onclick="window.toggleMonth('${currentWeekMonthGroupId}')"><td class="col-date month-summary-label" colspan="100"><span class="week-toggle-icon" id="icon-${currentWeekMonthGroupId}">▶</span> ${monthLabel}</td></tr>`;
+            const weekHtml = emitWeekSummary(weekAcc, weekId, currentWeekMonthGroupId) + weekRowsHTML;
+            if (currentWeekMonthGroupId) {
+                const wkYM = currentWeekMonthGroupId.replace('month-', '');
+                if (wkYM !== currentOldMonthBufferYM) {
+                    allHTML += flushMonthGroup();
+                    currentOldMonthBufferYM = wkYM;
+                    monthAccData = freshMonthAcc();
+                    monthWeeksBuffer = '';
+                }
+                mergeWeekIntoMonth(weekAcc);
+                monthWeeksBuffer += weekHtml;
+            } else {
+                allHTML += flushMonthGroup();
+                allHTML += weekHtml + `<tr style="height:16px;"><td colspan="100"></td></tr>`;
             }
-            allHTML += emitWeekSummary(weekAcc, weekId, currentWeekMonthGroupId) + weekRowsHTML + (currentWeekMonthGroupId ? '' : `<tr style="height:16px;"><td colspan="100"></td></tr>`);
             weekAcc = freshAcc(); weekId = null; weekRowsHTML = ''; currentWeekMonthGroupId = null;
         }
     }
     if (weekAcc.days > 0) {
-        if (currentWeekMonthGroupId && currentWeekMonthGroupId !== emittedMonthGroupYM) {
-            emittedMonthGroupYM = currentWeekMonthGroupId;
-            const mgMon = new Date(getWeekStart(weekId));
-            const monthLabel = mgMon.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-            allHTML += `<tr class="month-summary-row" onclick="window.toggleMonth('${currentWeekMonthGroupId}')"><td class="col-date month-summary-label" colspan="100"><span class="week-toggle-icon" id="icon-${currentWeekMonthGroupId}">▶</span> ${monthLabel}</td></tr>`;
+        const weekHtml = emitWeekSummary(weekAcc, weekId, currentWeekMonthGroupId) + weekRowsHTML;
+        if (currentWeekMonthGroupId) {
+            const wkYM = currentWeekMonthGroupId.replace('month-', '');
+            if (wkYM !== currentOldMonthBufferYM) {
+                allHTML += flushMonthGroup();
+                currentOldMonthBufferYM = wkYM;
+                monthAccData = freshMonthAcc();
+                monthWeeksBuffer = '';
+            }
+            mergeWeekIntoMonth(weekAcc);
+            monthWeeksBuffer += weekHtml;
+        } else {
+            allHTML += flushMonthGroup();
+            allHTML += weekHtml;
         }
-        allHTML += emitWeekSummary(weekAcc, weekId, currentWeekMonthGroupId) + weekRowsHTML;
     }
+    allHTML += flushMonthGroup();
     body.innerHTML = allHTML;
     expandWeekIds.forEach(wid => window.toggleWeek(wid));
     if (expandWeekIds.size === 0 && firstWeekId) window.toggleWeek(firstWeekId);
