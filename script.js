@@ -3422,8 +3422,9 @@ window.handleAppleHealthImport = async (event) => {
         let sleepMetric  = logData.customMetrics.find(m => m.name.toLowerCase().includes('sleep'));
         let weightMetric = logData.customMetrics.find(m => m.name.toLowerCase().includes('weight'));
         if (!vo2Metric    && Object.keys(vo2ByDate).length)    { vo2Metric    = { name: 'VO2 MAX', type: 'number' };  logData.customMetrics.push(vo2Metric); }
-        if (!sleepMetric  && Object.keys(sleepByDate).length)  { sleepMetric  = { name: 'SLEEP',   type: 'number' };  logData.customMetrics.push(sleepMetric); }
         if (!weightMetric && Object.keys(weightByDate).length) { weightMetric = { name: 'WEIGHT',  type: 'number' };  logData.customMetrics.push(weightMetric); }
+        if (!sleepMetric  && Object.keys(sleepByDate).length)  { sleepMetric  = { name: 'SLEEP',   type: 'number' };  logData.customMetrics.push(sleepMetric); }
+        else if (sleepMetric && sleepMetric.type !== 'number') { sleepMetric.type = 'number'; delete sleepMetric.scale; }
 
         // Attach to workout entries on matching dates
         newEntries.forEach(e => {
