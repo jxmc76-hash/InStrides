@@ -798,9 +798,9 @@ const renderTrailingCharts = (completed) => {
         if (e.customMetricData) Object.assign(byDate[e.date].customVals, e.customMetricData);
     });
 
-    // Collect all dates in range (last 90 days)
+    // Collect all dates in range (last 3 years)
     const allDates = [];
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 89);
+    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 3);
     const today = new Date();
     for (let d = new Date(cutoff); d <= today; d.setDate(d.getDate() + 1)) {
         allDates.push(d.toISOString().split('T')[0]);
@@ -814,7 +814,7 @@ const renderTrailingCharts = (completed) => {
             const window = allDates.slice(Math.max(0, i - (TRAILING_WINDOW - 1)), i + 1);
             const vals = window.map(d => accessor(byDate[d])).filter(v => v != null && v > 0);
             if (vals.length >= 2) {
-                points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+                points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
                 points.data.push(+(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
             }
         });
@@ -927,7 +927,7 @@ const renderTrailingCharts = (completed) => {
             const v = accessor(byDate[dateStr]);
             if (v != null) last = v;
             if (last != null) {
-                points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+                points.labels.push(new Date(dateStr).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
                 points.data.push(last);
             }
         });
@@ -1011,7 +1011,7 @@ const renderVolumeChart = (completed) => {
     if (!canvas) return;
 
     const weeks = {};
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 84);
+    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 3);
     completed
         .filter(e => e.type && e.type !== 'NONE' && new Date(e.date) >= cutoff)
         .forEach(e => {
@@ -1025,7 +1025,7 @@ const renderVolumeChart = (completed) => {
         return;
     }
 
-    const labels = sorted.map(w => new Date(w).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+    const labels = sorted.map(w => new Date(w).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
     const data = sorted.map(w => weeks[w]);
 
     chartInstances['volume'] = new Chart(canvas, {
@@ -1036,7 +1036,7 @@ const renderVolumeChart = (completed) => {
                 label: 'Workouts',
                 data,
                 backgroundColor: 'rgba(255,85,0,0.75)',
-                borderRadius: 8,
+                borderRadius: 4,
                 borderSkipped: false,
             }]
         },
@@ -1045,7 +1045,7 @@ const renderVolumeChart = (completed) => {
             plugins: { legend: { display: false } },
             scales: {
                 y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
-                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 18, maxRotation: 45 } }
             }
         }
     });
@@ -2202,7 +2202,7 @@ const computeHealthScoreSeries = (completed, days) => {
     for (let i = days - 1; i >= 0; i--) {
         const d = new Date(today); d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        points.labels.push(d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+        points.labels.push(d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
         points.data.push(computeHealthScore(completed, dateStr).score);
     }
     return points;
@@ -2221,7 +2221,7 @@ const renderHealthScore = (completed) => {
 
     const { score, label, color, components } = computeHealthScore(completed);
 
-    const series = computeHealthScoreSeries(completed, 30);
+    const series = computeHealthScoreSeries(completed, 3 * 365);
     const prevScore = series.data[series.data.length - 8]; // score 7 days ago
     let trendArrow = '';
     if (prevScore != null) {
@@ -2263,11 +2263,10 @@ const renderHealthScore = (completed) => {
                     data: series.data,
                     borderColor: color,
                     backgroundColor: color.replace(')', ',0.08)').replace('rgb', 'rgba'),
-                    borderWidth: 2.5,
-                    pointRadius: 2,
-                    pointBackgroundColor: color,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
                     fill: true,
-                    tension: 0.4,
+                    tension: 0.3,
                 }]
             },
             options: {
@@ -2275,7 +2274,7 @@ const renderHealthScore = (completed) => {
                 plugins: { legend: { display: false } },
                 scales: {
                     y: { min: 0, max: 100, ticks: { stepSize: 20 }, grid: { color: '#f1f5f9' } },
-                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 11 }, maxRotation: 45 } }
                 }
             }
         });
@@ -2481,7 +2480,7 @@ const renderDistanceChart = (completed) => {
     if (!canvas) return;
 
     const weeks = {};
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 84);
+    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 3);
     completed
         .filter(e => e.distance && new Date(e.date) >= cutoff)
         .forEach(e => {
@@ -2501,21 +2500,21 @@ const renderDistanceChart = (completed) => {
     }
 
     const distUnit = completed.find(e=>e.distanceUnit)?.distanceUnit || 'km';
-    const labels = sorted.map(w => new Date(w).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
+    const labels = sorted.map(w => new Date(w).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
     const data = sorted.map(w => +weeks[w].toFixed(1));
 
     chartInstances['distance'] = new Chart(canvas, {
         type: 'bar',
         data: {
             labels,
-            datasets: [{ label: `Distance (${distUnit})`, data, backgroundColor: 'rgba(255,85,0,0.75)', borderRadius: 8, borderSkipped: false }]
+            datasets: [{ label: `Distance (${distUnit})`, data, backgroundColor: 'rgba(255,85,0,0.75)', borderRadius: 4, borderSkipped: false }]
         },
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
             scales: {
                 y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
-                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 18, maxRotation: 45 } }
             }
         }
     });
