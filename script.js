@@ -3378,42 +3378,32 @@ window.handleAppleHealthImport = async (event) => {
         newEntries.push(entry);
     });
 
-    if (newEntries.length === 0) {
-        const detail = skippedExisting > 0 ? `${skippedExisting} already in your log.` : unmappedTypes.size > 0 ? `Types not recognised: ${[...unmappedTypes].join(', ')}` : 'No matching workout types found.';
-        return alert('Nothing to import. ' + detail);
-    }
-
-    // Enrich entries with health metrics from Record elements
+    // Process health metric Records — done BEFORE the empty-check so metric-only
+    // imports (no matching workouts) still work, and so metrics are auto-created
+    // when the data exists but the user hasn't set them up yet.
     if (recordStrings.length > 0) {
-        const vo2Metric    = logData.customMetrics.find(m => m.name.toLowerCase().includes('vo2'));
-        const sleepMetric  = logData.customMetrics.find(m => m.name.toLowerCase().includes('sleep'));
-        const weightMetric = logData.customMetrics.find(m => m.name.toLowerCase().includes('weight'));
-
         const vo2ByDate    = {};
         const sleepByDate  = {};
         const weightByDate = {};
 
         recordStrings.forEach(r => {
             const rType = attr(r, 'type');
-
-            if (vo2Metric && rType === 'HKQuantityTypeIdentifierVO2Max') {
+            if (rType === 'HKQuantityTypeIdentifierVO2Max') {
                 const date = attr(r, 'startDate').split(' ')[0];
                 const val  = parseFloat(attr(r, 'value') || '0');
                 if (/^\d{4}-\d{2}-\d{2}$/.test(date) && val > 0)
                     if (!vo2ByDate[date] || val > vo2ByDate[date]) vo2ByDate[date] = val;
-
-            } else if (sleepMetric && rType === 'HKCategoryTypeIdentifierSleepAnalysis') {
+            } else if (rType === 'HKCategoryTypeIdentifierSleepAnalysis') {
                 const val = attr(r, 'value');
-                if (!val.includes('Asleep')) return; // skip InBed / Awake
+                if (!val.includes('Asleep')) return;
                 const startMs = Date.parse(attr(r, 'startDate'));
                 const endStr  = attr(r, 'endDate');
                 const endMs   = Date.parse(endStr);
                 if (!endStr || isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return;
-                const date = endStr.split(' ')[0]; // attribute to the wake-up date
+                const date = endStr.split(' ')[0];
                 if (/^\d{4}-\d{2}-\d{2}$/.test(date))
                     sleepByDate[date] = (sleepByDate[date] || 0) + (endMs - startMs) / 60000;
-
-            } else if (weightMetric && rType === 'HKQuantityTypeIdentifierBodyMass') {
+            } else if (rType === 'HKQuantityTypeIdentifierBodyMass') {
                 const date = attr(r, 'startDate').split(' ')[0];
                 const val  = parseFloat(attr(r, 'value') || '0');
                 const unit = (attr(r, 'unit') || 'kg').toLowerCase();
@@ -3423,7 +3413,15 @@ window.handleAppleHealthImport = async (event) => {
             }
         });
 
-        // Attach metric values to workout entries on matching dates
+        // Auto-create metrics when data exists but no matching metric is configured
+        let vo2Metric    = logData.customMetrics.find(m => m.name.toLowerCase().includes('vo2'));
+        let sleepMetric  = logData.customMetrics.find(m => m.name.toLowerCase().includes('sleep'));
+        let weightMetric = logData.customMetrics.find(m => m.name.toLowerCase().includes('weight'));
+        if (!vo2Metric    && Object.keys(vo2ByDate).length)    { vo2Metric    = { name: 'VO2 MAX', type: 'number' };  logData.customMetrics.push(vo2Metric); }
+        if (!sleepMetric  && Object.keys(sleepByDate).length)  { sleepMetric  = { name: 'SLEEP',   type: 'number' };  logData.customMetrics.push(sleepMetric); }
+        if (!weightMetric && Object.keys(weightByDate).length) { weightMetric = { name: 'WEIGHT',  type: 'number' };  logData.customMetrics.push(weightMetric); }
+
+        // Attach to workout entries on matching dates
         newEntries.forEach(e => {
             if (!e.customMetricData) e.customMetricData = {};
             if (vo2Metric    && vo2ByDate[e.date]    != null) e.customMetricData[vo2Metric.name]    = Math.round(vo2ByDate[e.date] * 10) / 10;
@@ -3444,6 +3442,11 @@ window.handleAppleHealthImport = async (event) => {
             if (Object.keys(cmd).length > 0)
                 newEntries.push({ _id: mId, selected: true, id: mId++, date, type: 'NONE', isPlanned: false, customMetricData: cmd });
         });
+    }
+
+    if (newEntries.length === 0) {
+        const detail = skippedExisting > 0 ? `${skippedExisting} already in your log.` : unmappedTypes.size > 0 ? `Types not recognised: ${[...unmappedTypes].join(', ')}` : 'No workouts or health metrics found.';
+        return alert('Nothing to import. ' + detail);
     }
 
     newEntries.sort((a, b) => b.date.localeCompare(a.date));
