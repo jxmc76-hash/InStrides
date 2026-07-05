@@ -372,6 +372,7 @@
                             <option value="slider100">1 - 100 Scale Rating</option>
                             <option value="timedistance">Time + Distance</option>
                             <option value="number">Number (e.g. Weight)</option>
+                            <option value="duration">Duration (minutes)</option>
                         </select>
                         <button onclick="window.addCustomMetric()" class="btn-submit">Add Custom Metric</button>
                     </div>
@@ -639,7 +640,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=208"></script>
+    <script type="module" src="script.js?v=209"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
