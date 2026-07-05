@@ -1,5 +1,5 @@
-const CACHE = 'traininglog-v6';
-const ASSETS = ['/', '/index.html', '/style.css', '/script.js', '/logo.png', '/favicon.ico', '/manifest.json'];
+const CACHE = 'traininglog-v7';
+const ASSETS = ['/style.css', '/script.js', '/logo.png', '/favicon.ico', '/manifest.json'];
 
 self.addEventListener('install', e => {
     e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -14,9 +14,13 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
     const url = new URL(e.request.url);
-    // Let Firebase, fonts, CDN requests go straight to network
     if (url.hostname !== location.hostname) return;
-    // Network-first so deployed updates are picked up immediately; fall back to cache when offline
+    // HTML navigation: always hit network so new deployments land immediately
+    if (e.request.mode === 'navigate') {
+        e.respondWith(fetch(e.request).catch(() => caches.match('/')));
+        return;
+    }
+    // Other same-origin assets: network-first, cache as fallback for offline
     e.respondWith(
         fetch(e.request).then(res => {
             const clone = res.clone();
