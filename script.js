@@ -3191,29 +3191,35 @@ const makeAHFlusher = (workoutStrings, recordStrings) => {
 };
 
 
-// FileReader-based slice read — supported on all iOS versions unlike Blob.arrayBuffer()
-const readSlice = (file, start, end) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(new Uint8Array(e.target.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsArrayBuffer(file.slice(start, end));
-});
-
 const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject) => {
     const workouts = [], records = [];
     const { flush, dec, append } = makeAHFlusher(workouts, records);
-    const total = file.size, CHUNK = 1048576;
-    (async () => {
+    const total = file.size;
+    const CHUNK = 67108864; // 64 MB — ~50 reads for a 3 GB file vs 3000+ at 1 MB
+    let offset = 0;
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(reader.error || new Error('File read failed'));
+
+    reader.onload = e => {
         try {
-            for (let o = 0; o < total; o += CHUNK) {
-                const end = Math.min(o + CHUNK, total);
-                append(dec.decode(await readSlice(file, o, end), { stream: end < total }));
-                flush();
-                if (onStatus) onStatus(workouts.length);
-            }
-            resolve({ workouts, records });
-        } catch (e) { reject(e); }
-    })();
+            const isLast = offset >= total;
+            append(dec.decode(new Uint8Array(e.target.result), { stream: !isLast }));
+            flush();
+            if (onStatus) onStatus(workouts.length);
+            if (isLast) { resolve({ workouts, records }); return; }
+            readNext();
+        } catch (err) { reject(err); }
+    };
+
+    function readNext() {
+        const end = Math.min(offset + CHUNK, total);
+        const slice = file.slice(offset, end);
+        offset = end;
+        reader.readAsArrayBuffer(slice);
+    }
+
+    readNext();
 });
 
 // --- AH IMPORT PROGRESS OVERLAY ---
