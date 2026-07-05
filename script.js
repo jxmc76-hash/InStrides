@@ -2568,13 +2568,14 @@ const renderMatrix = () => {
     const latestEntryDate = dates.length > 0 ? new Date(dates[0]) : null;
     if (latestEntryDate && latestEntryDate > futureBuffer) futureBuffer.setTime(latestEntryDate.getTime());
 
-    const emitWeekSummary = (acc, weekId) => {
+    const emitWeekSummary = (acc, weekId, monthGroupId = null) => {
         if (acc.days === 0) return '';
         const monDate = new Date(getWeekStart(weekId));
         const weekLabel = monDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         const weekTheme = getThemeForDate(weekId);
         const themeLabel = weekTheme ? `<div class="plan-note">${weekTheme.title}</div>` : '';
-        let html = `<tr class="week-summary-row" onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
+        const monthAttrs = monthGroupId ? ` data-month="${monthGroupId}" data-weekid="${weekId}" style="display:none"` : '';
+        let html = `<tr class="week-summary-row"${monthAttrs} onclick="window.toggleWeek('${weekId}')" title="Click to expand/collapse">
             <td class="col-date week-summary-label"><span class="week-toggle-icon" id="icon-${weekId}">▶</span> ${weekLabel} →${themeLabel}</td>
             <td class="col-stat"></td>`;
 
@@ -2631,6 +2632,15 @@ const renderMatrix = () => {
     const currentWeekStart = getWeekStart(new Date().toISOString().split('T')[0]);
     const expandWeekIds = new Set();
 
+    // Month grouping: weeks whose Monday is older than the previous month get collapsed under a month header
+    const _now = new Date();
+    const _prevMonthDate = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
+    const prevYM = `${_prevMonthDate.getFullYear()}-${String(_prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+    let oldMonthGroupYM = null;
+    let oldMonthGroupId = null;
+    let emittedMonthGroupYM = null;
+    let currentWeekMonthGroupId = null;
+
     const hideFuture = localStorage.getItem('hideFuturePlans') === '1';
     const todayKey = new Date().toISOString().split('T')[0];
 
@@ -2645,12 +2655,22 @@ const renderMatrix = () => {
             weekId = dateKey;
             if (!firstWeekId) firstWeekId = weekId;
             if (getWeekStart(weekId) >= currentWeekStart) expandWeekIds.add(weekId);
+            // Determine if this week belongs to an old month group
+            const wkMon = new Date(getWeekStart(weekId));
+            const wkYM = `${wkMon.getFullYear()}-${String(wkMon.getMonth() + 1).padStart(2, '0')}`;
+            if (wkYM < prevYM) {
+                if (wkYM !== oldMonthGroupYM) { oldMonthGroupYM = wkYM; oldMonthGroupId = `month-${wkYM}`; }
+                currentWeekMonthGroupId = oldMonthGroupId;
+            } else {
+                currentWeekMonthGroupId = null;
+            }
         }
 
         const activeData = dayData || { customVals: {}, exercises: {} };
         const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
         const dateNum = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        const displayDate = `<span class="date-day">${dayName}</span> <span class="date-num">${dateNum}</span>`;
+        const dateYear = `'${String(d.getFullYear()).slice(2)}`;
+        const displayDate = `<span class="date-day">${dayName}</span> <span class="date-num">${dateNum} <span class="date-year">${dateYear}</span></span>`;
         const dayTheme = getThemeForDate(dateKey);
         const dayThemeLabel = dayTheme ? `<div class="day-theme-tag">${dayTheme.title}</div>` : '';
 
@@ -2688,7 +2708,7 @@ const renderMatrix = () => {
         const noteCell = noteText
             ? `<div class="plan-note" title="${noteText.replace(/"/g, '&quot;')}">${noteText}</div>`
             : `<div class="cell-empty">+</div>`;
-        let row = `<tr class="week-day-row${altClass}${todayClass}" data-week="${weekId}" style="display:none">
+        let row = `<tr class="week-day-row${altClass}${todayClass}" data-week="${weekId}"${currentWeekMonthGroupId ? ` data-month="${currentWeekMonthGroupId}"` : ''} style="display:none">
             <td class="col-date">${displayDate}${dayThemeLabel}</td>
             <td class="col-stat editable-cell" onclick="window.openNoteEdit(event,'${dateKey}')">${noteCell}</td>`;
 
@@ -2748,12 +2768,24 @@ const renderMatrix = () => {
         weekRowsHTML += row + `</tr>`;
 
         if (dayOfWeek === 1) {
-            allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML + `<tr style="height:16px;"><td colspan="100"></td></tr>`;
-            weekAcc = freshAcc(); weekId = null; weekRowsHTML = '';
+            if (currentWeekMonthGroupId && currentWeekMonthGroupId !== emittedMonthGroupYM) {
+                emittedMonthGroupYM = currentWeekMonthGroupId;
+                const mgMon = new Date(getWeekStart(weekId));
+                const monthLabel = mgMon.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+                allHTML += `<tr class="month-summary-row" onclick="window.toggleMonth('${currentWeekMonthGroupId}')"><td class="col-date month-summary-label" colspan="100"><span class="week-toggle-icon" id="icon-${currentWeekMonthGroupId}">▶</span> ${monthLabel}</td></tr>`;
+            }
+            allHTML += emitWeekSummary(weekAcc, weekId, currentWeekMonthGroupId) + weekRowsHTML + (currentWeekMonthGroupId ? '' : `<tr style="height:16px;"><td colspan="100"></td></tr>`);
+            weekAcc = freshAcc(); weekId = null; weekRowsHTML = ''; currentWeekMonthGroupId = null;
         }
     }
     if (weekAcc.days > 0) {
-        allHTML += emitWeekSummary(weekAcc, weekId) + weekRowsHTML;
+        if (currentWeekMonthGroupId && currentWeekMonthGroupId !== emittedMonthGroupYM) {
+            emittedMonthGroupYM = currentWeekMonthGroupId;
+            const mgMon = new Date(getWeekStart(weekId));
+            const monthLabel = mgMon.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+            allHTML += `<tr class="month-summary-row" onclick="window.toggleMonth('${currentWeekMonthGroupId}')"><td class="col-date month-summary-label" colspan="100"><span class="week-toggle-icon" id="icon-${currentWeekMonthGroupId}">▶</span> ${monthLabel}</td></tr>`;
+        }
+        allHTML += emitWeekSummary(weekAcc, weekId, currentWeekMonthGroupId) + weekRowsHTML;
     }
     body.innerHTML = allHTML;
     expandWeekIds.forEach(wid => window.toggleWeek(wid));
@@ -3092,6 +3124,21 @@ window.toggleWeek = (weekId) => {
         }
     });
     if (icon) icon.textContent = isHidden ? '▼' : '▶';
+};
+
+window.toggleMonth = (mgId) => {
+    const icon = document.getElementById('icon-' + mgId);
+    const isExpanded = icon && icon.textContent === '▼';
+    const summaryRows = document.querySelectorAll(`tr.week-summary-row[data-month="${mgId}"]`);
+    if (isExpanded) {
+        // Collapse all open weeks inside this month first
+        summaryRows.forEach(r => {
+            const wId = r.dataset.weekid;
+            if (wId) { const wi = document.getElementById('icon-' + wId); if (wi && wi.textContent === '▼') window.toggleWeek(wId); }
+        });
+    }
+    summaryRows.forEach(r => r.style.display = isExpanded ? 'none' : '');
+    if (icon) icon.textContent = isExpanded ? '▶' : '▼';
 };
 
 const celebrate = () => {

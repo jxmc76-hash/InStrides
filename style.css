@@ -118,6 +118,7 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 
 .date-day { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.3px; }
 .date-num { font-size: 0.9rem; font-weight: 900; color: var(--primary); }
+.date-year { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); opacity: 0.7; }
 .today-row .date-day { color: var(--primary); }
 
 @keyframes popIn {
@@ -264,6 +265,9 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .week-summary-label { color: var(--primary) !important; font-weight: 800; }
 .week-summary-row td:not(.week-summary-label) { color: var(--text-muted); font-weight: 700; }
 .week-toggle-icon { font-size: 0.6rem; margin-right: 6px; }
+.month-summary-row td { background: #f4f6fa; border-top: 2px solid #d1d5e0; cursor: pointer; }
+.month-summary-row:hover td { background: #eaecf4; }
+.month-summary-label { color: var(--text-muted) !important; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.5px; text-transform: uppercase; }
 .alt-row td { background: #fafcff; }
 .week-day-row td { transition: background-color 0.12s ease; }
 .week-day-row:hover td { background: #f6f3f0; }
@@ -592,6 +596,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 [data-theme="dark"] th, [data-theme="dark"] td { border-color: #2c2f38; }
 [data-theme="dark"] .week-summary-row td { background: #221d1a; border-bottom-color: #3a2c25; }
 [data-theme="dark"] .week-summary-row:hover td { background: #2a221d; }
+[data-theme="dark"] .month-summary-row td { background: #1a1c23; border-top-color: #2c2f38; }
+[data-theme="dark"] .month-summary-row:hover td { background: #20232c; }
 [data-theme="dark"] .health-score-ring-inner { background: #1d2027; }
 [data-theme="dark"] .alt-row td { background: #191b21; }
 [data-theme="dark"] .week-day-row:hover td { background: #23262e; }
