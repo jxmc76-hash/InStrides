@@ -3155,130 +3155,112 @@ window.handleImportFile = async (event) => {
 };
 
 // --- IMPORT APPLE HEALTH ---
-// Parsing runs in a Web Worker so the main thread stays free to paint the progress bar.
 
-const AH_WORKER_SRC = `
-const RECORD_TYPES = new Set(['HKQuantityTypeIdentifierVO2Max','HKCategoryTypeIdentifierSleepAnalysis','HKQuantityTypeIdentifierBodyMass']);
-const CHUNK = 1048576;
+const RECORD_TYPES_WANTED = new Set(['HKQuantityTypeIdentifierVO2Max', 'HKCategoryTypeIdentifierSleepAnalysis', 'HKQuantityTypeIdentifierBodyMass']);
 
-function buildFlusher(workouts, records) {
+// Shared flush logic — scans the text buffer for Workout/Record elements.
+const makeAHFlusher = (workoutStrings, recordStrings) => {
     let buf = '';
     const dec = new TextDecoder('utf-8');
-    function flush() {
+    const flush = () => {
         let from = 0;
         for (;;) {
-            const wp = buf.indexOf('<Workout ', from), rp = buf.indexOf('<Record ', from);
-            if (wp < 0 && rp < 0) break;
-            const isW = rp < 0 || (wp >= 0 && wp < rp), s = isW ? wp : rp;
+            const wPos = buf.indexOf('<Workout ', from), rPos = buf.indexOf('<Record ', from);
+            if (wPos < 0 && rPos < 0) break;
+            const isW = rPos < 0 || (wPos >= 0 && wPos < rPos), s = isW ? wPos : rPos;
             if (isW) {
                 const sc = buf.indexOf('/>', s), et = buf.indexOf('</Workout>', s);
-                let e;
-                if (sc >= 0 && (et < 0 || sc < et)) e = sc + 2;
-                else if (et >= 0) e = et + 10;
+                let end;
+                if (sc >= 0 && (et < 0 || sc < et)) end = sc + 2;
+                else if (et >= 0) end = et + 10;
                 else { buf = buf.slice(s); return; }
-                workouts.push(buf.slice(s, e)); from = e;
+                workoutStrings.push(buf.slice(s, end)); from = end;
             } else {
-                const e = buf.indexOf('/>', s);
-                if (e < 0) { buf = buf.slice(s); return; }
-                const str = buf.slice(s, e + 2), m = str.match(/type="([^"]*)"/);
-                if (m && RECORD_TYPES.has(m[1])) records.push(str);
-                from = e + 2;
+                const end = buf.indexOf('/>', s);
+                if (end < 0) { buf = buf.slice(s); return; }
+                const str = buf.slice(s, end + 2), m = str.match(/type="([^"]*)"/);
+                if (m && RECORD_TYPES_WANTED.has(m[1])) recordStrings.push(str);
+                from = end + 2;
             }
         }
         const lw = buf.lastIndexOf('<Workout ', from), lr = buf.lastIndexOf('<Record ', from);
         const l = Math.max(lw, lr);
         buf = l >= from ? buf.slice(l) : '';
-    }
-    return { flush, dec, append: s => { buf += s; } };
-}
-
-self.onmessage = async function(ev) {
-    const { file, isZip } = ev.data;
-    const workouts = [], records = [];
-    const total = file.size;
-    try {
-        if (isZip) {
-            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js');
-            const { flush, dec, append } = buildFlusher(workouts, records);
-            let found = false, resolveDone, rejectDone;
-            const done = new Promise(function(res, rej) { resolveDone = res; rejectDone = rej; });
-            const unzip = new fflate.Unzip();
-            unzip.register(fflate.UnzipInflate);
-            unzip.onfile = function(f) {
-                if (found || !/export\\.xml$/i.test(f.name)) return;
-                found = true;
-                f.ondata = function(err, data, isFinal) {
-                    if (err) { rejectDone(err); return; }
-                    append(dec.decode(data, { stream: !isFinal }));
-                    flush();
-                    if (isFinal) resolveDone();
-                };
-                f.start();
-            };
-            for (var o = 0; o < total; o += CHUNK) {
-                var e = Math.min(o + CHUNK, total);
-                unzip.push(new Uint8Array(await file.slice(o, e).arrayBuffer()), e >= total);
-                self.postMessage({ progress: e / total, count: workouts.length });
-            }
-            await done;
-            if (!found) throw new Error('export.xml not found in ZIP');
-        } else {
-            const { flush, dec, append } = buildFlusher(workouts, records);
-            for (var o = 0; o < total; o += CHUNK) {
-                var e = Math.min(o + CHUNK, total);
-                append(dec.decode(new Uint8Array(await file.slice(o, e).arrayBuffer()), { stream: e < total }));
-                flush();
-                self.postMessage({ progress: e / total, count: workouts.length });
-            }
-        }
-        self.postMessage({ done: true, workouts: workouts, records: records });
-    } catch (err) {
-        self.postMessage({ error: err.message || String(err) });
-    }
-};
-`;
-
-// Spin up a worker for parsing; progress messages arrive on the main thread
-// while the worker thread does all the CPU work — so Safari can repaint freely.
-const streamHealthData = (file, isZip, onProgress) => new Promise((resolve, reject) => {
-    const blob = new Blob([AH_WORKER_SRC], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const worker = new Worker(url);
-    URL.revokeObjectURL(url);
-    worker.onmessage = ({ data }) => {
-        if (data.error) { worker.terminate(); reject(new Error(data.error)); }
-        else if (data.done) { worker.terminate(); resolve({ workouts: data.workouts, records: data.records }); }
-        else if (onProgress) onProgress(data.progress, data.count);
     };
-    worker.onerror = (e) => { worker.terminate(); reject(new Error(e.message || 'Worker error')); };
-    worker.postMessage({ file, isZip });
+    return { flush, dec, append: s => { buf += s; } };
+};
+
+const streamHealthDataFromZip = (file, onStatus) => new Promise((resolve, reject) => {
+    if (typeof fflate === 'undefined') { reject(new Error('fflate not loaded')); return; }
+    const workouts = [], records = [];
+    const { flush, dec, append } = makeAHFlusher(workouts, records);
+    let found = false;
+    const unzip = new fflate.Unzip();
+    unzip.register(fflate.UnzipInflate);
+    unzip.onfile = f => {
+        if (found || !/export\.xml$/i.test(f.name)) return;
+        found = true;
+        f.ondata = (err, data, isFinal) => {
+            if (err) { reject(err); return; }
+            append(dec.decode(data, { stream: !isFinal }));
+            flush();
+            if (isFinal) resolve({ workouts, records });
+        };
+        f.start();
+    };
+    const total = file.size, CHUNK = 1048576;
+    (async () => {
+        try {
+            for (let o = 0; o < total; o += CHUNK) {
+                const end = Math.min(o + CHUNK, total);
+                unzip.push(new Uint8Array(await file.slice(o, end).arrayBuffer()), end >= total);
+                if (onStatus) onStatus(workouts.length);
+            }
+            if (!found) reject(new Error('export.xml not found in ZIP'));
+        } catch (e) { reject(e); }
+    })();
+});
+
+const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject) => {
+    const workouts = [], records = [];
+    const { flush, dec, append } = makeAHFlusher(workouts, records);
+    const total = file.size, CHUNK = 1048576;
+    (async () => {
+        try {
+            for (let o = 0; o < total; o += CHUNK) {
+                const end = Math.min(o + CHUNK, total);
+                append(dec.decode(new Uint8Array(await file.slice(o, end).arrayBuffer()), { stream: end < total }));
+                flush();
+                if (onStatus) onStatus(workouts.length);
+            }
+            resolve({ workouts, records });
+        } catch (e) { reject(e); }
+    })();
 });
 
 // --- AH IMPORT PROGRESS OVERLAY ---
-const showAHProgress = (label = 'Reading…') => {
+// The bar uses a CSS transform animation on the GPU compositor thread so it
+// keeps moving even while the JS main thread is blocked parsing the file.
+const showAHProgress = (fileSize) => {
+    const mb = fileSize ? Math.round(fileSize / 1048576) + ' MB' : '';
     const el = document.createElement('div');
     el.id = 'ahProgressOverlay';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:500;';
-    el.innerHTML = `
+    el.innerHTML = `<style>@keyframes ah-scan{0%{transform:translateX(-100%) scaleX(.5)}100%{transform:translateX(300%) scaleX(.5)}}</style>
         <div style="background:var(--card);border-radius:20px;padding:28px 28px 24px;width:min(320px,88vw);box-shadow:0 12px 40px rgba(0,0,0,0.35);">
             <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:4px;">Importing Apple Health</div>
-            <div id="ahProgStatus" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em;">${label}</div>
-            <div style="background:var(--border);border-radius:6px;height:6px;overflow:hidden;">
-                <div id="ahProgBar" style="height:100%;width:0%;background:var(--accent);border-radius:6px;transition:width 0.25s ease;"></div>
+            <div id="ahProgStatus" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em;">Reading ${mb} file…</div>
+            <div style="background:var(--border);border-radius:6px;height:6px;overflow:hidden;position:relative;">
+                <div style="position:absolute;inset:0;background:var(--accent);border-radius:6px;transform-origin:left;animation:ah-scan 1.4s ease-in-out infinite;"></div>
             </div>
         </div>`;
     document.body.appendChild(el);
 };
 
-const makeProgressUpdater = (label) => (fraction, workoutCount) => {
-    const pct = Math.min(Math.round(fraction * 100), 99);
-    const bar = document.getElementById('ahProgBar');
-    const status = document.getElementById('ahProgStatus');
-    if (bar) bar.style.width = pct + '%';
-    if (status) {
-        const found = workoutCount > 0 ? ` · ${workoutCount} workout${workoutCount !== 1 ? 's' : ''} found` : '';
-        status.textContent = `${label} ${pct}%${found}`;
-    }
+const updateAHStatus = (workoutCount) => {
+    const el = document.getElementById('ahProgStatus');
+    if (el && workoutCount > 0)
+        el.textContent = `${workoutCount} workout${workoutCount !== 1 ? 's' : ''} found…`;
 };
 
 const hideAHProgress = () => document.getElementById('ahProgressOverlay')?.remove();
@@ -3314,13 +3296,13 @@ window.handleAppleHealthImport = async (event) => {
     // attr() extracts an XML attribute value from a raw element string
     const attr = (str, name) => { const m = str.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : ''; };
 
-    const progressLabel = looksLikeZip ? 'Reading ZIP…' : 'Reading XML…';
-    showAHProgress(progressLabel);
-    const onProgress = makeProgressUpdater(progressLabel);
+    showAHProgress(file.size);
 
     let result;
     try {
-        result = await streamHealthData(file, looksLikeZip, onProgress);
+        result = looksLikeZip
+            ? await streamHealthDataFromZip(file, updateAHStatus)
+            : await streamHealthDataFromXml(file, updateAHStatus);
     } catch (err) {
         hideAHProgress();
         return alert('Could not read the file: ' + err.message);
