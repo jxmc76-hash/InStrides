@@ -3378,6 +3378,12 @@ window.handleAppleHealthImport = async (event) => {
         newEntries.push(entry);
     });
 
+    // DEBUG — remove after diagnosis
+    alert(`Parsed: ${workoutStrings.length} workouts, ${recordStrings.length} records\n` +
+        `VO2: ${recordStrings.filter(r=>r.includes('VO2Max')).length}, ` +
+        `BodyMass: ${recordStrings.filter(r=>r.includes('BodyMass')).length}, ` +
+        `Sleep: ${recordStrings.filter(r=>r.includes('SleepAnalysis')).length}`);
+
     // Process health metric Records — done BEFORE the empty-check so metric-only
     // imports (no matching workouts) still work, and so metrics are auto-created
     // when the data exists but the user hasn't set them up yet.
