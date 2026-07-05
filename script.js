@@ -3191,11 +3191,16 @@ const makeAHFlusher = (workoutStrings, recordStrings) => {
                 else { buf = buf.slice(s); return; }
                 workoutStrings.push(buf.slice(s, end)); from = end;
             } else {
-                const end = buf.indexOf('/>', s);
-                if (end < 0) { buf = buf.slice(s); return; }
-                const str = buf.slice(s, end + 2), m = str.match(/type="([^"]*)"/);
+                // Records can be self-closing (<Record .../>) or have children (<Record ...>).
+                // When filtered through the Python script only the opening line is kept, so
+                // we find whichever comes first: /> or the plain > that closes the opening tag.
+                const sc = buf.indexOf('/>', s);
+                const gt = buf.indexOf('>', s + 7); // end of opening tag
+                if (gt < 0) { buf = buf.slice(s); return; }
+                const end = (sc >= 0 && sc < gt) ? sc + 2 : gt + 1;
+                const str = buf.slice(s, end), m = str.match(/type="([^"]*)"/);
                 if (m && RECORD_TYPES_WANTED.has(m[1])) recordStrings.push(str);
-                from = end + 2;
+                from = end;
             }
         }
         const lw = buf.lastIndexOf('<Workout ', from), lr = buf.lastIndexOf('<Record ', from);
@@ -3367,7 +3372,7 @@ window.handleAppleHealthImport = async (event) => {
         }
         const distKm = distUnit === 'm' ? rawDist / 1000 : distUnit === 'mi' ? rawDist * 1.60934 : rawDist;
 
-        const entry = { _id: i, selected: true, id: ts + i, date: startDate, type: mapped, isPlanned: false };
+        const entry = { _id: i, selected: true, id: ts + i, date: startDate, type: mapped, isPlanned: false, customMetricData: {} };
         if (durationMin > 0) entry.duration = Math.round(durationMin);
         if (distKm > 0) { entry.distance = Math.round(distKm * 100) / 100; entry.distanceUnit = 'km'; }
         newEntries.push(entry);
@@ -3418,10 +3423,26 @@ window.handleAppleHealthImport = async (event) => {
             }
         });
 
+        // Attach metric values to workout entries on matching dates
         newEntries.forEach(e => {
-            if (vo2Metric    && vo2ByDate[e.date]    != null) e[vo2Metric.name]    = Math.round(vo2ByDate[e.date] * 10) / 10;
-            if (sleepMetric  && sleepByDate[e.date]  != null) e[sleepMetric.name]  = Math.round(sleepByDate[e.date] / 6) / 10; // minutes→hours 1dp
-            if (weightMetric && weightByDate[e.date] != null) e[weightMetric.name] = Math.round(weightByDate[e.date] * 10) / 10;
+            if (!e.customMetricData) e.customMetricData = {};
+            if (vo2Metric    && vo2ByDate[e.date]    != null) e.customMetricData[vo2Metric.name]    = Math.round(vo2ByDate[e.date] * 10) / 10;
+            if (sleepMetric  && sleepByDate[e.date]  != null) e.customMetricData[sleepMetric.name]  = Math.round(sleepByDate[e.date] / 6) / 10;
+            if (weightMetric && weightByDate[e.date] != null) e.customMetricData[weightMetric.name] = Math.round(weightByDate[e.date] * 10) / 10;
+        });
+
+        // Create standalone NONE entries for metric readings on days with no workout
+        const workoutDates = new Set(newEntries.map(e => e.date));
+        const allMetricDates = new Set([...Object.keys(vo2ByDate), ...Object.keys(sleepByDate), ...Object.keys(weightByDate)]);
+        let mId = ts + rawWorkouts.length + 1;
+        allMetricDates.forEach(date => {
+            if (workoutDates.has(date)) return;
+            const cmd = {};
+            if (vo2Metric    && vo2ByDate[date]    != null) cmd[vo2Metric.name]    = Math.round(vo2ByDate[date] * 10) / 10;
+            if (sleepMetric  && sleepByDate[date]  != null) cmd[sleepMetric.name]  = Math.round(sleepByDate[date] / 6) / 10;
+            if (weightMetric && weightByDate[date]  != null) cmd[weightMetric.name] = Math.round(weightByDate[date] * 10) / 10;
+            if (Object.keys(cmd).length > 0)
+                newEntries.push({ _id: mId, selected: true, id: mId++, date, type: 'NONE', isPlanned: false, customMetricData: cmd });
         });
     }
 
