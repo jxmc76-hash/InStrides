@@ -3191,6 +3191,14 @@ const makeAHFlusher = (workoutStrings, recordStrings) => {
 };
 
 
+// FileReader-based slice read — supported on all iOS versions unlike Blob.arrayBuffer()
+const readSlice = (file, start, end) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(new Uint8Array(e.target.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(file.slice(start, end));
+});
+
 const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject) => {
     const workouts = [], records = [];
     const { flush, dec, append } = makeAHFlusher(workouts, records);
@@ -3199,7 +3207,7 @@ const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject
         try {
             for (let o = 0; o < total; o += CHUNK) {
                 const end = Math.min(o + CHUNK, total);
-                append(dec.decode(new Uint8Array(await file.slice(o, end).arrayBuffer()), { stream: end < total }));
+                append(dec.decode(await readSlice(file, o, end), { stream: end < total }));
                 flush();
                 if (onStatus) onStatus(workouts.length);
             }
