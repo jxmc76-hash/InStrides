@@ -753,6 +753,21 @@ window.saveExercise = async () => {
     }
 };
 
+window.clearActivityData = async () => {
+    const entryCount = logData.entries.filter(e => !e.isPlanned).length;
+    if (!confirm(
+        `This will permanently delete all ${entryCount} logged activities and all custom metric readings (VO2, sleep, weight, etc.).\n\n` +
+        `Your metric definitions, activity types, goals, and training plans will be kept.\n\n` +
+        `This cannot be undone. Continue?`
+    )) return;
+    saveSnapshot(logData);
+    logData.entries = logData.entries.filter(e => e.isPlanned);
+    logData.dailyNotes = {};
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    window.closeSettings();
+    alert('All activity data cleared.');
+};
+
 window.deleteEntry = async () => {
     if (confirm("Delete entry?")) {
         logData.entries = logData.entries.filter(e => e.id !== editingId);
