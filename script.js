@@ -3195,11 +3195,17 @@ const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject
     const workouts = [], records = [];
     const { flush, dec, append } = makeAHFlusher(workouts, records);
     const total = file.size;
-    const CHUNK = 67108864; // 64 MB — ~50 reads for a 3 GB file vs 3000+ at 1 MB
+    const CHUNK = 4194304; // 4 MB — smaller chunks so iCloud-streamed files show progress incrementally
     let offset = 0;
     const reader = new FileReader();
 
     reader.onerror = () => reject(reader.error || new Error('File read failed'));
+
+    // fires during the read itself — keeps the percentage moving even if a chunk is slow
+    reader.onprogress = e => {
+        if (e.lengthComputable && onStatus)
+            onStatus(workouts.length, offset - CHUNK + e.loaded, total);
+    };
 
     reader.onload = e => {
         try {
@@ -3225,6 +3231,10 @@ const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject
 // --- AH IMPORT PROGRESS OVERLAY ---
 const showAHProgress = (fileSize) => {
     const totalMb = fileSize ? (fileSize / 1048576).toFixed(0) : '?';
+    const isLarge = fileSize > 1073741824; // > 1 GB
+    const hint = isLarge
+        ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:16px;line-height:1.4;">Large file — make sure export.xml is fully downloaded to your device, not streaming from iCloud.</div>`
+        : '';
     const el = document.createElement('div');
     el.id = 'ahProgressOverlay';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:500;';
@@ -3235,8 +3245,9 @@ const showAHProgress = (fileSize) => {
             <div id="ahProgPct" style="font-size:2rem;font-weight:800;color:var(--accent);line-height:1;margin-bottom:4px;">0%</div>
             <div id="ahProgStatus" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px;min-height:1.2em;">0 of ${totalMb} MB read</div>
             <div style="background:var(--border);border-radius:8px;height:10px;overflow:hidden;">
-                <div id="ahProgBar" style="height:100%;background:var(--accent);border-radius:8px;width:0%;transition:width 0.3s ease;"></div>
+                <div id="ahProgBar" style="height:100%;background:var(--accent);border-radius:8px;width:0%;transition:width 0.15s linear;"></div>
             </div>
+            ${hint}
         </div>`;
     document.body.appendChild(el);
 };
