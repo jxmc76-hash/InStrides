@@ -3378,16 +3378,14 @@ window.handleAppleHealthImport = async (event) => {
         newEntries.push(entry);
     });
 
-    // DEBUG — remove after diagnosis
-    alert(`Parsed: ${workoutStrings.length} workouts, ${recordStrings.length} records\n` +
-        `VO2: ${recordStrings.filter(r=>r.includes('VO2Max')).length}, ` +
-        `BodyMass: ${recordStrings.filter(r=>r.includes('BodyMass')).length}, ` +
-        `Sleep: ${recordStrings.filter(r=>r.includes('SleepAnalysis')).length}`);
-
     // Process health metric Records — done BEFORE the empty-check so metric-only
     // imports (no matching workouts) still work, and so metrics are auto-created
     // when the data exists but the user hasn't set them up yet.
     if (recordStrings.length > 0) {
+        // Apple Health timestamps use "YYYY-MM-DD HH:MM:SS +HHMM" (no colon in timezone).
+        // Convert to ISO 8601 so Date.parse works reliably across all browsers.
+        const parseAHDate = s => s ? Date.parse(s.replace(' ', 'T').replace(/([+-]\d{2})(\d{2})$/, '$1:$2')) : NaN;
+
         const vo2ByDate    = {};
         const sleepByDate  = {};
         const weightByDate = {};
@@ -3402,9 +3400,9 @@ window.handleAppleHealthImport = async (event) => {
             } else if (rType === 'HKCategoryTypeIdentifierSleepAnalysis') {
                 const val = attr(r, 'value');
                 if (!val.includes('Asleep')) return;
-                const startMs = Date.parse(attr(r, 'startDate'));
+                const startMs = parseAHDate(attr(r, 'startDate'));
                 const endStr  = attr(r, 'endDate');
-                const endMs   = Date.parse(endStr);
+                const endMs   = parseAHDate(endStr);
                 if (!endStr || isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return;
                 const date = endStr.split(' ')[0];
                 if (/^\d{4}-\d{2}-\d{2}$/.test(date))
