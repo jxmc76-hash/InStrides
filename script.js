@@ -3206,7 +3206,7 @@ const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject
             const isLast = offset >= total;
             append(dec.decode(new Uint8Array(e.target.result), { stream: !isLast }));
             flush();
-            if (onStatus) onStatus(workouts.length);
+            if (onStatus) onStatus(workouts.length, offset, total);
             if (isLast) { resolve({ workouts, records }); return; }
             readNext();
         } catch (err) { reject(err); }
@@ -3223,28 +3223,37 @@ const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject
 });
 
 // --- AH IMPORT PROGRESS OVERLAY ---
-// The bar uses a CSS transform animation on the GPU compositor thread so it
-// keeps moving even while the JS main thread is blocked parsing the file.
 const showAHProgress = (fileSize) => {
-    const mb = fileSize ? Math.round(fileSize / 1048576) + ' MB' : '';
+    const totalMb = fileSize ? (fileSize / 1048576).toFixed(0) : '?';
     const el = document.createElement('div');
     el.id = 'ahProgressOverlay';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:500;';
-    el.innerHTML = `<style>@keyframes ah-scan{0%{transform:translateX(-100%) scaleX(.5)}100%{transform:translateX(300%) scaleX(.5)}}</style>
-        <div style="background:var(--card);border-radius:20px;padding:28px 28px 24px;width:min(320px,88vw);box-shadow:0 12px 40px rgba(0,0,0,0.35);">
-            <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:4px;">Importing Apple Health</div>
-            <div id="ahProgStatus" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em;">Reading ${mb} file…</div>
-            <div style="background:var(--border);border-radius:6px;height:6px;overflow:hidden;position:relative;">
-                <div style="position:absolute;inset:0;background:var(--accent);border-radius:6px;transform-origin:left;animation:ah-scan 1.4s ease-in-out infinite;"></div>
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:500;';
+    el.innerHTML = `
+        <div style="background:var(--card);border-radius:24px;padding:32px 28px 28px;width:min(340px,90vw);box-shadow:0 16px 48px rgba(0,0,0,0.4);text-align:center;">
+            <div style="font-size:2rem;margin-bottom:8px;">🏃</div>
+            <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:6px;">Importing Apple Health</div>
+            <div id="ahProgPct" style="font-size:2rem;font-weight:800;color:var(--accent);line-height:1;margin-bottom:4px;">0%</div>
+            <div id="ahProgStatus" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px;min-height:1.2em;">0 of ${totalMb} MB read</div>
+            <div style="background:var(--border);border-radius:8px;height:10px;overflow:hidden;">
+                <div id="ahProgBar" style="height:100%;background:var(--accent);border-radius:8px;width:0%;transition:width 0.3s ease;"></div>
             </div>
         </div>`;
     document.body.appendChild(el);
 };
 
-const updateAHStatus = (workoutCount) => {
-    const el = document.getElementById('ahProgStatus');
-    if (el && workoutCount > 0)
-        el.textContent = `${workoutCount} workout${workoutCount !== 1 ? 's' : ''} found…`;
+const updateAHStatus = (workoutCount, bytesRead, totalBytes) => {
+    const pct = totalBytes ? Math.min(100, Math.round((bytesRead / totalBytes) * 100)) : 0;
+    const readMb = (bytesRead / 1048576).toFixed(0);
+    const totalMb = totalBytes ? (totalBytes / 1048576).toFixed(0) : '?';
+    const pctEl = document.getElementById('ahProgPct');
+    const statusEl = document.getElementById('ahProgStatus');
+    const barEl = document.getElementById('ahProgBar');
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (barEl) barEl.style.width = pct + '%';
+    if (statusEl) {
+        const wStr = workoutCount > 0 ? ` · ${workoutCount} workout${workoutCount !== 1 ? 's' : ''}` : '';
+        statusEl.textContent = `${readMb} of ${totalMb} MB read${wStr}`;
+    }
 };
 
 const hideAHProgress = () => document.getElementById('ahProgressOverlay')?.remove();
