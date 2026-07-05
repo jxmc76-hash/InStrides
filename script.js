@@ -3190,36 +3190,6 @@ const makeAHFlusher = (workoutStrings, recordStrings) => {
     return { flush, dec, append: s => { buf += s; } };
 };
 
-const streamHealthDataFromZip = (file, onStatus) => new Promise((resolve, reject) => {
-    if (typeof fflate === 'undefined') { reject(new Error('fflate not loaded')); return; }
-    const workouts = [], records = [];
-    const { flush, dec, append } = makeAHFlusher(workouts, records);
-    let found = false;
-    const unzip = new fflate.Unzip();
-    unzip.register(fflate.UnzipInflate);
-    unzip.onfile = f => {
-        if (found || !/export\.xml$/i.test(f.name)) return;
-        found = true;
-        f.ondata = (err, data, isFinal) => {
-            if (err) { reject(err); return; }
-            append(dec.decode(data, { stream: !isFinal }));
-            flush();
-            if (isFinal) resolve({ workouts, records });
-        };
-        f.start();
-    };
-    const total = file.size, CHUNK = 1048576;
-    (async () => {
-        try {
-            for (let o = 0; o < total; o += CHUNK) {
-                const end = Math.min(o + CHUNK, total);
-                unzip.push(new Uint8Array(await file.slice(o, end).arrayBuffer()), end >= total);
-                if (onStatus) onStatus(workouts.length);
-            }
-            if (!found) reject(new Error('export.xml not found in ZIP'));
-        } catch (e) { reject(e); }
-    })();
-});
 
 const streamHealthDataFromXml = (file, onStatus) => new Promise((resolve, reject) => {
     const workouts = [], records = [];
@@ -3291,8 +3261,6 @@ window.handleAppleHealthImport = async (event) => {
     if (!file) return;
     window.closeSettings();
 
-    const looksLikeZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
-
     // attr() extracts an XML attribute value from a raw element string
     const attr = (str, name) => { const m = str.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : ''; };
 
@@ -3300,9 +3268,7 @@ window.handleAppleHealthImport = async (event) => {
 
     let result;
     try {
-        result = looksLikeZip
-            ? await streamHealthDataFromZip(file, updateAHStatus)
-            : await streamHealthDataFromXml(file, updateAHStatus);
+        result = await streamHealthDataFromXml(file, updateAHStatus);
     } catch (err) {
         hideAHProgress();
         return alert('Could not read the file: ' + err.message);
@@ -3311,7 +3277,7 @@ window.handleAppleHealthImport = async (event) => {
 
     const { workouts: workoutStrings, records } = result;
     const recordStrings = records;
-    if (!workoutStrings.length) return alert('No workouts found. Make sure you selected export.xml or the Apple Health export ZIP.');
+    if (!workoutStrings.length) return alert('No workouts found. Make sure you selected the export.xml file from your Apple Health export.');
     const rawWorkouts = workoutStrings;
     const useAttr = attr;
 
