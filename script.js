@@ -3155,153 +3155,103 @@ window.handleImportFile = async (event) => {
 };
 
 // --- IMPORT APPLE HEALTH ---
+// Parsing runs in a Web Worker so the main thread stays free to paint the progress bar.
 
-// Stream-parse Workout and relevant Record elements from a ZIP using fflate.
-// Returns { workouts: string[], records: string[] } without loading the full XML into memory.
-const RECORD_TYPES_WANTED = new Set(['HKQuantityTypeIdentifierVO2Max', 'HKCategoryTypeIdentifierSleepAnalysis', 'HKQuantityTypeIdentifierBodyMass']);
+const AH_WORKER_SRC = `
+const RECORD_TYPES = new Set(['HKQuantityTypeIdentifierVO2Max','HKCategoryTypeIdentifierSleepAnalysis','HKQuantityTypeIdentifierBodyMass']);
+const CHUNK = 1048576;
 
-const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reject) => {
-    if (typeof fflate === 'undefined') { reject(new Error('fflate not loaded')); return; }
-    const workoutStrings = [];
-    const recordStrings = [];
-    let found = false;
+function buildFlusher(workouts, records) {
     let buf = '';
     const dec = new TextDecoder('utf-8');
-
-    const flush = () => {
+    function flush() {
         let from = 0;
         for (;;) {
-            const wPos = buf.indexOf('<Workout ', from);
-            const rPos = buf.indexOf('<Record ', from);
-            if (wPos === -1 && rPos === -1) break;
-
-            const isWorkout = rPos === -1 || (wPos !== -1 && wPos < rPos);
-            const s = isWorkout ? wPos : rPos;
-
-            if (isWorkout) {
-                const sc = buf.indexOf('/>', s);
-                const et = buf.indexOf('</Workout>', s);
-                let end;
-                if (sc !== -1 && (et === -1 || sc < et)) end = sc + 2;
-                else if (et !== -1) end = et + '</Workout>'.length;
+            const wp = buf.indexOf('<Workout ', from), rp = buf.indexOf('<Record ', from);
+            if (wp < 0 && rp < 0) break;
+            const isW = rp < 0 || (wp >= 0 && wp < rp), s = isW ? wp : rp;
+            if (isW) {
+                const sc = buf.indexOf('/>', s), et = buf.indexOf('</Workout>', s);
+                let e;
+                if (sc >= 0 && (et < 0 || sc < et)) e = sc + 2;
+                else if (et >= 0) e = et + 10;
                 else { buf = buf.slice(s); return; }
-                workoutStrings.push(buf.slice(s, end));
-                from = end;
+                workouts.push(buf.slice(s, e)); from = e;
             } else {
-                const end = buf.indexOf('/>', s);
-                if (end === -1) { buf = buf.slice(s); return; }
-                const str = buf.slice(s, end + 2);
-                const tm = str.match(/type="([^"]*)"/);
-                if (tm && RECORD_TYPES_WANTED.has(tm[1])) recordStrings.push(str);
-                from = end + 2;
+                const e = buf.indexOf('/>', s);
+                if (e < 0) { buf = buf.slice(s); return; }
+                const str = buf.slice(s, e + 2), m = str.match(/type="([^"]*)"/);
+                if (m && RECORD_TYPES.has(m[1])) records.push(str);
+                from = e + 2;
             }
         }
-        // retain any partial tag that starts after the last complete element
-        const lastW = buf.lastIndexOf('<Workout ', from);
-        const lastR = buf.lastIndexOf('<Record ', from);
-        const last = Math.max(lastW, lastR);
-        buf = last >= from ? buf.slice(last) : '';
-    };
+        const lw = buf.lastIndexOf('<Workout ', from), lr = buf.lastIndexOf('<Record ', from);
+        const l = Math.max(lw, lr);
+        buf = l >= from ? buf.slice(l) : '';
+    }
+    return { flush, dec, append: s => { buf += s; } };
+}
 
-    const unzip = new fflate.Unzip();
-    unzip.register(fflate.UnzipInflate);
-    unzip.onfile = (f) => {
-        if (found || !/export\.xml$/i.test(f.name)) return;
-        found = true;
-        f.ondata = (err, data, isFinal) => {
-            if (err) { reject(err); return; }
-            buf += dec.decode(data, { stream: !isFinal });
-            flush();
-            if (isFinal) resolve({ workouts: workoutStrings, records: recordStrings });
-        };
-        f.start();
-    };
-
-    // Process in 1 MB slices. Between slices, use requestAnimationFrame to
-    // guarantee Safari actually paints the progress update before continuing.
+self.onmessage = async function(ev) {
+    const { file, isZip } = ev.data;
+    const workouts = [], records = [];
     const total = file.size;
-    const CHUNK = 1048576; // 1 MB per slice
-    const raf = () => new Promise(r => requestAnimationFrame(r));
-    let lastPaint = -Infinity;
-    (async () => {
-        try {
-            for (let offset = 0; offset < total; offset += CHUNK) {
-                const end = Math.min(offset + CHUNK, total);
-                const data = new Uint8Array(await file.slice(offset, end).arrayBuffer());
-                unzip.push(data, end >= total);
-                const now = performance.now();
-                if (onProgress && now - lastPaint > 100) {
-                    onProgress(end / total, workoutStrings.length);
-                    await raf(); // wait for the browser to actually paint
-                    lastPaint = performance.now();
-                }
+    try {
+        if (isZip) {
+            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js');
+            const { flush, dec, append } = buildFlusher(workouts, records);
+            let found = false, resolveDone, rejectDone;
+            const done = new Promise(function(res, rej) { resolveDone = res; rejectDone = rej; });
+            const unzip = new fflate.Unzip();
+            unzip.register(fflate.UnzipInflate);
+            unzip.onfile = function(f) {
+                if (found || !/export\\.xml$/i.test(f.name)) return;
+                found = true;
+                f.ondata = function(err, data, isFinal) {
+                    if (err) { rejectDone(err); return; }
+                    append(dec.decode(data, { stream: !isFinal }));
+                    flush();
+                    if (isFinal) resolveDone();
+                };
+                f.start();
+            };
+            for (var o = 0; o < total; o += CHUNK) {
+                var e = Math.min(o + CHUNK, total);
+                unzip.push(new Uint8Array(await file.slice(o, e).arrayBuffer()), e >= total);
+                self.postMessage({ progress: e / total, count: workouts.length });
             }
-            if (!found) reject(new Error('export.xml not found in ZIP'));
-        } catch (e) { reject(e); }
-    })();
-});
-
-// Stream-parse Workout and Record elements directly from an XML file.
-// Same streaming approach as the ZIP path but without decompression.
-const streamHealthDataFromXml = (file, onProgress) => new Promise((resolve, reject) => {
-    const workoutStrings = [];
-    const recordStrings = [];
-    let buf = '';
-    const dec = new TextDecoder('utf-8');
-
-    const flush = () => {
-        let from = 0;
-        for (;;) {
-            const wPos = buf.indexOf('<Workout ', from);
-            const rPos = buf.indexOf('<Record ', from);
-            if (wPos === -1 && rPos === -1) break;
-            const isWorkout = rPos === -1 || (wPos !== -1 && wPos < rPos);
-            const s = isWorkout ? wPos : rPos;
-            if (isWorkout) {
-                const sc = buf.indexOf('/>', s);
-                const et = buf.indexOf('</Workout>', s);
-                let end;
-                if (sc !== -1 && (et === -1 || sc < et)) end = sc + 2;
-                else if (et !== -1) end = et + '</Workout>'.length;
-                else { buf = buf.slice(s); return; }
-                workoutStrings.push(buf.slice(s, end));
-                from = end;
-            } else {
-                const end = buf.indexOf('/>', s);
-                if (end === -1) { buf = buf.slice(s); return; }
-                const str = buf.slice(s, end + 2);
-                const tm = str.match(/type="([^"]*)"/);
-                if (tm && RECORD_TYPES_WANTED.has(tm[1])) recordStrings.push(str);
-                from = end + 2;
-            }
-        }
-        const lastW = buf.lastIndexOf('<Workout ', from);
-        const lastR = buf.lastIndexOf('<Record ', from);
-        const last = Math.max(lastW, lastR);
-        buf = last >= from ? buf.slice(last) : '';
-    };
-
-    const total = file.size;
-    const CHUNK = 1048576;
-    const raf = () => new Promise(r => requestAnimationFrame(r));
-    let lastPaint = -Infinity;
-    (async () => {
-        try {
-            for (let offset = 0; offset < total; offset += CHUNK) {
-                const end = Math.min(offset + CHUNK, total);
-                const data = new Uint8Array(await file.slice(offset, end).arrayBuffer());
-                buf += dec.decode(data, { stream: end < total });
+            await done;
+            if (!found) throw new Error('export.xml not found in ZIP');
+        } else {
+            const { flush, dec, append } = buildFlusher(workouts, records);
+            for (var o = 0; o < total; o += CHUNK) {
+                var e = Math.min(o + CHUNK, total);
+                append(dec.decode(new Uint8Array(await file.slice(o, e).arrayBuffer()), { stream: e < total }));
                 flush();
-                const now = performance.now();
-                if (onProgress && now - lastPaint > 100) {
-                    onProgress(end / total, workoutStrings.length);
-                    await raf();
-                    lastPaint = performance.now();
-                }
+                self.postMessage({ progress: e / total, count: workouts.length });
             }
-            resolve({ workouts: workoutStrings, records: recordStrings });
-        } catch (e) { reject(e); }
-    })();
+        }
+        self.postMessage({ done: true, workouts: workouts, records: records });
+    } catch (err) {
+        self.postMessage({ error: err.message || String(err) });
+    }
+};
+`;
+
+// Spin up a worker for parsing; progress messages arrive on the main thread
+// while the worker thread does all the CPU work — so Safari can repaint freely.
+const streamHealthData = (file, isZip, onProgress) => new Promise((resolve, reject) => {
+    const blob = new Blob([AH_WORKER_SRC], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+    URL.revokeObjectURL(url);
+    worker.onmessage = ({ data }) => {
+        if (data.error) { worker.terminate(); reject(new Error(data.error)); }
+        else if (data.done) { worker.terminate(); resolve({ workouts: data.workouts, records: data.records }); }
+        else if (onProgress) onProgress(data.progress, data.count);
+    };
+    worker.onerror = (e) => { worker.terminate(); reject(new Error(e.message || 'Worker error')); };
+    worker.postMessage({ file, isZip });
 });
 
 // --- AH IMPORT PROGRESS OVERLAY ---
@@ -3366,14 +3316,11 @@ window.handleAppleHealthImport = async (event) => {
 
     const progressLabel = looksLikeZip ? 'Reading ZIP…' : 'Reading XML…';
     showAHProgress(progressLabel);
-    await new Promise(r => requestAnimationFrame(r)); // ensure overlay paints before CPU work starts
     const onProgress = makeProgressUpdater(progressLabel);
 
     let result;
     try {
-        result = looksLikeZip
-            ? await streamHealthDataFromZip(file, onProgress)
-            : await streamHealthDataFromXml(file, onProgress);
+        result = await streamHealthData(file, looksLikeZip, onProgress);
     } catch (err) {
         hideAHProgress();
         return alert('Could not read the file: ' + err.message);
