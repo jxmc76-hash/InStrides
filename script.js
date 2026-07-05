@@ -3169,10 +3169,10 @@ const makeAHFlusher = (workoutStrings, recordStrings) => {
             if (wPos < 0 && rPos < 0) break;
             const isW = rPos < 0 || (wPos >= 0 && wPos < rPos), s = isW ? wPos : rPos;
             if (isW) {
-                const sc = buf.indexOf('/>', s), et = buf.indexOf('</Workout>', s);
+                const et = buf.indexOf('</Workout>', s), sc = buf.indexOf('/>', s);
                 let end;
-                if (sc >= 0 && (et < 0 || sc < et)) end = sc + 2;
-                else if (et >= 0) end = et + 10;
+                if (et >= 0) end = et + 10;           // full block with children
+                else if (sc >= 0) end = sc + 2;       // self-closing <Workout ... />
                 else { buf = buf.slice(s); return; }
                 workoutStrings.push(buf.slice(s, end)); from = end;
             } else {
@@ -3340,8 +3340,16 @@ window.handleAppleHealthImport = async (event) => {
         const durationUnit = (useAttr(w, 'durationUnit') || 'min').toLowerCase();
         const durationMin = durationUnit === 's' ? durationRaw / 60 : durationUnit === 'hr' ? durationRaw * 60 : durationRaw;
 
-        const rawDist  = parseFloat(useAttr(w, 'totalDistance') || '0');
-        const distUnit = (useAttr(w, 'totalDistanceUnit') || '').toLowerCase();
+        let rawDist  = parseFloat(useAttr(w, 'totalDistance') || '0');
+        let distUnit = (useAttr(w, 'totalDistanceUnit') || '').toLowerCase();
+        if (!rawDist) {
+            // distance stored in WorkoutStatistics child elements (common for Strava workouts)
+            const distTypes = ['HKQuantityTypeIdentifierDistanceWalkingRunning','HKQuantityTypeIdentifierDistanceCycling','HKQuantityTypeIdentifierDistanceSwimming'];
+            for (const dt of distTypes) {
+                const dm = w.match(new RegExp('WorkoutStatistics[^>]*type="' + dt + '"[^>]*sum="([^"]*)"[^>]*unit="([^"]*)"'));
+                if (dm) { rawDist = parseFloat(dm[1]); distUnit = dm[2].toLowerCase(); break; }
+            }
+        }
         const distKm = distUnit === 'm' ? rawDist / 1000 : distUnit === 'mi' ? rawDist * 1.60934 : rawDist;
 
         const entry = { _id: i, selected: true, id: ts + i, date: startDate, type: mapped, isPlanned: false };
