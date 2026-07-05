@@ -2195,11 +2195,12 @@ const computeHealthScore = (completed, asOfDateStr) => {
     return { score, label, color, components };
 };
 
-// Health score for each of the last `days` days, for the trend chart and the up/down arrow
+// Health score series: daily for short ranges, weekly samples for longer ranges
 const computeHealthScoreSeries = (completed, days) => {
     const points = { labels: [], data: [] };
     const today = new Date();
-    for (let i = days - 1; i >= 0; i--) {
+    const step = days > 90 ? 7 : 1;
+    for (let i = days - 1; i >= 0; i -= step) {
         const d = new Date(today); d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
         points.labels.push(d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
