@@ -3241,31 +3241,93 @@ const streamHealthDataFromZip = (file, onProgress) => new Promise((resolve, reje
     })();
 });
 
+// Stream-parse Workout and Record elements directly from an XML file.
+// Same streaming approach as the ZIP path but without decompression.
+const streamHealthDataFromXml = (file, onProgress) => new Promise((resolve, reject) => {
+    const workoutStrings = [];
+    const recordStrings = [];
+    let buf = '';
+    const dec = new TextDecoder('utf-8');
+
+    const flush = () => {
+        let from = 0;
+        for (;;) {
+            const wPos = buf.indexOf('<Workout ', from);
+            const rPos = buf.indexOf('<Record ', from);
+            if (wPos === -1 && rPos === -1) break;
+            const isWorkout = rPos === -1 || (wPos !== -1 && wPos < rPos);
+            const s = isWorkout ? wPos : rPos;
+            if (isWorkout) {
+                const sc = buf.indexOf('/>', s);
+                const et = buf.indexOf('</Workout>', s);
+                let end;
+                if (sc !== -1 && (et === -1 || sc < et)) end = sc + 2;
+                else if (et !== -1) end = et + '</Workout>'.length;
+                else { buf = buf.slice(s); return; }
+                workoutStrings.push(buf.slice(s, end));
+                from = end;
+            } else {
+                const end = buf.indexOf('/>', s);
+                if (end === -1) { buf = buf.slice(s); return; }
+                const str = buf.slice(s, end + 2);
+                const tm = str.match(/type="([^"]*)"/);
+                if (tm && RECORD_TYPES_WANTED.has(tm[1])) recordStrings.push(str);
+                from = end + 2;
+            }
+        }
+        const lastW = buf.lastIndexOf('<Workout ', from);
+        const lastR = buf.lastIndexOf('<Record ', from);
+        const last = Math.max(lastW, lastR);
+        buf = last >= from ? buf.slice(last) : '';
+    };
+
+    const total = file.size;
+    const CHUNK = 1048576;
+    const raf = () => new Promise(r => requestAnimationFrame(r));
+    let lastPaint = -Infinity;
+    (async () => {
+        try {
+            for (let offset = 0; offset < total; offset += CHUNK) {
+                const end = Math.min(offset + CHUNK, total);
+                const data = new Uint8Array(await file.slice(offset, end).arrayBuffer());
+                buf += dec.decode(data, { stream: end < total });
+                flush();
+                const now = performance.now();
+                if (onProgress && now - lastPaint > 100) {
+                    onProgress(end / total, workoutStrings.length);
+                    await raf();
+                    lastPaint = performance.now();
+                }
+            }
+            resolve({ workouts: workoutStrings, records: recordStrings });
+        } catch (e) { reject(e); }
+    })();
+});
+
 // --- AH IMPORT PROGRESS OVERLAY ---
-const showAHProgress = () => {
+const showAHProgress = (label = 'Reading…') => {
     const el = document.createElement('div');
     el.id = 'ahProgressOverlay';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:500;';
     el.innerHTML = `
         <div style="background:var(--card);border-radius:20px;padding:28px 28px 24px;width:min(320px,88vw);box-shadow:0 12px 40px rgba(0,0,0,0.35);">
             <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:4px;">Importing Apple Health</div>
-            <div id="ahProgStatus" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em;">Reading ZIP…</div>
+            <div id="ahProgStatus" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em;">${label}</div>
             <div style="background:var(--border);border-radius:6px;height:6px;overflow:hidden;">
                 <div id="ahProgBar" style="height:100%;width:0%;background:var(--accent);border-radius:6px;transition:width 0.25s ease;"></div>
             </div>
         </div>`;
     document.body.appendChild(el);
-    return el;
 };
 
-const updateAHProgress = (fraction, workoutCount) => {
-    const pct = Math.min(Math.round(fraction * 100), 99); // hold at 99 until fully done
+const makeProgressUpdater = (label) => (fraction, workoutCount) => {
+    const pct = Math.min(Math.round(fraction * 100), 99);
     const bar = document.getElementById('ahProgBar');
     const status = document.getElementById('ahProgStatus');
     if (bar) bar.style.width = pct + '%';
     if (status) {
         const found = workoutCount > 0 ? ` · ${workoutCount} workout${workoutCount !== 1 ? 's' : ''} found` : '';
-        status.textContent = `Reading ZIP… ${pct}%${found}`;
+        status.textContent = `${label} ${pct}%${found}`;
     }
 };
 
@@ -3302,39 +3364,27 @@ window.handleAppleHealthImport = async (event) => {
     // attr() extracts an XML attribute value from a raw element string
     const attr = (str, name) => { const m = str.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : ''; };
 
-    let rawWorkouts; // array of either DOM Element or raw XML string
-    let useAttr;     // function(w, name) => string value
-    let recordStrings = [];
+    const progressLabel = looksLikeZip ? 'Reading ZIP…' : 'Reading XML…';
+    showAHProgress(progressLabel);
+    await new Promise(r => requestAnimationFrame(r)); // ensure overlay paints before CPU work starts
+    const onProgress = makeProgressUpdater(progressLabel);
 
-    if (looksLikeZip) {
-        showAHProgress();
-        await new Promise(r => requestAnimationFrame(r)); // ensure overlay paints before CPU work starts
-        let result;
-        try {
-            result = await streamHealthDataFromZip(file, updateAHProgress);
-        } catch (err) {
-            hideAHProgress();
-            return alert('Could not read the ZIP file: ' + err.message + '\n\nIf the error persists, try sharing just the export.xml file from inside the ZIP.');
-        }
+    let result;
+    try {
+        result = looksLikeZip
+            ? await streamHealthDataFromZip(file, onProgress)
+            : await streamHealthDataFromXml(file, onProgress);
+    } catch (err) {
         hideAHProgress();
-        const { workouts: workoutStrings, records } = result;
-        recordStrings = records;
-        if (!workoutStrings.length) return alert('No workouts found in the export ZIP.');
-        rawWorkouts = workoutStrings;
-        useAttr = attr;
-    } else {
-        let xmlText;
-        try { xmlText = await file.text(); }
-        catch (err) { return alert('Could not read file: ' + err.message); }
-        let xmlDoc;
-        try {
-            xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
-            if (xmlDoc.querySelector('parsererror')) throw new Error('Invalid XML');
-        } catch (err) { return alert('Could not parse Apple Health XML. Make sure you selected export.xml or the Apple Health export ZIP.'); }
-        rawWorkouts = Array.from(xmlDoc.querySelectorAll('Workout'));
-        if (!rawWorkouts.length) return alert('No workouts found in the export.');
-        useAttr = (w, name) => w.getAttribute(name) || '';
+        return alert('Could not read the file: ' + err.message);
     }
+    hideAHProgress();
+
+    const { workouts: workoutStrings, records } = result;
+    const recordStrings = records;
+    if (!workoutStrings.length) return alert('No workouts found. Make sure you selected export.xml or the Apple Health export ZIP.');
+    const rawWorkouts = workoutStrings;
+    const useAttr = attr;
 
     const existingKeys = new Set(logData.entries.filter(e => !e.isPlanned).map(e => `${e.date}__${e.type}`));
     const newEntries = [];
