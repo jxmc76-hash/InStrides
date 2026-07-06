@@ -2250,11 +2250,33 @@ const renderLongTermCharts = (completed) => {
         };
     };
 
+    const ltInsight = ({ labels, data }, unit) => {
+        if (data.length < 3) return null;
+        const lastVal = data[data.length - 1];
+        const lastLabel = labels[labels.length - 1];
+        const allAvg = data.reduce((a, b) => a + b, 0) / data.length;
+        if (!allAvg) return null;
+        const pctDiff = Math.round(((lastVal - allAvg) / allAvg) * 100);
+        const years = Math.max(1, Math.round(data.length / 12));
+        const yearStr = years > 1 ? `${years}-year` : 'long-term';
+        if (Math.abs(pctDiff) < 1) return `${lastLabel} was in line with your ${yearStr} average.`;
+        const dir = pctDiff > 0 ? 'above' : 'below';
+        return `${lastLabel} was ${Math.abs(pctDiff)}% ${dir} your ${yearStr} average.`;
+    };
+
     const makeLtChart = (id, canvasId, title, { labels, data }, color, unit, chartType = 'line') => {
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
         titleEl.textContent = title;
         container.appendChild(titleEl);
+
+        const sentence = ltInsight({ labels, data }, unit);
+        if (sentence) {
+            const p = document.createElement('p');
+            p.className = 'lt-insight';
+            p.textContent = sentence;
+            container.appendChild(p);
+        }
 
         if (data.length < 2) {
             const empty = document.createElement('div');

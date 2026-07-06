@@ -144,8 +144,9 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 }
 
 /* Insights Section Titles */
-.insights-section-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin: 30px 0 12px 0; }
+.insights-section-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin: 30px 0 6px 0; }
 .insights-container > .insights-section-title:first-child { margin-top: 0; }
+.lt-insight { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; margin: 0 0 10px; font-style: italic; }
 
 /* Stat card icon */
 .stat-icon { font-size: 1.4rem; margin-bottom: 8px; }
