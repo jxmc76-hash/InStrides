@@ -1779,6 +1779,38 @@ const renderCorrelations = () => {
     });
 };
 
+// --- ACTIVE GOALS PANEL ---
+const renderActiveGoals = () => {
+    const panel = document.getElementById('activeGoalsPanel');
+    if (!panel) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const activeGoals = (logData.goals || []).filter(g =>
+        (!g.startDate || g.startDate <= todayStr) &&
+        (!g.targetDate || g.targetDate >= todayStr)
+    );
+    if (!activeGoals.length) { panel.innerHTML = ''; return; }
+
+    panel.innerHTML = `<div class="ag-section">
+        <div class="ag-heading">Active Goals</div>
+        ${activeGoals.map(g => {
+            const { pct } = computeGoalProgress(g);
+            const daysLeft = g.targetDate
+                ? Math.max(0, Math.round((new Date(g.targetDate + 'T00:00:00') - new Date()) / 86400000))
+                : null;
+            const targetLabel = goalTargetLabel(g);
+            return `<div class="ag-goal">
+                <div class="ag-goal-top">
+                    <span class="ag-goal-title">${g.title}</span>
+                    ${daysLeft !== null ? `<span class="ag-goal-days">${daysLeft}d left</span>` : ''}
+                </div>
+                ${targetLabel ? `<div class="ag-goal-target">${g.type} · ${targetLabel}</div>` : ''}
+                <div class="ag-bar-wrap"><div class="ag-bar-fill" style="width:${pct}%"></div></div>
+                <div class="ag-goal-pct">${pct}%</div>
+            </div>`;
+        }).join('')}
+    </div>`;
+};
+
 // --- MASCOT ---
 // --- OVERVIEW RENDERER ---
 const OVERVIEW_CAT_COLORS = {
@@ -1923,6 +1955,7 @@ const renderOverview = () => {
         scrollEl.addEventListener('scroll', scrollEl._ovHeaderScroll, { passive: true });
     }
 
+    renderActiveGoals();
     renderShortTermCharts(completed);
     renderLongTermCharts(completed);
 };
