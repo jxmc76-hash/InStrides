@@ -381,7 +381,6 @@ const attachRealtimeListener = () => {
             renderMatrix();
             renderStreak();
             if(document.getElementById('viewOverview').classList.contains('active')) renderOverview();
-            if(document.getElementById('viewInsights').classList.contains('active')) renderInsights();
             if(document.getElementById('viewGoals').classList.contains('active')) { renderThemes(); renderGoals(); }
             if(document.getElementById('viewPlan').classList.contains('active')) renderPlan();
         } else if (!snap.metadata.fromCache) {
@@ -594,7 +593,6 @@ window.switchTab = (tab) => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     if (tab === 'overview') renderOverview();
-    if (tab === 'insights') renderInsights();
     if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); renderPlan(); }
 };
 
@@ -1916,148 +1914,8 @@ const renderOverview = () => {
         scrollEl.addEventListener('scroll', scrollEl._ovHeaderScroll, { passive: true });
     }
 
-    // Sidebar
-    const sidebar = document.getElementById('overviewSidebar');
-    if (!sidebar) return;
-
-    // Streak
-    const loggedDates = new Set(completed.map(e => e.date));
-    let streak = 0;
-    const sd = new Date(today);
-    if (!loggedDates.has(todayStr)) sd.setDate(sd.getDate() - 1);
-    while (loggedDates.has(sd.toISOString().split('T')[0])) { streak++; sd.setDate(sd.getDate() - 1); }
-
-    // 4 rolling 7-day periods (oldest → newest)
-    const periods = [3, 2, 1, 0].map(w => {
-        const end = new Date(today); end.setDate(end.getDate() - w * 7);
-        const start = new Date(end); start.setDate(start.getDate() - 6);
-        const endStr = end.toISOString().split('T')[0];
-        const startStr = start.toISOString().split('T')[0];
-        const entries = completed.filter(e => e.type && e.type !== 'NONE' && e.date >= startStr && e.date <= endStr);
-        const byType = {};
-        entries.forEach(e => { byType[e.type] = (byType[e.type] || 0) + 1; });
-        return { sessions: entries.length, activeDays: new Set(entries.map(e => e.date)).size, byType, label: w === 0 ? 'Now' : `${w}w` };
-    });
-
-    const cur = periods[3], prev = periods[2];
-    const topTypeCur = Object.entries(cur.byType).sort((a, b) => b[1] - a[1])[0];
-
-    // Active theme
-    const activeTheme = themes.find(t => t.startDate <= todayStr && t.endDate >= todayStr) || null;
-
-    // --- Intelligence card ---
-    const intelItems = [];
-
-    // Week-on-week sessions
-    if (cur.sessions > prev.sessions) {
-        intelItems.push(`This week you've done <strong>${cur.sessions}</strong> session${cur.sessions !== 1 ? 's' : ''} — ${cur.sessions - prev.sessions} more than last week.`);
-    } else if (cur.sessions < prev.sessions && prev.sessions > 0) {
-        intelItems.push(`${prev.sessions} sessions last week, ${cur.sessions} so far this week — a quieter spell.`);
-    } else if (cur.sessions > 0) {
-        intelItems.push(`Matching last week — <strong>${cur.sessions}</strong> sessions apiece so far.`);
-    }
-
-    // Most frequent activity type overall
-    const allTypeCounts = {};
-    completed.filter(e => e.type && e.type !== 'NONE').forEach(e => { allTypeCounts[e.type] = (allTypeCounts[e.type] || 0) + 1; });
-    const topTypeEntry = Object.entries(allTypeCounts).sort((a, b) => b[1] - a[1])[0];
-    if (topTypeEntry) {
-        const total = Object.values(allTypeCounts).reduce((a, b) => a + b, 0);
-        const pct = Math.round(topTypeEntry[1] / total * 100);
-        intelItems.push(`<strong>${topTypeEntry[0]}</strong> makes up ${pct}% of all your sessions.`);
-    }
-
-    // Training days in last 28
-    const last28Days = periods.reduce((acc, p) => acc + p.activeDays, 0);
-    if (last28Days > 0) {
-        intelItems.push(`You've trained on <strong>${last28Days} of the last 28 days</strong>.`);
-    }
-
-    // Streak note
-    if (streak >= 3) {
-        intelItems.push(`🔥 ${streak}-day streak — keep the chain going.`);
-    } else {
-        intelItems.push(`🔥 ${streak}-day streak.`);
-    }
-
-    let sideHtml = `<div class="ov-card">
-        <div class="ov-card-title">Training Intelligence</div>
-        <ul class="ov-intel-list">
-            ${intelItems.map(item => `<li>${item}</li>`).join('')}
-        </ul>
-    </div>`;
-
-    // Theme card
-    if (activeTheme) {
-        const start = new Date(activeTheme.startDate + 'T00:00:00');
-        const end = new Date(activeTheme.endDate + 'T00:00:00');
-        const totalDays = Math.round((end - start) / 86400000) + 1;
-        const elapsed = Math.round((today - start) / 86400000) + 1;
-        const pct = Math.min(100, Math.round((elapsed / totalDays) * 100));
-        const daysLeft = Math.max(0, Math.round((end - today) / 86400000));
-        const themeSessions = completed.filter(e => e.date >= activeTheme.startDate && e.date <= activeTheme.endDate).length;
-
-        sideHtml += `<div class="ov-card">
-            <div class="ov-card-title">Current Theme</div>
-            <div class="ov-theme-name">${activeTheme.title}</div>
-            <div class="ov-theme-dates">${fmtShort(activeTheme.startDate)} – ${fmtShort(activeTheme.endDate)}</div>
-            <div class="ov-progress-track"><div class="ov-progress-fill" style="width:${pct}%"></div></div>
-            <div class="ov-theme-stats">
-                <div class="ov-theme-stat"><span class="ov-theme-stat-value">${pct}%</span><span class="ov-theme-stat-label">Complete</span></div>
-                <div class="ov-theme-stat"><span class="ov-theme-stat-value">${themeSessions}</span><span class="ov-theme-stat-label">Sessions</span></div>
-                <div class="ov-theme-stat"><span class="ov-theme-stat-value">${daysLeft}</span><span class="ov-theme-stat-label">Days left</span></div>
-            </div>
-        </div>`;
-    } else {
-        sideHtml += `<div class="ov-card"><div class="ov-card-title">Current Theme</div><p class="ov-no-theme">No active theme. Set one up in Goals.</p></div>`;
-    }
-
-    sidebar.innerHTML = sideHtml;
-
-    // Strapline — random pick from data-driven pool, changes on each render
-    const ovStrapline = document.getElementById('ovStrapline');
-    if (ovStrapline) {
-        const pool = [];
-        if (streak >= 30) {
-            pool.push(`${streak} days straight — that's not a habit, that's a lifestyle.`);
-            pool.push(`A solid month without a missed day. ${streak} sessions in a row.`);
-        } else if (streak >= 14) {
-            pool.push(`${streak} days on the trot. Keep the chain intact.`);
-        } else if (streak >= 7) {
-            pool.push(`Seven days in a row — you're in a proper rhythm right now.`);
-        } else if (streak >= 3) {
-            pool.push(`${streak} days running — the habit is forming.`);
-        }
-        if (cur.sessions > prev.sessions) {
-            pool.push(`Already ahead of last week — ${cur.sessions} sessions vs ${prev.sessions}. Keep it going.`);
-            pool.push(`This week is going better than last — ${cur.sessions} sessions and climbing.`);
-        } else if (cur.sessions < prev.sessions) {
-            pool.push(`${prev.sessions - cur.sessions} sessions behind last week's pace — still time to close the gap.`);
-        } else if (cur.sessions > 0) {
-            pool.push(`Perfectly matched with last week — ${cur.sessions} sessions apiece so far.`);
-        }
-        const maxS = Math.max(...periods.map(p => p.sessions));
-        if (cur.sessions === maxS && cur.sessions > 0 && periods.filter(p => p.sessions === maxS).length === 1) {
-            pool.push(`Best week in the past month — ${cur.sessions} sessions. You're peaking.`);
-        }
-        if (cur.activeDays === 7) pool.push(`Every single day this week. No rest for the relentless.`);
-        else if (cur.activeDays >= 5) pool.push(`Active ${cur.activeDays} out of 7 days this week — solid commitment.`);
-        if (activeTheme) {
-            const thEnd = new Date(activeTheme.endDate + 'T00:00:00');
-            const thStart = new Date(activeTheme.startDate + 'T00:00:00');
-            const thPct = Math.min(100, Math.round(((today - thStart) / (thEnd - thStart)) * 100));
-            const thLeft = Math.max(0, Math.round((thEnd - today) / 86400000));
-            if (thLeft <= 7) pool.push(`Final week of ${activeTheme.title}. Leave nothing on the table.`);
-            else if (thPct >= 75) pool.push(`Three quarters through ${activeTheme.title}. Finish strong.`);
-            else pool.push(`${thPct}% into ${activeTheme.title} — ${thLeft} days left to make it count.`);
-        }
-        if (topTypeCur && topTypeCur[1] >= 3) {
-            pool.push(`${topTypeCur[0].toLowerCase()} is front and centre this week — ${topTypeCur[1]} sessions and going.`);
-        }
-        if (cur.sessions >= 10) pool.push(`${cur.sessions} sessions in 7 days. Proper graft.`);
-        if (pool.length === 0) pool.push('Keep showing up — every session counts.');
-        ovStrapline.textContent = pool[Math.floor(Math.random() * pool.length)];
-    }
+    renderShortTermCharts(completed);
+    renderLongTermCharts(completed);
 };
 
 // --- KEY FINDINGS ---
@@ -2464,13 +2322,6 @@ window.openOvDetail = (dateStr, type) => {
     }).join('');
 
     document.getElementById('ovDetailModal').style.display = 'flex';
-};
-
-// --- INSIGHTS RENDERER ---
-const renderInsights = () => {
-    const completed = logData.entries.filter(e => !e.isPlanned);
-    renderShortTermCharts(completed);
-    renderLongTermCharts(completed);
 };
 
 const computeHealthScore = (completed, asOfDateStr) => {

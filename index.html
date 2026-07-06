@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=158">
+    <link rel="stylesheet" href="style.css?v=159">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -154,11 +154,21 @@
             </div>
 
             <div id="viewOverview" class="view-pane active">
-                <div id="ovStrapline" class="ov-strapline"></div>
                 <div class="overview-container">
                     <div class="overview-sidebar-wrap">
-                        <div class="ov-panel-heading">Stats</div>
-                        <div class="overview-sidebar" id="overviewSidebar"></div>
+                        <div class="ov-panel-heading">Trends</div>
+                        <div class="overview-charts" id="overviewCharts">
+                            <div class="period-header">Past 12 Weeks</div>
+                            <div class="isect">
+                                <div class="isect-header">Short-Term Trends</div>
+                                <div id="shortTermChartsContainer"></div>
+                            </div>
+                            <div class="period-header">Past 8 Years</div>
+                            <div class="isect">
+                                <div class="isect-header">Long-Term Trends</div>
+                                <div id="longTermChartsContainer"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="overview-table-wrap">
                         <div class="ov-panel-heading">Activity</div>
@@ -169,25 +179,7 @@
                 </div>
             </div>
 
-            <div id="viewInsights" class="view-pane">
-                <div class="insights-container">
-
-                    <div class="period-header">Past 12 Weeks</div>
-
-                    <div class="isect">
-                        <div class="isect-header">Short-Term Trends</div>
-                        <div id="shortTermChartsContainer"></div>
-                    </div>
-
-                    <div class="period-header">Past 8 Years</div>
-
-                    <div class="isect">
-                        <div class="isect-header">Long-Term Trends</div>
-                        <div id="longTermChartsContainer"></div>
-                    </div>
-
-                </div>
-            </div>
+            <div id="viewInsights" class="view-pane"></div>
 
             <div id="viewGoals" class="view-pane">
                 <div class="insights-container">
@@ -237,13 +229,7 @@
                 </svg>
                 <span class="bottom-nav-label">Log</span>
             </button>
-            <button class="bottom-nav-item" data-tab="insights" onclick="window.switchTab('insights')">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="13" width="5" height="7" rx="1"/><rect x="8.5" y="8" width="5" height="12" rx="1"/><rect x="15" y="3" width="5" height="17" rx="1"/>
-                </svg>
-                <span class="bottom-nav-label">Insights</span>
-            </button>
-            <button class="bottom-nav-item" data-tab="goals" onclick="window.switchTab('goals')">
+<button class="bottom-nav-item" data-tab="goals" onclick="window.switchTab('goals')">
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8">
                     <circle cx="11" cy="11" r="9"/><circle cx="11" cy="11" r="5"/><circle cx="11" cy="11" r="1.5" fill="currentColor" stroke="none"/>
                 </svg>
@@ -634,7 +620,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=222"></script>
+    <script type="module" src="script.js?v=223"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
