@@ -3293,6 +3293,48 @@ window.saveCellValue = async (dateKey, field, value) => {
     }
 };
 
+window.restoreJuneData = async () => {
+    const DATA = [
+        { date: '2026-06-21',              SLEEP: 62 },
+        { date: '2026-06-20', ENERGY: 8,  SLEEP: 63 },
+        { date: '2026-06-19', ENERGY: 8,  SLEEP: 90 },
+        { date: '2026-06-18', ENERGY: 7,  SLEEP: 78 },
+        { date: '2026-06-17', ENERGY: 7,  SLEEP: 74 },
+        { date: '2026-06-16', ENERGY: 6,  SLEEP: 88 },
+        { date: '2026-06-15', ENERGY: 8,  SLEEP: 88 },
+        { date: '2026-06-14', ENERGY: 5,  SLEEP: 70 },
+        { date: '2026-06-13', ENERGY: 8,  SLEEP: 95 },
+        { date: '2026-06-12', ENERGY: 4,  SLEEP: 82 },
+        { date: '2026-06-11', ENERGY: 7,  SLEEP: 93 },
+        { date: '2026-06-10', ENERGY: 6,  SLEEP: 93 },
+        { date: '2026-06-09', ENERGY: 4,  SLEEP: 78 },
+        { date: '2026-06-08', ENERGY: 4,  SLEEP: 83 },
+        { date: '2026-06-07', ENERGY: 9,  SLEEP: 86 },
+        { date: '2026-06-06', ENERGY: 9,  SLEEP: 84 },
+        { date: '2026-06-05', ENERGY: 7,  SLEEP: 76 },
+        { date: '2026-06-04', ENERGY: 9,  SLEEP: 90 },
+        { date: '2026-06-03', ENERGY: 6,  SLEEP: 68 },
+        { date: '2026-06-02', ENERGY: 9,  SLEEP: 94 },
+        { date: '2026-06-01', ENERGY: 7,  SLEEP: 75 },
+        { date: '2026-05-31', ENERGY: 8,  SLEEP: 97 },
+        { date: '2026-05-30', ENERGY: 8,  SLEEP: 83 },
+    ];
+    let ts = Date.now();
+    DATA.forEach(({ date, ENERGY, SLEEP }) => {
+        let record = logData.entries.find(e => e.date === date && !e.isPlanned && e.type === 'NONE');
+        if (!record) {
+            record = { id: ts++, date, type: 'NONE', isPlanned: false, customMetricData: {} };
+            logData.entries.push(record);
+        }
+        if (!record.customMetricData) record.customMetricData = {};
+        if (ENERGY != null) record.customMetricData.ENERGY = ENERGY;
+        if (SLEEP  != null) record.customMetricData.SLEEP  = SLEEP;
+    });
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    console.log('restoreJuneData: done, saved', DATA.length, 'dates.');
+};
+
 window.toggleBinaryCell = async (dateKey, metricName, currentVal) => {
     const newVal = !currentVal;
     let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
