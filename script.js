@@ -1894,10 +1894,9 @@ const renderOverview = () => {
             const label = active ? getOvCellLabel(entries, type) : '';
             let cellInner = '';
             if (label) {
-                const match = label.match(/^([\d.]+)(.*)$/);
+                const match = label.match(/^([\d.]+)/);
                 const num = match ? match[1] : label;
-                const unit = match ? match[2] : '';
-                cellInner = `<span class="ov-sq-val"><span class="ov-sq-num">${num}</span>${unit ? `<span class="ov-sq-unit">${unit}</span>` : ''}</span>`;
+                cellInner = `<span class="ov-sq-val"><span class="ov-sq-num">${num}</span></span>`;
             }
             html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}>${cellInner}</div></td>`;
         });
