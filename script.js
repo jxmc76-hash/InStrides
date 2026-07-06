@@ -2111,6 +2111,42 @@ const renderLongTermCharts = (completed) => {
         };
     };
 
+    const monthlyAvgCarryForward = (accessor) => {
+        const months = {};
+        completed.forEach(e => {
+            if (new Date(e.date) < cutoff) return;
+            const val = parseFloat(accessor(e));
+            if (!val || isNaN(val) || val <= 0) return;
+            const ym = e.date.slice(0, 7);
+            if (!months[ym]) months[ym] = { sum: 0, count: 0 };
+            months[ym].sum += val;
+            months[ym].count++;
+        });
+        const recorded = Object.keys(months).sort();
+        if (!recorded.length) return { labels: [], data: [] };
+        // Enumerate every month from first recorded to today
+        const today = new Date();
+        const endYM = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        const allYMs = [];
+        let [y, m] = recorded[0].split('-').map(Number);
+        const [ey, em] = endYM.split('-').map(Number);
+        while (y < ey || (y === ey && m <= em)) {
+            allYMs.push(`${y}-${String(m).padStart(2, '0')}`);
+            m++; if (m > 12) { m = 1; y++; }
+        }
+        const labels = [], data = [];
+        let lastVal = null;
+        allYMs.forEach(ym => {
+            const avg = months[ym] ? +(months[ym].sum / months[ym].count).toFixed(1) : null;
+            if (avg != null) lastVal = avg;
+            if (lastVal != null) {
+                labels.push(new Date(ym + '-15').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+                data.push(lastVal);
+            }
+        });
+        return { labels, data };
+    };
+
     const monthlySum = (accessor) => {
         const months = {};
         completed.forEach(e => {
@@ -2180,7 +2216,7 @@ const renderLongTermCharts = (completed) => {
     const weightSeries = monthlyAvg(e => e.customMetricData?.['WEIGHT']);
     makeLtChart('lt-weight', 'chartLtWeight', 'Average Monthly Weight (kg)', weightSeries, '#6366f1', 'kg');
 
-    const vo2Series = monthlyAvg(e => e.customMetricData?.['VO2 MAX']);
+    const vo2Series = monthlyAvgCarryForward(e => e.customMetricData?.['VO2 MAX']);
     makeLtChart('lt-vo2max', 'chartLtVo2max', 'Average Monthly VO2 Max (mL/kg/min)', vo2Series, '#10b981', 'mL/kg/min');
 
     const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
