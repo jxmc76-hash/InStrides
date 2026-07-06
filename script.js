@@ -1246,7 +1246,11 @@ const goalTargetLabel = (g) => {
 };
 
 const computeGoalProgress = (g) => {
-    const entries = logData.entries.filter(e => e.type === g.type && !e.isPlanned);
+    const entries = logData.entries.filter(e =>
+        e.type === g.type && !e.isPlanned &&
+        (!g.startDate || e.date >= g.startDate) &&
+        (!g.targetDate || e.date <= g.targetDate)
+    );
     switch (g.category) {
         case 'cardio': {
             const best = Math.max(0, ...entries.filter(e => e.distance > 0).map(e => e.distance));
@@ -1285,7 +1289,9 @@ const computeGoalProgress = (g) => {
         }
         case 'metric': {
             const vals = logData.entries
-                .filter(e => !e.isPlanned && e.customMetricData?.[g.metricName] != null)
+                .filter(e => !e.isPlanned && e.customMetricData?.[g.metricName] != null &&
+                    (!g.startDate || e.date >= g.startDate) &&
+                    (!g.targetDate || e.date <= g.targetDate))
                 .sort((a, b) => a.date < b.date ? -1 : 1);
             if (!vals.length) return { pct: 0, currentLabel: 'No entries logged yet' };
             const current = vals[vals.length - 1].customMetricData[g.metricName];
