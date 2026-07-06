@@ -2250,10 +2250,15 @@ const renderLongTermCharts = (completed) => {
         };
     };
 
-    const ltInsight = ({ labels, data }, unit) => {
+    const ltInsight = ({ labels, data }) => {
         if (data.length < 3) return null;
-        const lastVal = data[data.length - 1];
-        const lastLabel = labels[labels.length - 1];
+        // Skip current (partial) month — compare against its label
+        const thisMonthLabel = new Date().toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+        let idx = data.length - 1;
+        if (labels[idx] === thisMonthLabel) idx--;
+        if (idx < 1) return null;
+        const lastVal = data[idx];
+        const lastLabel = labels[idx];
         const allAvg = data.reduce((a, b) => a + b, 0) / data.length;
         if (!allAvg) return null;
         const pctDiff = Math.round(((lastVal - allAvg) / allAvg) * 100);
