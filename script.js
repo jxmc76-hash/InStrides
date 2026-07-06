@@ -2215,7 +2215,7 @@ const renderShortTermCharts = (completed) => {
     makeStChart('st-weight',   'chartStWeight',   'Weekly Avg Weight (kg)',            weeklyAvg(e => e.customMetricData?.['WEIGHT']),  '#6366f1', 'kg');
     makeStChart('st-vo2max',   'chartStVo2max',   'Weekly VO2 Max (mL/kg/min)',         weeklyVo2CarryForward(),                          '#10b981', 'mL/kg/min');
     const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
-    makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit, 'bar');
+    makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit);
     makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
     makeStChart('st-sleep',    'chartStSleep',    'Weekly Avg Sleep',                  weeklyAvg(e => e.customMetricData?.['SLEEP']),   '#14b8a6', '');
 };
@@ -2358,7 +2358,7 @@ const renderLongTermCharts = (completed) => {
 
     const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
     const runSeries = monthlySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null);
-    makeLtChart('lt-rundist', 'chartLtRunDist', `Monthly Running Distance (${distUnit})`, runSeries, '#ff5500', distUnit, 'bar');
+    makeLtChart('lt-rundist', 'chartLtRunDist', `Monthly Running Distance (${distUnit})`, runSeries, '#ff5500', distUnit);
 };
 
 // --- INSIGHTS RENDERER ---
