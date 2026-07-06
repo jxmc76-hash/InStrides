@@ -172,34 +172,11 @@
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
 
-                    <div class="period-header">Past 3 Months</div>
+                    <div class="period-header">Past 12 Weeks</div>
 
                     <div class="isect">
-                        <div class="isect-header">Key Findings</div>
-                        <div id="keyFindingsContainer"></div>
-                    </div>
-
-                    <div class="isect">
-                        <div class="isect-header">This Week</div>
-                        <div id="weeklyRecap" class="recap-card"></div>
-                        <div id="weekCompare" class="week-compare-grid"></div>
-                    </div>
-
-                    <div class="isect">
-                        <div class="isect-header">Health Score</div>
-                        <div id="healthScoreCard" class="health-score-card"></div>
-                        <div id="healthScoreChartWrap" class="chart-container" style="display:none"><canvas id="healthScoreChart"></canvas></div>
-                    </div>
-
-                    <div class="isect">
-                        <div class="isect-header">Your Data</div>
-                        <div class="chart-container"><canvas id="chartDistance"></canvas></div>
-                        <div id="trailingChartsContainer"></div>
-                    </div>
-
-                    <div class="isect">
-                        <div class="isect-header">Patterns</div>
-                        <div id="correlationsContainer"></div>
+                        <div class="isect-header">Short-Term Trends</div>
+                        <div id="shortTermChartsContainer"></div>
                     </div>
 
                     <div class="period-header">Past 8 Years</div>
@@ -644,7 +621,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=215"></script>
+    <script type="module" src="script.js?v=216"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
