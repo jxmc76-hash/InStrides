@@ -2083,6 +2083,143 @@ const renderKeyFindings = (completed) => {
     container.innerHTML = `<ul class="key-findings-list">${findings.map(f => `<li>${f}</li>`).join('')}</ul>`;
 };
 
+const renderShortTermCharts = (completed) => {
+    const container = document.getElementById('shortTermChartsContainer');
+    if (!container) return;
+
+    Object.keys(chartInstances).filter(k => k.startsWith('st-')).forEach(k => destroyChart(k));
+    container.innerHTML = '';
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 84); // 12 weeks
+
+    // Build a sorted list of week-start keys covering the range
+    const weekKeys = [];
+    const today = new Date();
+    for (let d = new Date(cutoff); d <= today; d.setDate(d.getDate() + 7)) {
+        weekKeys.push(getWeekStart(d.toISOString().split('T')[0]));
+    }
+    const uniqueWeeks = [...new Set(weekKeys)].sort();
+
+    // Per-week aggregation helpers
+    const weeklyAvg = (accessor) => {
+        const weeks = {};
+        completed.forEach(e => {
+            if (new Date(e.date) < cutoff) return;
+            const val = parseFloat(accessor(e));
+            if (!val || isNaN(val) || val <= 0) return;
+            const wk = getWeekStart(e.date);
+            if (!weeks[wk]) weeks[wk] = { sum: 0, count: 0 };
+            weeks[wk].sum += val;
+            weeks[wk].count++;
+        });
+        return uniqueWeeks
+            .filter(wk => weeks[wk])
+            .map(wk => ({
+                label: new Date(wk).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+                value: +(weeks[wk].sum / weeks[wk].count).toFixed(1)
+            }));
+    };
+
+    const weeklySum = (accessor) => {
+        const weeks = {};
+        completed.forEach(e => {
+            if (new Date(e.date) < cutoff) return;
+            const val = parseFloat(accessor(e));
+            if (!val || isNaN(val) || val <= 0) return;
+            const wk = getWeekStart(e.date);
+            weeks[wk] = (weeks[wk] || 0) + val;
+        });
+        return uniqueWeeks
+            .filter(wk => weeks[wk])
+            .map(wk => ({
+                label: new Date(wk).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+                value: +weeks[wk].toFixed(1)
+            }));
+    };
+
+    // VO2 Max with carry-forward: use last known value per week
+    const weeklyVo2CarryForward = () => {
+        const byDate = {};
+        completed.forEach(e => {
+            const val = parseFloat(e.customMetricData?.['VO2 MAX']);
+            if (val > 0 && !isNaN(val)) byDate[e.date] = val;
+        });
+        const sortedDates = Object.keys(byDate).sort();
+        const result = [];
+        let lastVal = null;
+        // seed lastVal from before the cutoff window
+        sortedDates.forEach(d => { if (new Date(d) < cutoff) lastVal = byDate[d]; });
+        uniqueWeeks.forEach(wk => {
+            const wkEnd = new Date(wk); wkEnd.setDate(wkEnd.getDate() + 6);
+            const wkEndStr = wkEnd.toISOString().split('T')[0];
+            sortedDates.forEach(d => { if (d >= wk && d <= wkEndStr && byDate[d] != null) lastVal = byDate[d]; });
+            if (lastVal != null) result.push({
+                label: new Date(wk).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+                value: lastVal
+            });
+        });
+        return result;
+    };
+
+    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line') => {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'insights-section-title';
+        titleEl.textContent = title;
+        container.appendChild(titleEl);
+
+        if (points.length < 2) {
+            const empty = document.createElement('div');
+            empty.className = 'chart-container chart-empty-state';
+            empty.innerHTML = `<div class="chart-empty-icon">📈</div><p>Not enough data yet</p>`;
+            container.appendChild(empty);
+            return;
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-container';
+        const canvas = document.createElement('canvas');
+        canvas.id = canvasId;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        const isBar = chartType === 'bar';
+        chartInstances[id] = new Chart(canvas, {
+            type: chartType,
+            data: {
+                labels: points.map(p => p.label),
+                datasets: [{
+                    label: unit,
+                    data: points.map(p => p.value),
+                    borderColor: color,
+                    backgroundColor: isBar ? color + 'bf' : color + '26',
+                    borderWidth: isBar ? 0 : 2,
+                    borderRadius: isBar ? 4 : 0,
+                    tension: 0.3,
+                    fill: !isBar,
+                    pointRadius: 2,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: false, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45 } }
+                }
+            }
+        });
+    };
+
+    makeStChart('st-weight',   'chartStWeight',   'Weekly Avg Weight (kg)',            weeklyAvg(e => e.customMetricData?.['WEIGHT']),  '#6366f1', 'kg');
+    makeStChart('st-vo2max',   'chartStVo2max',   'Weekly VO2 Max (mL/kg/min)',         weeklyVo2CarryForward(),                          '#10b981', 'mL/kg/min');
+    const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
+    makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit, 'bar');
+    makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
+    makeStChart('st-sleep',    'chartStSleep',    'Weekly Avg Sleep',                  weeklyAvg(e => e.customMetricData?.['SLEEP']),   '#14b8a6', '');
+};
+
 const renderLongTermCharts = (completed) => {
     const container = document.getElementById('longTermChartsContainer');
     if (!container) return;
@@ -2227,13 +2364,7 @@ const renderLongTermCharts = (completed) => {
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
-    renderKeyFindings(completed);
-    renderHealthScore(completed);
-    renderWeeklyRecap(completed);
-    renderWeekCompare(completed);
-    renderDistanceChart(completed);
-    renderTrailingCharts(completed);
-    renderCorrelations();
+    renderShortTermCharts(completed);
     renderLongTermCharts(completed);
 };
 
