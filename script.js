@@ -2425,8 +2425,6 @@ window.openOvDetail = (dateStr, type) => {
     titleEl.style.color = color;
     document.getElementById('ovDetailDate').textContent = dateLabel;
 
-    const fmtStat = (label, val, unit = '') => val ? `<div class="ov-detail-stat"><span class="ov-detail-stat-val">${val}</span><span class="ov-detail-stat-unit">${unit ? ' ' + unit : label ? '' : ''}</span>${label ? `<span class="ov-detail-stat-label">${label}</span>` : ''}</div>` : '';
-
     document.getElementById('ovDetailBody').innerHTML = entries.map((e, i) => {
         const stats = [];
         if (cat === 'cardio' || cat === 'pacing') {

@@ -444,7 +444,8 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .ov-cell-wrap { padding: 0; vertical-align: middle; }
 .ov-sq { width: 26px; height: 36px; border-radius: 6px; background: var(--border); display: flex; align-items: center; justify-content: center; }
 .ov-sq-on { opacity: 0.92; }
-.ov-sq-val { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; pointer-events: none; }
+.ov-sq-val { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.ov-sq * { pointer-events: none; }
 .ov-sq-num { font-size: 0.62rem; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -0.5px; }
 .ov-sq-unit { font-size: 0.4rem; font-weight: 700; color: rgba(255,255,255,0.68); line-height: 1; text-transform: uppercase; letter-spacing: 0.4px; }
 .ov-week-sep td { height: 6px; padding: 0 !important; border: none !important; border-bottom: 1.5px dashed var(--border) !important; }
