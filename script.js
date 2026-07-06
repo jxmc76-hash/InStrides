@@ -1892,7 +1892,14 @@ const renderOverview = () => {
             const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
             const entries = active ? (entriesByDateType[`${dateStr}|${type}`] || []) : [];
             const label = active ? getOvCellLabel(entries, type) : '';
-            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}>${label ? `<span class="ov-sq-val">${label}</span>` : ''}</div></td>`;
+            let cellInner = '';
+            if (label) {
+                const match = label.match(/^([\d.]+)(.*)$/);
+                const num = match ? match[1] : label;
+                const unit = match ? match[2] : '';
+                cellInner = `<span class="ov-sq-val"><span class="ov-sq-num">${num}</span>${unit ? `<span class="ov-sq-unit">${unit}</span>` : ''}</span>`;
+            }
+            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}>${cellInner}</div></td>`;
         });
         html += `</tr>`;
     });
