@@ -1793,6 +1793,47 @@ const renderOverview = () => {
     }
 
     const done = new Set(completed.map(e => `${e.date}|${e.type}`));
+
+    // Build lookup: "date|type" → entries array
+    const entriesByDateType = {};
+    completed.forEach(e => {
+        const k = `${e.date}|${e.type}`;
+        if (!entriesByDateType[k]) entriesByDateType[k] = [];
+        entriesByDateType[k].push(e);
+    });
+
+    const getOvCellLabel = (entries, type) => {
+        if (!entries.length) return '';
+        const cat = getTypeCategory(type);
+        if (cat === 'cardio' || cat === 'pacing') {
+            const dist = entries.reduce((s, e) => s + (e.distance || 0), 0);
+            if (!dist) return '';
+            const unit = entries.find(e => e.distanceUnit)?.distanceUnit || 'km';
+            const val = dist >= 10 ? Math.round(dist) : +dist.toFixed(1);
+            return `${val}${unit === 'km' ? 'k' : 'mi'}`;
+        }
+        if (cat === 'gym') {
+            const maxW = Math.max(...entries.map(e => e.weight || 0));
+            if (!maxW || !isFinite(maxW)) return '';
+            const unit = entries.find(e => e.weightUnit)?.weightUnit || 'kg';
+            return `${maxW}${unit === 'kg' ? 'k' : 'lb'}`;
+        }
+        if (cat === 'time' || cat === 'bodyweight') {
+            const dur = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            return dur ? `${dur}m` : '';
+        }
+        if (cat === 'other') {
+            const dur = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            if (dur) return `${dur}m`;
+            const vals = entries.filter(e => e.otherRating).map(e => e.otherRating);
+            if (vals.length) {
+                const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+                return avg % 1 === 0 ? `${avg}` : avg.toFixed(1);
+            }
+        }
+        return '';
+    };
+
     const themeObjForDate = d => themes.find(t => t.startDate <= d && t.endDate >= d) || null;
     const fmtShort = s => new Date(s + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
@@ -1849,7 +1890,9 @@ const renderOverview = () => {
         types.forEach(type => {
             const active = done.has(`${dateStr}|${type}`);
             const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
-            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}></div></td>`;
+            const entries = active ? (entriesByDateType[`${dateStr}|${type}`] || []) : [];
+            const label = active ? getOvCellLabel(entries, type) : '';
+            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}>${label ? `<span class="ov-sq-val">${label}</span>` : ''}</div></td>`;
         });
         html += `</tr>`;
     });
