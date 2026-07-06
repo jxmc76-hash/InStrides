@@ -251,6 +251,19 @@
             </button>
         </nav>
 
+        <div id="ovDetailModal" class="modal-overlay" onclick="if(event.target===this)window.closeModal('ovDetailModal')">
+            <div class="modal-card ov-detail-card">
+                <div class="modal-header">
+                    <div>
+                        <h2 id="ovDetailTitle" class="ov-detail-title"></h2>
+                        <div id="ovDetailDate" class="ov-detail-date"></div>
+                    </div>
+                    <button onclick="window.closeModal('ovDetailModal')" class="close-btn">✕</button>
+                </div>
+                <div id="ovDetailBody"></div>
+            </div>
+        </div>
+
         <div id="inputModal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
@@ -621,7 +634,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=220"></script>
+    <script type="module" src="script.js?v=221"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);

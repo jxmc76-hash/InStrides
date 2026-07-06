@@ -1898,7 +1898,8 @@ const renderOverview = () => {
                 const num = match ? match[1] : label;
                 cellInner = `<span class="ov-sq-val"><span class="ov-sq-num">${num}</span></span>`;
             }
-            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${active ? ` style="background:${color}"` : ''}>${cellInner}</div></td>`;
+            const clickAttr = active ? ` onclick="window.openOvDetail('${dateStr}','${type}')" style="background:${color};cursor:pointer"` : '';
+            html += `<td class="ov-cell-wrap"><div class="ov-sq${active ? ' ov-sq-on' : ''}"${clickAttr}>${cellInner}</div></td>`;
         });
         html += `</tr>`;
     });
@@ -2408,6 +2409,63 @@ const renderLongTermCharts = (completed) => {
     const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
     const runSeries = monthlySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null);
     makeLtChart('lt-rundist', 'chartLtRunDist', `Monthly Running Distance (${distUnit})`, runSeries, '#ff5500', distUnit);
+};
+
+window.openOvDetail = (dateStr, type) => {
+    const entries = logData.entries.filter(e => e.date === dateStr && e.type === type && !e.isPlanned);
+    if (!entries.length) return;
+
+    const cat = getTypeCategory(type);
+    const color = OVERVIEW_CAT_COLORS[cat] || '#ff5500';
+    const d = new Date(dateStr + 'T00:00:00');
+    const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const titleEl = document.getElementById('ovDetailTitle');
+    titleEl.textContent = type;
+    titleEl.style.color = color;
+    document.getElementById('ovDetailDate').textContent = dateLabel;
+
+    const fmtStat = (label, val, unit = '') => val ? `<div class="ov-detail-stat"><span class="ov-detail-stat-val">${val}</span><span class="ov-detail-stat-unit">${unit ? ' ' + unit : label ? '' : ''}</span>${label ? `<span class="ov-detail-stat-label">${label}</span>` : ''}</div>` : '';
+
+    document.getElementById('ovDetailBody').innerHTML = entries.map((e, i) => {
+        const stats = [];
+        if (cat === 'cardio' || cat === 'pacing') {
+            if (e.distance) stats.push({ val: e.distance, unit: e.distanceUnit || 'km', label: 'distance' });
+            if (e.duration) stats.push({ val: e.duration, unit: 'min', label: 'duration' });
+        } else if (cat === 'gym') {
+            if (e.weight) stats.push({ val: e.weight, unit: e.weightUnit || 'kg', label: 'weight' });
+            if (e.reps) stats.push({ val: e.reps, unit: '', label: 'reps' });
+            if (e.duration) stats.push({ val: e.duration, unit: 'min', label: 'duration' });
+        } else if (cat === 'time') {
+            if (e.duration) stats.push({ val: e.duration, unit: 'min', label: 'duration' });
+        } else if (cat === 'bodyweight') {
+            if (e.reps) stats.push({ val: e.reps, unit: '', label: 'reps' });
+            if (e.duration) stats.push({ val: e.duration, unit: 'min', label: 'duration' });
+        } else {
+            if (e.duration) stats.push({ val: e.duration, unit: 'min', label: 'duration' });
+            if (e.otherRating) stats.push({ val: e.otherRating, unit: '/10', label: 'effort' });
+        }
+
+        const statsHtml = stats.length
+            ? `<div class="ov-detail-stats">${stats.map(s =>
+                `<div class="ov-detail-stat">
+                    <span class="ov-detail-stat-val">${s.val}</span>
+                    <span class="ov-detail-stat-unit">${s.unit}</span>
+                    <span class="ov-detail-stat-label">${s.label}</span>
+                </div>`).join('')}</div>`
+            : '';
+
+        const notesHtml = e.details ? `<div class="ov-detail-notes">${e.details}</div>` : '';
+        const stravaHtml = e.isStravaActivity ? `<div class="ov-detail-strava">Imported from Strava</div>` : '';
+        const sep = i > 0 ? ' ov-detail-entry-sep' : '';
+
+        return `<div class="ov-detail-entry${sep}">
+            ${statsHtml}${notesHtml}${stravaHtml}
+            <button class="ov-detail-edit-btn" onclick="window.editEntry(${e.id});window.closeModal('ovDetailModal')">Edit entry</button>
+        </div>`;
+    }).join('');
+
+    document.getElementById('ovDetailModal').style.display = 'flex';
 };
 
 // --- INSIGHTS RENDERER ---
