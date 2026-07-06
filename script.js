@@ -1335,10 +1335,10 @@ window.toggleGoalTypeFields = () => {
     document.getElementById('goalMetricCardio').style.display = (cat === 'cardio' || cat === 'pacing') ? 'block' : 'none';
     document.getElementById('goalMetricGym').style.display = cat === 'gym' ? 'block' : 'none';
     document.getElementById('goalMetricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
-    document.getElementById('goalMetricTime').style.display = (cat === 'time' || cat === 'pacing') ? 'block' : 'none';
+    document.getElementById('goalMetricTime').style.display = (cat === 'cardio' || cat === 'time' || cat === 'pacing') ? 'block' : 'none';
     document.getElementById('goalMetricTarget').style.display = isMetric ? 'block' : 'none';
-    document.getElementById('goalMetricCardioLabel').textContent = cat === 'pacing' ? 'Target Distance' : 'Target Distance (or more)';
-    document.getElementById('goalMetricTimeLabel').textContent = cat === 'pacing' ? 'Target Time, minutes (under)' : 'Target Time, minutes (or more)';
+    document.getElementById('goalMetricCardioLabel').textContent = 'Target Distance';
+    document.getElementById('goalMetricTimeLabel').textContent = cat === 'time' ? 'Target Time, minutes (or more)' : cat === 'cardio' ? 'Target Time, minutes (under — optional)' : 'Target Time, minutes (under)';
     const hintEl = document.getElementById('goalMetricTargetHint');
     if (isMetric) {
         const metricName = type.slice(7);
@@ -1415,13 +1415,16 @@ window.saveGoal = async () => {
     const type = document.getElementById('goalType').value;
     if (!type) return alert('Please add an exercise type with a category first (Settings → Manage Types).');
     const isMetric = type.startsWith('metric:');
-    const cat = isMetric ? 'metric' : getTypeCategory(type);
+    const baseCat = isMetric ? 'metric' : getTypeCategory(type);
 
     const targetDistance = parseFloat(document.getElementById('goalTargetDistance').value);
     const targetWeight = parseFloat(document.getElementById('goalTargetWeight').value);
     const targetReps = parseInt(document.getElementById('goalTargetReps').value);
     const targetTime = parseInt(document.getElementById('goalTargetTime').value);
     const targetValue = parseFloat(document.getElementById('goalTargetValue').value);
+
+    // Promote cardio to pacing when a time target is also provided
+    const cat = (baseCat === 'cardio' && !isNaN(targetTime) && targetTime > 0) ? 'pacing' : baseCat;
 
     if ((cat === 'cardio' || cat === 'pacing') && (isNaN(targetDistance) || targetDistance <= 0)) return alert('Please enter a target distance.');
     if (cat === 'gym' && (isNaN(targetWeight) || targetWeight <= 0)) return alert('Please enter a target weight.');
