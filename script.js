@@ -2690,16 +2690,18 @@ const renderMatrix = () => {
     // Carry forward metrics flagged for roll-forward (number type always; slider with carryForward:true opt-in)
     const rollForwardMetrics = logData.customMetrics.filter(m => m.type === 'number' || m.carryForward === true).map(m => m.name);
     if (rollForwardMetrics.length) {
+        const todayStr = new Date().toISOString().split('T')[0];
         const ascDates = Object.keys(entriesByDate).sort((a, b) => new Date(a) - new Date(b));
         const lastVal = {};
         ascDates.forEach(dateKey => {
             const dayData = entriesByDate[dateKey];
             const hasCompleted = Object.values(dayData.exercises).some(arr => arr.some(e => !e.isPlanned));
+            const isPast = dateKey <= todayStr;
             rollForwardMetrics.forEach(name => {
                 const explicit = dayData.customVals[name];
                 if (explicit !== undefined && explicit !== null && explicit !== '') {
                     lastVal[name] = explicit;
-                } else if (hasCompleted && lastVal[name] !== undefined) {
+                } else if ((hasCompleted || isPast) && lastVal[name] !== undefined) {
                     dayData.customVals[name] = lastVal[name];
                     (dayData.customValsCarried = dayData.customValsCarried || {})[name] = true;
                 }
