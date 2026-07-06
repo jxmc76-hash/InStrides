@@ -798,9 +798,9 @@ const renderTrailingCharts = (completed) => {
         if (e.customMetricData) Object.assign(byDate[e.date].customVals, e.customMetricData);
     });
 
-    // Collect all dates in range (last 3 years)
+    // Collect all dates in range (last 3 months)
     const allDates = [];
-    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 3);
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 91);
     const today = new Date();
     for (let d = new Date(cutoff); d <= today; d.setDate(d.getDate() + 1)) {
         allDates.push(d.toISOString().split('T')[0]);
@@ -2083,17 +2083,122 @@ const renderKeyFindings = (completed) => {
     container.innerHTML = `<ul class="key-findings-list">${findings.map(f => `<li>${f}</li>`).join('')}</ul>`;
 };
 
+const renderLongTermCharts = (completed) => {
+    const container = document.getElementById('longTermChartsContainer');
+    if (!container) return;
+
+    ['lt-weight', 'lt-vo2max', 'lt-rundist'].forEach(k => destroyChart(k));
+    container.innerHTML = '';
+
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 8);
+
+    const monthlyAvg = (accessor) => {
+        const months = {};
+        completed.forEach(e => {
+            if (new Date(e.date) < cutoff) return;
+            const val = parseFloat(accessor(e));
+            if (!val || isNaN(val) || val <= 0) return;
+            const ym = e.date.slice(0, 7);
+            if (!months[ym]) months[ym] = { sum: 0, count: 0 };
+            months[ym].sum += val;
+            months[ym].count++;
+        });
+        const sorted = Object.keys(months).sort();
+        return {
+            labels: sorted.map(ym => new Date(ym + '-15').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })),
+            data: sorted.map(ym => +(months[ym].sum / months[ym].count).toFixed(1))
+        };
+    };
+
+    const monthlySum = (accessor) => {
+        const months = {};
+        completed.forEach(e => {
+            if (new Date(e.date) < cutoff) return;
+            const val = parseFloat(accessor(e));
+            if (!val || isNaN(val) || val <= 0) return;
+            const ym = e.date.slice(0, 7);
+            months[ym] = (months[ym] || 0) + val;
+        });
+        const sorted = Object.keys(months).sort();
+        return {
+            labels: sorted.map(ym => new Date(ym + '-15').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })),
+            data: sorted.map(ym => +months[ym].toFixed(1))
+        };
+    };
+
+    const makeLtChart = (id, canvasId, title, { labels, data }, color, unit, chartType = 'line') => {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'insights-section-title';
+        titleEl.textContent = title;
+        container.appendChild(titleEl);
+
+        if (data.length < 2) {
+            const empty = document.createElement('div');
+            empty.className = 'chart-container chart-empty-state';
+            empty.innerHTML = `<div class="chart-empty-icon">📈</div><p>Not enough data yet</p>`;
+            container.appendChild(empty);
+            return;
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-container';
+        const canvas = document.createElement('canvas');
+        canvas.id = canvasId;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        const isBar = chartType === 'bar';
+        chartInstances[id] = new Chart(canvas, {
+            type: chartType,
+            data: {
+                labels,
+                datasets: [{
+                    label: unit,
+                    data,
+                    borderColor: color,
+                    backgroundColor: isBar ? color + 'bf' : color + '26',
+                    borderWidth: isBar ? 0 : 2,
+                    borderRadius: isBar ? 4 : 0,
+                    tension: 0.3,
+                    fill: !isBar,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: false, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 16, maxRotation: 45 } }
+                }
+            }
+        });
+    };
+
+    const weightSeries = monthlyAvg(e => e.customMetricData?.['WEIGHT']);
+    makeLtChart('lt-weight', 'chartLtWeight', 'Average Monthly Weight (kg)', weightSeries, '#6366f1', 'kg');
+
+    const vo2Series = monthlyAvg(e => e.customMetricData?.['VO2 MAX']);
+    makeLtChart('lt-vo2max', 'chartLtVo2max', 'Average Monthly VO2 Max (mL/kg/min)', vo2Series, '#10b981', 'mL/kg/min');
+
+    const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
+    const runSeries = monthlySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null);
+    makeLtChart('lt-rundist', 'chartLtRunDist', `Monthly Running Distance (${distUnit})`, runSeries, '#ff5500', distUnit, 'bar');
+};
+
 // --- INSIGHTS RENDERER ---
 const renderInsights = () => {
     const completed = logData.entries.filter(e => !e.isPlanned);
     renderKeyFindings(completed);
     renderHealthScore(completed);
     renderWeeklyRecap(completed);
-    renderAchievements(completed);
     renderWeekCompare(completed);
     renderDistanceChart(completed);
     renderTrailingCharts(completed);
     renderCorrelations();
+    renderLongTermCharts(completed);
 };
 
 const computeHealthScore = (completed, asOfDateStr) => {
@@ -2222,7 +2327,7 @@ const renderHealthScore = (completed) => {
 
     const { score, label, color, components } = computeHealthScore(completed);
 
-    const series = computeHealthScoreSeries(completed, 3 * 365);
+    const series = computeHealthScoreSeries(completed, 90);
     const prevScore = series.data[series.data.length - 8]; // score 7 days ago
     let trendArrow = '';
     if (prevScore != null) {
@@ -2481,7 +2586,7 @@ const renderDistanceChart = (completed) => {
     if (!canvas) return;
 
     const weeks = {};
-    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 3);
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 91);
     completed
         .filter(e => e.distance && new Date(e.date) >= cutoff)
         .forEach(e => {

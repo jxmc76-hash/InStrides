@@ -172,6 +172,8 @@
             <div id="viewInsights" class="view-pane">
                 <div class="insights-container">
 
+                    <div class="period-header">Past 3 Months</div>
+
                     <div class="isect">
                         <div class="isect-header">Key Findings</div>
                         <div id="keyFindingsContainer"></div>
@@ -190,11 +192,6 @@
                     </div>
 
                     <div class="isect">
-                        <div class="isect-header">Milestones</div>
-                        <div id="achievementsGrid" class="achievements-grid"></div>
-                    </div>
-
-                    <div class="isect">
                         <div class="isect-header">Your Data</div>
                         <div class="chart-container"><canvas id="chartDistance"></canvas></div>
                         <div id="trailingChartsContainer"></div>
@@ -203,6 +200,13 @@
                     <div class="isect">
                         <div class="isect-header">Patterns</div>
                         <div id="correlationsContainer"></div>
+                    </div>
+
+                    <div class="period-header">Past 8 Years</div>
+
+                    <div class="isect">
+                        <div class="isect-header">Long-Term Trends</div>
+                        <div id="longTermChartsContainer"></div>
                     </div>
 
                 </div>
@@ -640,7 +644,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=212"></script>
+    <script type="module" src="script.js?v=213"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
