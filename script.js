@@ -2304,16 +2304,24 @@ const renderShortTermCharts = (completed) => {
         const pts = dailyVal(accessor);
         if (pts.length < 1) return null;
         const last3 = pts.slice(-3);
-        const prev3 = pts.slice(-6, -3);
+        const prev7 = pts.slice(-10, -3);
         const avg = v => +(v.reduce((a, b) => a + b.value, 0) / v.length).toFixed(1);
         const a3 = avg(last3);
-        const trend = prev3.length >= 2 ? (() => {
-            const ap = avg(prev3), diff = a3 - ap;
-            if (diff > 1) return ` — up from ${ap} the previous 3 days`;
-            if (diff < -1) return ` — down from ${ap} the previous 3 days`;
-            return ' — consistent with the previous 3 days';
-        })() : '';
-        return `Last 3 days averaged <strong>${a3}/${max}</strong>${trend}.`;
+        let arrow = '', trend = '';
+        if (prev7.length >= 2) {
+            const ap = avg(prev7), diff = a3 - ap;
+            if (diff > 1) {
+                arrow = '<span style="color:#22c55e;font-weight:900">↑</span>';
+                trend = ` — up from ${ap} (7-day avg)`;
+            } else if (diff < -1) {
+                arrow = '<span style="color:#ef4444;font-weight:900">↓</span>';
+                trend = ` — down from ${ap} (7-day avg)`;
+            } else {
+                arrow = '<span style="color:var(--text-muted);font-weight:900">→</span>';
+                trend = ` — in line with ${ap} (7-day avg)`;
+            }
+        }
+        return `${arrow} Last 3 days averaged <strong>${a3}/${max}</strong>${trend}.`;
     };
     makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration (/50)',       dailyVal(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'bar', 50,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_DURATION'], 50));
     makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime (/30)',        dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'bar', 30,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_BEDTIME'], 30));
