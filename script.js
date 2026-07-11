@@ -2171,6 +2171,20 @@ const renderShortTermCharts = (completed) => {
             }));
     };
 
+    const dailyVal = (accessor) => {
+        const days = {};
+        completed.forEach(e => {
+            if (new Date(e.date) < cutoff) return;
+            const val = parseFloat(accessor(e));
+            if (isNaN(val) || val == null) return;
+            days[e.date] = val; // last/only value for that day
+        });
+        return Object.keys(days).sort().map(d => ({
+            label: new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            value: days[d]
+        }));
+    };
+
     // VO2 Max with carry-forward: use last known value per week
     const weeklyVo2CarryForward = () => {
         const byDate = {};
@@ -2286,9 +2300,9 @@ const renderShortTermCharts = (completed) => {
     makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit);
     makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
     makeStChart('st-sleep',      'chartStSleep',     'Weekly Avg Sleep Score (/100)',           weeklyAvg(e => e.customMetricData?.['SLEEP']),              '#14b8a6', '/100', 'line', 100);
-    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Weekly Avg Sleep · Duration (/50)',       weeklyAvg(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'line', 50,  true);
-    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Weekly Avg Sleep · Bedtime (/30)',        weeklyAvg(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'line', 30,  true);
-    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Weekly Avg Sleep · Interruptions (/20)', weeklyAvg(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'line', 20, true);
+    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration (/50)',       dailyVal(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'line', 50,  true);
+    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime (/30)',        dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'line', 30,  true);
+    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions (/20)', dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'line', 20, true);
 };
 
 const renderLongTermCharts = (completed) => {
