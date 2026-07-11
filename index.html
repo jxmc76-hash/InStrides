@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="TrainingLog">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#ff5500">
-    <link rel="stylesheet" href="style.css?v=166">
+    <link rel="stylesheet" href="style.css?v=167">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -554,12 +554,29 @@
         </div>
     </div>
 
+    <!-- Plan Session Log Choice Modal (manual vs Strava) -->
+    <div id="planLogChoiceModal" class="modal-overlay" onclick="if(event.target===this)window.closeModal('planLogChoiceModal')">
+        <div class="modal-card" style="max-width:320px">
+            <div class="modal-header">
+                <h2>Log Session</h2>
+                <button onclick="window.closeModal('planLogChoiceModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body" style="display:flex;flex-direction:column;gap:12px;padding-top:4px">
+                <button onclick="window._choosePlanLog('strava')" class="btn-submit" style="display:flex;align-items:center;justify-content:center;gap:8px">
+                    <svg width="16" height="16" viewBox="0 0 227.197 227.197" fill="currentColor"><path d="M114 0C51.1 0 0 51.1 0 114s51.1 113.2 114 113.2 113.2-51.1 113.2-113.2S176.9 0 114 0zm25.2 130.3l-25.3-50.5-25.2 50.5H72l41.9-83.7 41.9 83.7h-16.6z"/></svg>
+                    Import from Strava
+                </button>
+                <button onclick="window._choosePlanLog('manual')" class="nav-btn btn-secondary" style="text-align:center">Log Manually</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Strava Activity Modal -->
-    <div id="stravaModal" class="modal-overlay">
+    <div id="stravaModal" class="modal-overlay" onclick="if(event.target===this){window.closeModal('stravaModal');window._pendingPlanLink=null;}">
         <div class="modal-card">
             <div class="modal-header">
                 <h2>Latest Strava Activity</h2>
-                <button onclick="window.closeModal('stravaModal')" class="close-btn">✕</button>
+                <button onclick="window.closeModal('stravaModal');window._pendingPlanLink=null;" class="close-btn">✕</button>
             </div>
             <div id="stravaModalBody" class="form-body"></div>
         </div>
@@ -621,7 +638,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=228"></script>
+    <script type="module" src="script.js?v=229"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
