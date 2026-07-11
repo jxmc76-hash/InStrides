@@ -2293,9 +2293,9 @@ const renderShortTermCharts = (completed) => {
     makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit);
     makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
     makeStChart('st-sleep',      'chartStSleep',     'Weekly Avg Sleep Score (/100)',           weeklyAvg(e => e.customMetricData?.['SLEEP']),              '#14b8a6', '/100', 'line', 100);
-    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration (/50)',       dailyVal(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'bar', 50,  false, false);
-    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime (/30)',        dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'bar', 30,  false, false);
-    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions (/20)', dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'bar', 20, false, false);
+    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration — 3-day avg (/50)',       rollingAvg3Points(dailyVal(e => e.customMetricData?.['SLEEP_DURATION'])),     '#3b82f6', '/50',  'line', 50);
+    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime — 3-day avg (/30)',        rollingAvg3Points(dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME'])),      '#10b981', '/30',  'line', 30);
+    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions — 3-day avg (/20)', rollingAvg3Points(dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS'])), '#f97316', '/20', 'line', 20);
 };
 
 const renderLongTermCharts = (completed) => {
