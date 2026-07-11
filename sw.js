@@ -1,5 +1,5 @@
-const CACHE = 'traininglog-v8';
-const ASSETS = ['/style.css', '/script.js', '/logo.png', '/favicon.ico', '/manifest.json'];
+const CACHE = 'traininglog-v9';
+const ASSETS = ['/logo.png', '/favicon.ico', '/manifest.json'];
 
 self.addEventListener('install', e => {
     e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -15,9 +15,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
     const url = new URL(e.request.url);
     if (url.hostname !== location.hostname) return;
-    // HTML navigation: always hit network so new deployments land immediately
-    if (e.request.mode === 'navigate') {
-        e.respondWith(fetch(e.request).catch(() => caches.match('/')));
+    // Always hit network for navigation and versioned assets (?v=) — never serve stale JS/CSS
+    if (e.request.mode === 'navigate' || url.searchParams.has('v')) {
+        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
         return;
     }
     // Other same-origin assets: network-first, cache as fallback for offline
