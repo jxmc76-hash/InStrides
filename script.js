@@ -3215,10 +3215,10 @@ const renderMatrix = () => {
                 row += `<td class="col-stat editable-cell" onclick="window.promptTimeDistance('${dateKey}','${m.name}',${mVal && mVal.time != null ? `'${mVal.time}'` : 'null'},${mVal && mVal.distance != null ? `'${mVal.distance}'` : 'null'})">${cellContent}</td>`;
             } else if (m.type === 'duration') {
                 row += `<td class="col-stat editable-cell" onclick="window.promptDuration('${dateKey}','${m.name}',${mVal !== undefined && mVal !== null && mVal !== '' ? mVal : 'null'})">${cellContent}</td>`;
-            } else if (m.type === 'number') {
-                row += `<td class="col-stat editable-cell" onclick="window.promptNumberValue('${dateKey}','metric-${m.name}',${!isCarried && mVal !== undefined && mVal !== null && mVal !== '' ? mVal : 'null'})">${cellContent}</td>`;
             } else if (m.name === 'SLEEP') {
                 row += `<td class="col-stat editable-cell" onclick="window.promptSleepScore('${dateKey}')">${cellContent}</td>`;
+            } else if (m.type === 'number') {
+                row += `<td class="col-stat editable-cell" onclick="window.promptNumberValue('${dateKey}','metric-${m.name}',${!isCarried && mVal !== undefined && mVal !== null && mVal !== '' ? mVal : 'null'})">${cellContent}</td>`;
             } else if (m.scale === 100) {
                 row += `<td class="col-stat editable-cell" onclick="window.promptCellValue('${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'},100)">${cellContent}</td>`;
             } else {
