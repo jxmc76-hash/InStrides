@@ -2195,7 +2195,19 @@ const renderShortTermCharts = (completed) => {
         return result;
     };
 
-    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line', yMax = null) => {
+    const linRegression = (vals) => {
+        const n = vals.length;
+        if (n < 3) return null;
+        const sumX = (n * (n - 1)) / 2;
+        const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6;
+        const sumY = vals.reduce((a, b) => a + b, 0);
+        const sumXY = vals.reduce((a, v, i) => a + i * v, 0);
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const intercept = (sumY - slope * sumX) / n;
+        return vals.map((_, i) => +(intercept + slope * i).toFixed(2));
+    };
+
+    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line', yMax = null, showTrend = false) => {
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
         titleEl.textContent = title;
@@ -2219,6 +2231,7 @@ const renderShortTermCharts = (completed) => {
         const isBar = chartType === 'bar';
         const vals = points.map(p => p.value);
         const avgVal = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        const trendVals = showTrend ? linRegression(vals) : null;
         chartInstances[id] = new Chart(canvas, {
             type: chartType,
             data: {
@@ -2244,6 +2257,16 @@ const renderShortTermCharts = (completed) => {
                     fill: false,
                     tension: 0,
                     type: 'line'
+                }] : []), ...(trendVals ? [{
+                    label: 'Trend',
+                    data: trendVals,
+                    borderColor: color,
+                    borderWidth: 2,
+                    borderDash: [2, 2],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                    type: 'line'
                 }] : [])]
             },
             options: {
@@ -2263,9 +2286,9 @@ const renderShortTermCharts = (completed) => {
     makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit);
     makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
     makeStChart('st-sleep',      'chartStSleep',     'Weekly Avg Sleep Score (/100)',           weeklyAvg(e => e.customMetricData?.['SLEEP']),              '#14b8a6', '/100', 'line', 100);
-    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Weekly Avg Sleep · Duration (/50)',       weeklyAvg(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'line', 50);
-    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Weekly Avg Sleep · Bedtime (/30)',        weeklyAvg(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'line', 30);
-    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Weekly Avg Sleep · Interruptions (/20)', weeklyAvg(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'line', 20);
+    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Weekly Avg Sleep · Duration (/50)',       weeklyAvg(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'line', 50,  true);
+    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Weekly Avg Sleep · Bedtime (/30)',        weeklyAvg(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'line', 30,  true);
+    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Weekly Avg Sleep · Interruptions (/20)', weeklyAvg(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'line', 20, true);
 };
 
 const renderLongTermCharts = (completed) => {
