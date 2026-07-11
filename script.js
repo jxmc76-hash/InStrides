@@ -2209,16 +2209,12 @@ const renderShortTermCharts = (completed) => {
         return result;
     };
 
-    const linRegression = (vals) => {
-        const n = vals.length;
-        if (n < 3) return null;
-        const sumX = (n * (n - 1)) / 2;
-        const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6;
-        const sumY = vals.reduce((a, b) => a + b, 0);
-        const sumXY = vals.reduce((a, v, i) => a + i * v, 0);
-        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-        const intercept = (sumY - slope * sumX) / n;
-        return vals.map((_, i) => +(intercept + slope * i).toFixed(2));
+    const rollingAvg3 = (vals) => {
+        if (vals.length < 2) return null;
+        return vals.map((_, i) => {
+            const slice = vals.slice(Math.max(0, i - 2), i + 1);
+            return +(slice.reduce((a, b) => a + b, 0) / slice.length).toFixed(1);
+        });
     };
 
     const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line', yMax = null, showTrend = false) => {
@@ -2245,7 +2241,7 @@ const renderShortTermCharts = (completed) => {
         const isBar = chartType === 'bar';
         const vals = points.map(p => p.value);
         const avgVal = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-        const trendVals = showTrend ? linRegression(vals) : null;
+        const trendVals = showTrend ? rollingAvg3(vals) : null;
         chartInstances[id] = new Chart(canvas, {
             type: chartType,
             data: {
