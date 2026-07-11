@@ -228,6 +228,14 @@ th { background: #fcfdfe; font-size: 0.65rem; font-weight: 800; text-transform: 
 .bin-btn.active[id*="Yes"] { color: var(--success); }
 .highlight-box { background: #f8fafc; padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 20px; }
 .slider-row { display: flex; align-items: center; gap: 15px; margin-top: 5px; }
+.sleep-subscore-grid { display: flex; gap: 10px; margin-top: 8px; }
+.sleep-subscore-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sleep-sub-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.sleep-sub-input { width: 100%; text-align: center; padding: 8px 4px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 1rem; font-weight: 700; background: var(--bg); color: var(--text-main); outline: none; }
+.sleep-sub-input:focus { border-color: var(--primary); }
+.sleep-sub-max { font-size: 0.72rem; color: var(--text-muted); }
+.sleep-total-row { margin-top: 10px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+.sleep-total-row #sleep-total-val { font-weight: 900; font-size: 1.1rem; color: var(--primary); }
 .slider-row input { flex: 1; accent-color: var(--primary); }
 .score-display { font-weight: 900; color: var(--primary); font-size: 1.2rem; width: 25px; text-align: right; }
 
