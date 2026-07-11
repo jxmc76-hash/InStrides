@@ -2214,11 +2214,18 @@ const renderShortTermCharts = (completed) => {
         return { label: p.label, value: +(slice.reduce((a, b) => a + b.value, 0) / slice.length).toFixed(1) };
     });
 
-    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line', yMax = null, showTrend = false, showAvg = true) => {
+    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line', yMax = null, showTrend = false, showAvg = true, summary = null) => {
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
         titleEl.textContent = title;
         container.appendChild(titleEl);
+
+        if (summary) {
+            const summaryEl = document.createElement('p');
+            summaryEl.className = 'chart-summary';
+            summaryEl.innerHTML = summary;
+            container.appendChild(summaryEl);
+        }
 
         if (points.length < 2) {
             const empty = document.createElement('div');
@@ -2293,9 +2300,24 @@ const renderShortTermCharts = (completed) => {
     makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit);
     makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
     makeStChart('st-sleep',      'chartStSleep',     'Weekly Avg Sleep Score (/100)',           weeklyAvg(e => e.customMetricData?.['SLEEP']),              '#14b8a6', '/100', 'line', 100);
-    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration — 3-day avg (/50)',       rollingAvg3Points(dailyVal(e => e.customMetricData?.['SLEEP_DURATION'])),     '#3b82f6', '/50',  'line', 50);
-    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime — 3-day avg (/30)',        rollingAvg3Points(dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME'])),      '#10b981', '/30',  'line', 30);
-    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions — 3-day avg (/20)', rollingAvg3Points(dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS'])), '#f97316', '/20', 'line', 20);
+    const sleepSummary = (accessor, max) => {
+        const pts = dailyVal(accessor);
+        if (pts.length < 1) return null;
+        const last3 = pts.slice(-3);
+        const prev3 = pts.slice(-6, -3);
+        const avg = v => +(v.reduce((a, b) => a + b.value, 0) / v.length).toFixed(1);
+        const a3 = avg(last3);
+        const trend = prev3.length >= 2 ? (() => {
+            const ap = avg(prev3), diff = a3 - ap;
+            if (diff > 1) return ` — up from ${ap} the previous 3 days`;
+            if (diff < -1) return ` — down from ${ap} the previous 3 days`;
+            return ' — consistent with the previous 3 days';
+        })() : '';
+        return `Last 3 days averaged <strong>${a3}/${max}</strong>${trend}.`;
+    };
+    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration (/50)',       dailyVal(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'bar', 50,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_DURATION'], 50));
+    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime (/30)',        dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'bar', 30,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_BEDTIME'], 30));
+    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions (/20)', dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'bar', 20, false, false, sleepSummary(e => e.customMetricData?.['SLEEP_INTERRUPTIONS'], 20));
 };
 
 const renderLongTermCharts = (completed) => {
