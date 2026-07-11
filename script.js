@@ -542,7 +542,37 @@ const buildCustomMetricsFormUI = (existingCustomValues = {}) => {
 
         const div = document.createElement('div');
         div.className = "input-row";
-        if (m.type === 'timedistance') {
+        if (m.name === 'SLEEP') {
+            const dur = existingCustomValues['SLEEP_DURATION'] ?? '';
+            const bed = existingCustomValues['SLEEP_BEDTIME'] ?? '';
+            const intr = existingCustomValues['SLEEP_INTERRUPTIONS'] ?? '';
+            dynamicMetricValues['SLEEP_DURATION'] = dur === '' ? null : +dur;
+            dynamicMetricValues['SLEEP_BEDTIME'] = bed === '' ? null : +bed;
+            dynamicMetricValues['SLEEP_INTERRUPTIONS'] = intr === '' ? null : +intr;
+            const hasAny = dur !== '' || bed !== '' || intr !== '';
+            const showTotal = hasAny ? (+dur || 0) + (+bed || 0) + (+intr || 0) : (val !== '' && val != null ? val : '–');
+            div.className = "input-row highlight-box";
+            div.innerHTML = `
+                <label>SLEEP Score</label>
+                <div class="sleep-subscore-grid">
+                    <div class="sleep-subscore-item">
+                        <span class="sleep-sub-label">Duration</span>
+                        <input class="sleep-sub-input" type="number" min="0" max="50" placeholder="–" value="${dur}" oninput="window.updateSleepSubscore('DURATION',this.value)">
+                        <span class="sleep-sub-max">/50</span>
+                    </div>
+                    <div class="sleep-subscore-item">
+                        <span class="sleep-sub-label">Bedtime</span>
+                        <input class="sleep-sub-input" type="number" min="0" max="30" placeholder="–" value="${bed}" oninput="window.updateSleepSubscore('BEDTIME',this.value)">
+                        <span class="sleep-sub-max">/30</span>
+                    </div>
+                    <div class="sleep-subscore-item">
+                        <span class="sleep-sub-label">Interruptions</span>
+                        <input class="sleep-sub-input" type="number" min="0" max="20" placeholder="–" value="${intr}" oninput="window.updateSleepSubscore('INTERRUPTIONS',this.value)">
+                        <span class="sleep-sub-max">/20</span>
+                    </div>
+                </div>
+                <div class="sleep-total-row">Total: <span id="sleep-total-val">${showTotal}</span><span style="opacity:0.5">/100</span></div>`;
+        } else if (m.type === 'timedistance') {
             const time = (val && val.time) || '';
             const dist = (val && val.distance) || '';
             div.innerHTML = `
@@ -583,6 +613,19 @@ window.setLocalBinMetric = (name, val) => {
     dynamicMetricValues[name] = val;
     document.getElementById(`binBtn-Y-${name}`).classList.toggle('active', val);
     document.getElementById(`binBtn-N-${name}`).classList.toggle('active', !val);
+};
+
+window.updateSleepSubscore = (field, raw) => {
+    const n = raw === '' ? null : Math.min(field === 'DURATION' ? 50 : field === 'BEDTIME' ? 30 : 20, Math.max(0, parseFloat(raw)));
+    dynamicMetricValues['SLEEP_' + field] = isNaN(n) ? null : n;
+    const d = dynamicMetricValues['SLEEP_DURATION'] ?? 0;
+    const b = dynamicMetricValues['SLEEP_BEDTIME'] ?? 0;
+    const i = dynamicMetricValues['SLEEP_INTERRUPTIONS'] ?? 0;
+    const hasAny = dynamicMetricValues['SLEEP_DURATION'] !== null || dynamicMetricValues['SLEEP_BEDTIME'] !== null || dynamicMetricValues['SLEEP_INTERRUPTIONS'] !== null;
+    const total = hasAny ? (+d || 0) + (+b || 0) + (+i || 0) : null;
+    dynamicMetricValues['SLEEP'] = total;
+    const el = document.getElementById('sleep-total-val');
+    if (el) el.textContent = total !== null ? total : '–';
 };
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
@@ -718,6 +761,10 @@ window.saveExercise = async () => {
         if (v === '' || v === undefined || v === null || isNaN(parseFloat(v))) delete customMetricData[m.name];
         else customMetricData[m.name] = parseFloat(v);
     });
+    ['SLEEP_DURATION', 'SLEEP_BEDTIME', 'SLEEP_INTERRUPTIONS'].forEach(k => {
+        if (customMetricData[k] == null) delete customMetricData[k];
+    });
+    if (customMetricData['SLEEP'] == null) delete customMetricData['SLEEP'];
     const entryData = {
         date: document.getElementById('modalDate').value,
         type,
