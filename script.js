@@ -4361,6 +4361,92 @@ window._choosePlanLog = (mode) => {
     }
 };
 
+// --- SEED HALF MARATHON PLAN ---
+window.seedHalfMarathonPlan = async () => {
+    if ((logData.trainingPlans || []).some(p => p.title.includes('Half Marathon'))) {
+        alert('Half marathon plan already exists.');
+        return;
+    }
+    const S = (id, date, label, done) => ({ id, date, type: 'RUN', target: label, isComplete: done, logEntryId: null });
+    const plan = {
+        id: Date.now(),
+        title: 'Half Marathon — Goal 1:39:00 (4:42/km)',
+        startDate: '2026-06-22',
+        endDate: '2026-10-10',
+        sessions: [
+            // Week 1 — Foundation (done)
+            S(1,  '2026-06-22', 'Tempo — 3 km @ 4:50/km', true),
+            S(2,  '2026-06-24', 'Long — 13 km @ 5:30–6:00/km', true),
+            S(3,  '2026-06-27', 'Speed — 6×400m @ 4:00/km, 90s jog', true),
+            // Week 2 — Foundation (done)
+            S(4,  '2026-06-29', 'Tempo — 4 km @ 4:50/km', true),
+            S(5,  '2026-07-01', 'Long — 14 km @ 5:30–6:00/km', true),
+            S(6,  '2026-07-04', 'Speed — 8×400m @ 4:00/km, 90s jog', true),
+            // Week 3 — Foundation (done)
+            S(7,  '2026-07-06', 'Tempo — 5 km @ 4:50/km', true),
+            S(8,  '2026-07-08', 'Long — 16 km @ 5:30–6:00/km', true),
+            S(9,  '2026-07-11', 'Speed — 5×800m @ 4:15/km, 2min jog', true),
+            // Week 4 — Cutback
+            S(10, '2026-07-13', 'Tempo — 3 km @ 4:50/km (Cutback)', false),
+            S(11, '2026-07-15', 'Long — 12 km @ 5:30–6:00/km (Cutback)', false),
+            S(12, '2026-07-18', 'Speed — 6×400m @ 4:00/km, 90s jog (Cutback)', false),
+            // Week 5 — Build
+            S(13, '2026-07-20', 'Tempo — 5 km @ 4:50/km', false),
+            S(14, '2026-07-22', 'Long — 15 km @ 5:30–6:00/km', false),
+            S(15, '2026-07-25', 'Speed — 6×800m @ 4:15/km, 90s jog', false),
+            // Week 6 — Build
+            S(16, '2026-07-27', 'Tempo — 6 km @ 4:50/km', false),
+            S(17, '2026-07-29', 'Long — 17 km @ 5:30–6:00/km', false),
+            S(18, '2026-08-01', 'Speed — 4×1000m @ 4:15/km, 2min jog', false),
+            // Week 7 — Build
+            S(19, '2026-08-03', 'Tempo — 2×3 km @ 4:50/km, 90s jog', false),
+            S(20, '2026-08-05', 'Long — 18 km @ 5:30–6:00/km', false),
+            S(21, '2026-08-08', 'Speed — 5×1000m @ 4:15/km, 2min jog', false),
+            // Week 8 — Cutback
+            S(22, '2026-08-10', 'Tempo — 4 km @ 4:50/km (Cutback)', false),
+            S(23, '2026-08-12', 'Long — 14 km @ 5:30–6:00/km (Cutback)', false),
+            S(24, '2026-08-15', 'Speed — 8×400m @ 4:00/km, 75s jog (Cutback)', false),
+            // Week 9 — Peak
+            S(25, '2026-08-17', 'Tempo — 6 km @ 4:50/km', false),
+            S(26, '2026-08-19', 'Long — 18 km, last 4 km @ 4:42/km', false),
+            S(27, '2026-08-22', 'Speed — 3×1600m @ 4:15/km, 2:30 jog', false),
+            // Week 10 — Peak
+            S(28, '2026-08-24', 'Tempo — 7 km @ 4:50/km', false),
+            S(29, '2026-08-26', 'Long — 20 km @ 5:30–6:00/km', false),
+            S(30, '2026-08-29', 'Speed — 4×1200m @ 4:15/km, 2min jog', false),
+            // Week 11 — Peak (highest load)
+            S(31, '2026-08-31', 'Tempo — 8 km @ 4:45/km', false),
+            S(32, '2026-09-02', 'Long — 21 km, last 5 km @ 4:42/km', false),
+            S(33, '2026-09-05', 'Speed — 5×1000m @ 4:15/km, 2min jog', false),
+            // Week 12 — Cutback
+            S(34, '2026-09-07', 'Tempo — 5 km @ 4:50/km (Cutback)', false),
+            S(35, '2026-09-09', 'Long — 15 km @ 5:30–6:00/km (Cutback)', false),
+            S(36, '2026-09-12', 'Speed — 6×600m @ 4:00/km, 90s jog (Cutback)', false),
+            // Week 13 — Sharpen
+            S(37, '2026-09-14', 'Tempo — 6 km @ 4:42/km (Goal Pace)', false),
+            S(38, '2026-09-16', 'Long — 19 km, middle 8 km @ 4:42/km', false),
+            S(39, '2026-09-19', 'Speed — 4×1200m @ 4:15/km, 2min jog', false),
+            // Week 14 — Sharpen
+            S(40, '2026-09-21', 'Tempo — 5 km @ 4:42/km (Goal Pace)', false),
+            S(41, '2026-09-23', 'Long — 16 km, last 6 km @ 4:42/km', false),
+            S(42, '2026-09-26', 'Speed — 6×800m @ 4:15/km, 90s jog', false),
+            // Week 15 — Taper
+            S(43, '2026-09-28', 'Tempo — 4 km @ 4:42/km (Goal Pace, Taper)', false),
+            S(44, '2026-09-30', 'Long — 13 km @ 5:30–6:00/km (Taper)', false),
+            S(45, '2026-10-03', 'Speed — 4×400m @ 4:00/km, 90s jog (Taper)', false),
+            // Week 16 — Race Week
+            S(46, '2026-10-05', 'Easy — 8 km @ 5:30–6:00/km', false),
+            S(47, '2026-10-07', 'Strides — 3×400m @ 4:42/km, easy (2 days out)', false),
+            S(48, '2026-10-10', 'RACE — Half Marathon @ 4:42/km · Goal 1:39:00', false),
+        ]
+    };
+    if (!logData.trainingPlans) logData.trainingPlans = [];
+    logData.trainingPlans.push(plan);
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    if (document.getElementById('viewPlan')?.classList.contains('active')) renderPlan();
+    alert('Half marathon plan added! Navigate to the Plan tab to see it.');
+};
+
 // --- EXPORT DATA ---
 window.exportData = () => {
     const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
