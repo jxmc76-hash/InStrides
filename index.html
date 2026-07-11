@@ -554,6 +554,40 @@
         </div>
     </div>
 
+    <!-- Sleep Score Modal -->
+    <div id="sleepScoreModal" class="modal-overlay" onclick="if(event.target===this)window.closeModal('sleepScoreModal')">
+        <div class="modal-card" style="max-width:320px">
+            <div class="modal-header">
+                <h2>Sleep Score</h2>
+                <button onclick="window.closeModal('sleepScoreModal')" class="close-btn">✕</button>
+            </div>
+            <div class="form-body">
+                <div class="highlight-box">
+                    <label>SLEEP Score</label>
+                    <div class="sleep-subscore-grid">
+                        <div class="sleep-subscore-item">
+                            <span class="sleep-sub-label">Duration</span>
+                            <input id="sleepScoreModalDur" class="sleep-sub-input" type="number" min="0" max="50" placeholder="–" oninput="window.updateSleepScoreModal()">
+                            <span class="sleep-sub-max">/50</span>
+                        </div>
+                        <div class="sleep-subscore-item">
+                            <span class="sleep-sub-label">Bedtime</span>
+                            <input id="sleepScoreModalBed" class="sleep-sub-input" type="number" min="0" max="30" placeholder="–" oninput="window.updateSleepScoreModal()">
+                            <span class="sleep-sub-max">/30</span>
+                        </div>
+                        <div class="sleep-subscore-item">
+                            <span class="sleep-sub-label">Interruptions</span>
+                            <input id="sleepScoreModalIntr" class="sleep-sub-input" type="number" min="0" max="20" placeholder="–" oninput="window.updateSleepScoreModal()">
+                            <span class="sleep-sub-max">/20</span>
+                        </div>
+                    </div>
+                    <div class="sleep-total-row">Total: <span id="sleepModalTotal">–</span><span style="opacity:0.5">/100</span></div>
+                </div>
+                <button onclick="window.saveSleepScoreFromModal()" class="btn-submit">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Plan Session Log Choice Modal (manual vs Strava) -->
     <div id="planLogChoiceModal" class="modal-overlay" onclick="if(event.target===this)window.closeModal('planLogChoiceModal')">
         <div class="modal-card" style="max-width:320px">
@@ -638,7 +672,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=231"></script>
+    <script type="module" src="script.js?v=232"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
