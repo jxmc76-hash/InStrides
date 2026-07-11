@@ -2195,7 +2195,7 @@ const renderShortTermCharts = (completed) => {
         return result;
     };
 
-    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line') => {
+    const makeStChart = (id, canvasId, title, points, color, unit, chartType = 'line', yMax = null) => {
         const titleEl = document.createElement('div');
         titleEl.className = 'insights-section-title';
         titleEl.textContent = title;
@@ -2250,7 +2250,7 @@ const renderShortTermCharts = (completed) => {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: false, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+                    y: { beginAtZero: false, ...(yMax ? { suggestedMax: yMax } : {}), grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
                     x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45 } }
                 }
             }
@@ -2262,7 +2262,10 @@ const renderShortTermCharts = (completed) => {
     const distUnit = completed.find(e => e.distanceUnit)?.distanceUnit || 'km';
     makeStChart('st-rundist',  'chartStRunDist',  `Weekly Running Distance (${distUnit})`, weeklySum(e => e.type === 'RUN' && e.distance > 0 ? e.distance : null), '#ff5500', distUnit);
     makeStChart('st-energy',   'chartStEnergy',   'Weekly Avg Energy (1–10)',           weeklyAvg(e => e.customMetricData?.['ENERGY']),  '#f59e0b', '/10');
-    makeStChart('st-sleep',    'chartStSleep',    'Weekly Avg Sleep',                  weeklyAvg(e => e.customMetricData?.['SLEEP']),   '#14b8a6', '');
+    makeStChart('st-sleep',      'chartStSleep',     'Weekly Avg Sleep Score (/100)',           weeklyAvg(e => e.customMetricData?.['SLEEP']),              '#14b8a6', '/100', 'line', 100);
+    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Weekly Avg Sleep · Duration (/50)',       weeklyAvg(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'line', 50);
+    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Weekly Avg Sleep · Bedtime (/30)',        weeklyAvg(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'line', 30);
+    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Weekly Avg Sleep · Interruptions (/20)', weeklyAvg(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'line', 20);
 };
 
 const renderLongTermCharts = (completed) => {
