@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, enableIndexedDbPersistence, doc, onSnapshot, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"; // v96
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, browserLocalPersistence, setPersistence, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js"; // v229
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_VBffGyCoopsZZiPTZowx8d7fhFQ8_-w",
@@ -24,8 +24,9 @@ const functions = getFunctions(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 let LOG_ID = null;
-let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [], completedLearnings: [], trainingPlans: [] };
+let logData = { types: ["RUN", "YOGA", "GYM", "SWIM"], typeCategories: {}, customMetrics: [], entries: [], dailyNotes: {}, goals: [], themes: [], completedLearnings: [], trainingPlans: [], tasks: [] };
 let editingGoalId = null;
+let _stravaConnected = false;
 let editingThemeId = null;
 
 const TYPE_CATEGORIES = [
@@ -375,7 +376,7 @@ const attachRealtimeListener = () => {
     unsubSnapshot = onSnapshot(doc(db, "logs", LOG_ID), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [], trainingPlans: data.trainingPlans || [] };
+            logData = { types: data.types || [], typeCategories: data.typeCategories || {}, customMetrics: data.customMetrics || [], entries: data.entries || [], dailyNotes: data.dailyNotes || {}, goals: data.goals || [], themes: data.themes || [], completedLearnings: data.completedLearnings || [], trainingPlans: data.trainingPlans || [], tasks: data.tasks || [] };
             // Keep a rolling local backup whenever real data arrives from the server
             if (!snap.metadata.fromCache && logData.entries.length > 0) saveSnapshot(logData);
             renderMatrix();
@@ -650,6 +651,11 @@ window.quickAddEntry = (dateKey, type) => {
         typeSelect.value = type;
     }
     window.toggleDistanceRow();
+};
+
+window.quickAddEntryOnDate = (dateKey) => {
+    window.showInputModal();
+    document.getElementById('modalDate').value = dateKey;
 };
 
 window.editEntry = (id) => {
@@ -1573,53 +1579,80 @@ const renderLearnings = () => {
 
     const entries = logData.entries.filter(e => !e.isPlanned && e.type && e.type !== 'NONE' && e.learnings?.length);
     const done = new Set(logData.completedLearnings || []);
+    const tasks = logData.tasks || [];
 
-    if (!entries.length) {
-        container.innerHTML = '<p class="neutral-msg" style="padding:20px 0">No learnings logged yet — add some when recording a session.</p>';
-        return;
-    }
+    const allPending = [], allDone = [];
 
-    // Group by type
-    const byType = {};
+    // Exercise-linked learnings
     entries.forEach(e => {
-        if (!byType[e.type]) byType[e.type] = [];
         e.learnings.forEach((text, i) => {
             const key = `${e.id}-${i}`;
-            byType[e.type].push({ key, text, date: e.date, isDone: done.has(key) });
+            const item = { key, text, date: e.date, type: e.type, isDone: done.has(key) };
+            (item.isDone ? allDone : allPending).push(item);
         });
     });
 
-    const pending = [], completed = [];
-    Object.entries(byType).forEach(([type, items]) => {
-        const p = items.filter(x => !x.isDone);
-        const c = items.filter(x => x.isDone);
-        if (p.length) pending.push({ type, items: p });
-        if (c.length) completed.push({ type, items: c });
+    // Standalone tasks
+    tasks.forEach(t => {
+        const item = { key: `task-${t.id}`, text: t.text, date: t.date, type: t.type || null, isDone: !!t.isDone };
+        (item.isDone ? allDone : allPending).push(item);
     });
 
-    const renderGroup = (groups, isDoneSection) => groups.map(({ type, items }) => `
-        <div class="learning-type-group">
-            <div class="learning-type-label cat-${getTypeCategory(type)}">${titleCase(type)}</div>
-            ${items.map(item => `
-                <label class="learning-item${item.isDone ? ' learning-done' : ''}">
-                    <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
-                    <span class="learning-text">${item.text}</span>
-                    <span class="learning-date">${titleCase(type)} · ${new Date(item.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
-                </label>
-            `).join('')}
-        </div>
-    `).join('');
+    allPending.sort((a, b) => b.date.localeCompare(a.date));
+    allDone.sort((a, b) => b.date.localeCompare(a.date));
 
-    let html = '';
-    if (pending.length) html += `<div class="insights-section-title">To work on</div>${renderGroup(pending, false)}`;
-    if (completed.length) html += `<div class="insights-section-title" style="margin-top:30px">Done</div>${renderGroup(completed, true)}`;
+    const renderItem = (item) => `
+        <label class="learning-item${item.isDone ? ' learning-done' : ''}">
+            <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
+            <span class="learning-text">${item.text}</span>
+            <span class="learning-date">${item.type ? titleCase(item.type) + ' · ' : ''}${new Date(item.date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
+        </label>`;
+
+    const typeOptions = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
+
+    let html = `<div class="task-add-row">
+        <input type="text" id="newTaskInput" placeholder="Add a task or learning..." class="task-add-input" onkeydown="if(event.key==='Enter')window.addTaskFromInput()">
+        <select id="newTaskType" class="task-add-type">
+            <option value="">General</option>
+            ${typeOptions}
+        </select>
+        <button onclick="window.addTaskFromInput()" class="task-add-btn">+ Add</button>
+    </div>`;
+
+    if (allPending.length) html += `<div class="insights-section-title">To work on</div>${allPending.map(renderItem).join('')}`;
+    if (allDone.length) html += `<div class="insights-section-title" style="margin-top:30px">Done</div>${allDone.map(renderItem).join('')}`;
+    if (!allPending.length && !allDone.length) {
+        html += '<p class="neutral-msg" style="padding:20px 0">No learnings yet — add some when recording a session, or use the field above.</p>';
+    }
+
     container.innerHTML = html;
 };
 
+window.addTaskFromInput = async () => {
+    const input = document.getElementById('newTaskInput');
+    const typeSelect = document.getElementById('newTaskType');
+    const text = input?.value.trim();
+    if (!text) return;
+    const type = typeSelect?.value || null;
+    const task = { id: Date.now(), text, type: type || null, date: new Date().toISOString().split('T')[0], isDone: false };
+    if (!logData.tasks) logData.tasks = [];
+    logData.tasks.push(task);
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    renderLearnings();
+};
+
 window.toggleLearning = async (key) => {
-    const done = new Set(logData.completedLearnings || []);
-    if (done.has(key)) done.delete(key); else done.add(key);
-    logData.completedLearnings = [...done];
+    if (key.startsWith('task-')) {
+        const taskId = +key.slice(5);
+        const tasks = logData.tasks || [];
+        const t = tasks.find(x => x.id === taskId);
+        if (t) t.isDone = !t.isDone;
+        logData.tasks = tasks;
+    } else {
+        const done = new Set(logData.completedLearnings || []);
+        if (done.has(key)) done.delete(key); else done.add(key);
+        logData.completedLearnings = [...done];
+    }
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     renderLearnings();
 };
@@ -1903,6 +1936,7 @@ const renderOverview = () => {
     // Rows (most recent first)
     const colSpan = types.length + 1;
     let prevThemeId = undefined;
+    let prevWeekStart = null;
     rows.forEach((dateStr, idx) => {
         const theme = themeObjForDate(dateStr);
         const themeId = theme?.id ?? null;
@@ -1916,16 +1950,18 @@ const renderOverview = () => {
         }
         prevThemeId = themeId;
 
-        // Dashed week separator before Monday rows (skip very first row)
+        // Dashed week separator at each Mon→Sun boundary (between weeks, not within)
         const d = new Date(dateStr + 'T00:00:00');
-        if (idx > 0 && d.getDay() === 1) {
+        const thisWeekStart = getWeekStart(dateStr);
+        if (idx > 0 && thisWeekStart !== prevWeekStart) {
             html += `<tr class="ov-week-sep"><td colspan="${colSpan}"></td></tr>`;
         }
+        prevWeekStart = thisWeekStart;
 
         const dayLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
         const isToday = dateStr === todayStr;
 
-        html += `<tr><td class="ov-date-td${isToday ? ' ov-today' : ''}">${dayLabel}</td>`;
+        html += `<tr><td class="ov-date-td${isToday ? ' ov-today' : ''}" onclick="window.quickAddEntryOnDate('${dateStr}')" title="Log entry for ${dayLabel}">${dayLabel}</td>`;
         types.forEach(type => {
             const active = done.has(`${dateStr}|${type}`);
             const color = OVERVIEW_CAT_COLORS[getTypeCategory(type)] || '#ff5500';
@@ -2134,13 +2170,15 @@ const renderShortTermCharts = (completed) => {
         container.appendChild(wrap);
 
         const isBar = chartType === 'bar';
+        const vals = points.map(p => p.value);
+        const avgVal = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
         chartInstances[id] = new Chart(canvas, {
             type: chartType,
             data: {
                 labels: points.map(p => p.label),
                 datasets: [{
                     label: unit,
-                    data: points.map(p => p.value),
+                    data: vals,
                     borderColor: color,
                     backgroundColor: isBar ? color + 'bf' : color + '26',
                     borderWidth: isBar ? 0 : 2,
@@ -2149,7 +2187,17 @@ const renderShortTermCharts = (completed) => {
                     fill: !isBar,
                     pointRadius: 2,
                     pointHoverRadius: 5
-                }]
+                }, ...(avgVal !== null ? [{
+                    label: 'Average',
+                    data: Array(vals.length).fill(+avgVal.toFixed(2)),
+                    borderColor: color + '90',
+                    borderWidth: 1.5,
+                    borderDash: [5, 4],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                    type: 'line'
+                }] : [])]
             },
             options: {
                 responsive: true,
@@ -2299,6 +2347,8 @@ const renderLongTermCharts = (completed) => {
         container.appendChild(wrap);
 
         const isBar = chartType === 'bar';
+        const dataVals = data.filter(v => v != null && !isNaN(v));
+        const ltAvg = dataVals.length ? dataVals.reduce((a, b) => a + b, 0) / dataVals.length : null;
         chartInstances[id] = new Chart(canvas, {
             type: chartType,
             data: {
@@ -2314,7 +2364,17 @@ const renderLongTermCharts = (completed) => {
                     fill: !isBar,
                     pointRadius: 0,
                     pointHoverRadius: 4
-                }]
+                }, ...(ltAvg !== null ? [{
+                    label: 'Average',
+                    data: Array(data.length).fill(+ltAvg.toFixed(2)),
+                    borderColor: color + '90',
+                    borderWidth: 1.5,
+                    borderDash: [5, 4],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                    type: 'line'
+                }] : [])]
             },
             options: {
                 responsive: true,
@@ -3196,6 +3256,7 @@ const updateStravaButton = async () => {
     const btn = document.getElementById('stravaBtn');
     if (!btn || !auth.currentUser) return;
     const snap = await getDoc(doc(db, 'strava', auth.currentUser.uid));
+    _stravaConnected = snap.exists();
     if (snap.exists()) {
         btn.textContent = '✓ Strava';
         btn.onclick = () => window.showStravaActivity();
@@ -3613,6 +3674,7 @@ window.handleImportFile = async (event) => {
         goals: imported.goals || [],
         themes: imported.themes || [],
         trainingPlans: imported.trainingPlans || [],
+        tasks: imported.tasks || [],
     };
 
     try {
@@ -4258,10 +4320,22 @@ window.deletePlanSession = async () => {
     renderPlan();
 };
 
+window._pendingChoicePlanLink = null;
+
 window.logPlanSession = (planId, sessionId) => {
     const plan = (logData.trainingPlans || []).find(p => p.id === planId);
     const session = (plan?.sessions || []).find(s => s.id === sessionId);
     if (!session) return;
+
+    if (_stravaConnected) {
+        window._pendingChoicePlanLink = { planId, sessionId, session };
+        document.getElementById('planLogChoiceModal').style.display = 'flex';
+    } else {
+        window._openPlanSessionManual(planId, sessionId, session);
+    }
+};
+
+window._openPlanSessionManual = (planId, sessionId, session) => {
     window.showInputModal();
     document.getElementById('modalDate').value = session.date;
     if (session.type && session.type !== 'NONE') {
@@ -4270,8 +4344,21 @@ window.logPlanSession = (planId, sessionId) => {
     }
     if (session.target) document.getElementById('modalDetails').value = session.target;
     window.toggleDistanceRow();
-    // Set AFTER showInputModal (which clears _pendingPlanLink)
     window._pendingPlanLink = { planId, sessionId };
+};
+
+window._choosePlanLog = (mode) => {
+    window.closeModal('planLogChoiceModal');
+    const link = window._pendingChoicePlanLink;
+    window._pendingChoicePlanLink = null;
+    if (!link) return;
+    const { planId, sessionId, session } = link;
+    if (mode === 'strava') {
+        window._pendingPlanLink = { planId, sessionId };
+        window.showStravaActivity();
+    } else {
+        window._openPlanSessionManual(planId, sessionId, session);
+    }
 };
 
 // --- EXPORT DATA ---

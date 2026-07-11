@@ -1,4 +1,4 @@
-const CACHE = 'traininglog-v7';
+const CACHE = 'traininglog-v8';
 const ASSETS = ['/style.css', '/script.js', '/logo.png', '/favicon.ico', '/manifest.json'];
 
 self.addEventListener('install', e => {
