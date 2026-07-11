@@ -3217,6 +3217,8 @@ const renderMatrix = () => {
                 row += `<td class="col-stat editable-cell" onclick="window.promptDuration('${dateKey}','${m.name}',${mVal !== undefined && mVal !== null && mVal !== '' ? mVal : 'null'})">${cellContent}</td>`;
             } else if (m.type === 'number') {
                 row += `<td class="col-stat editable-cell" onclick="window.promptNumberValue('${dateKey}','metric-${m.name}',${!isCarried && mVal !== undefined && mVal !== null && mVal !== '' ? mVal : 'null'})">${cellContent}</td>`;
+            } else if (m.name === 'SLEEP') {
+                row += `<td class="col-stat editable-cell" onclick="window.promptSleepScore('${dateKey}')">${cellContent}</td>`;
             } else if (m.scale === 100) {
                 row += `<td class="col-stat editable-cell" onclick="window.promptCellValue('${dateKey}','metric-${m.name}',${mVal !== undefined && mVal !== null ? mVal : 'null'},100)">${cellContent}</td>`;
             } else {
@@ -3538,6 +3540,54 @@ window.promptDuration = (dateKey, metricName, currentVal) => {
     const mins = parseInt(input, 10);
     if (isNaN(mins) || mins < 0) return;
     window.saveCellValue(dateKey, 'metric-' + metricName, mins);
+};
+
+let _sleepScoreDateKey = null;
+window.promptSleepScore = (dateKey) => {
+    _sleepScoreDateKey = dateKey;
+    const entry = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
+    const cmd = entry?.customMetricData || {};
+    document.getElementById('sleepScoreModalDur').value = cmd['SLEEP_DURATION'] ?? '';
+    document.getElementById('sleepScoreModalBed').value = cmd['SLEEP_BEDTIME'] ?? '';
+    document.getElementById('sleepScoreModalIntr').value = cmd['SLEEP_INTERRUPTIONS'] ?? '';
+    window.updateSleepScoreModal();
+    document.getElementById('sleepScoreModal').style.display = 'flex';
+};
+
+window.updateSleepScoreModal = () => {
+    const d = parseFloat(document.getElementById('sleepScoreModalDur')?.value);
+    const b = parseFloat(document.getElementById('sleepScoreModalBed')?.value);
+    const i = parseFloat(document.getElementById('sleepScoreModalIntr')?.value);
+    const hasAny = !isNaN(d) || !isNaN(b) || !isNaN(i);
+    const total = hasAny ? (isNaN(d) ? 0 : d) + (isNaN(b) ? 0 : b) + (isNaN(i) ? 0 : i) : null;
+    const el = document.getElementById('sleepModalTotal');
+    if (el) el.textContent = total !== null ? total : '–';
+};
+
+window.saveSleepScoreFromModal = async () => {
+    const dateKey = _sleepScoreDateKey;
+    if (!dateKey) return;
+    const d = parseFloat(document.getElementById('sleepScoreModalDur').value);
+    const b = parseFloat(document.getElementById('sleepScoreModalBed').value);
+    const i = parseFloat(document.getElementById('sleepScoreModalIntr').value);
+    let record = logData.entries.find(e => e.date === dateKey && !e.isPlanned && e.type === 'NONE');
+    if (!record) {
+        record = { id: Date.now(), date: dateKey, type: 'NONE', isPlanned: false, customMetricData: {} };
+        logData.entries.push(record);
+    }
+    if (!record.customMetricData) record.customMetricData = {};
+    if (!isNaN(d)) record.customMetricData['SLEEP_DURATION'] = Math.min(50, Math.max(0, d));
+    else delete record.customMetricData['SLEEP_DURATION'];
+    if (!isNaN(b)) record.customMetricData['SLEEP_BEDTIME'] = Math.min(30, Math.max(0, b));
+    else delete record.customMetricData['SLEEP_BEDTIME'];
+    if (!isNaN(i)) record.customMetricData['SLEEP_INTERRUPTIONS'] = Math.min(20, Math.max(0, i));
+    else delete record.customMetricData['SLEEP_INTERRUPTIONS'];
+    const hasAny = !isNaN(d) || !isNaN(b) || !isNaN(i);
+    if (hasAny) record.customMetricData['SLEEP'] = (isNaN(d)?0:d) + (isNaN(b)?0:b) + (isNaN(i)?0:i);
+    else delete record.customMetricData['SLEEP'];
+    window.closeModal('sleepScoreModal');
+    renderMatrix();
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
 };
 
 window.saveCellValue = async (dateKey, field, value) => {
