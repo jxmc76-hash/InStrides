@@ -374,7 +374,7 @@ th { background: #f5f5f7; font-size: 0.65rem; font-weight: 800; text-transform: 
 .learning-date { font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; }
 .learning-done .learning-text { text-decoration: line-through; opacity: 0.5; }
 .learning-done { opacity: 0.7; }
-[data-theme="dark"] .learning-item { background: #1d2027; }
+[data-theme="dark"] .learning-item { background: #1c1c1e; }
 [data-theme="dark"] .learning-item:hover { background: #23262e; }
 
 .goal-card { cursor: pointer; text-align: left !important; display: flex; flex-direction: column; gap: 8px; }
