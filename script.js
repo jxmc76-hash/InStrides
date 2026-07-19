@@ -1717,7 +1717,8 @@ window.sendToThings = (items) => {
             title: i.text,
             notes: `InStrides${i.type ? ' · ' + i.type : ''} · ${i.date}`,
             tags: ['InStrides'],
-            when: 'today'
+            when: 'today',
+            list: 'Training Log'
         }
     }));
     window.location.href = `things:///json?data=${encodeURIComponent(JSON.stringify(data))}`;
