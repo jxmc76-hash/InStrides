@@ -41,8 +41,10 @@ exports.calendarFeed = onRequest({ cors: false, invoker: 'public' }, async (req,
             if (dateStr.length !== 8) continue;
 
             const typeLabel = session.type || 'Session';
-            const doneLabel = session.isComplete ? ' ✓' : '';
-            const summary = `${typeLabel}${doneLabel} — ${plan.title}`;
+            const target = (session.target || '').trim();
+            const summary = target
+                ? `${typeLabel} — ${target} (${plan.title})`
+                : `${typeLabel} (${plan.title})`;
             const description = session.target || '';
 
             lines.push('BEGIN:VEVENT');
