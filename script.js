@@ -3798,6 +3798,23 @@ window.saveNote = async (dateKey, text) => {
 
 window.toggleSettings = () => { document.getElementById('settingsMenu').classList.toggle('open'); };
 window.closeSettings = () => { document.getElementById('settingsMenu').classList.remove('open'); };
+
+window.getCalendarUrl = async () => {
+    window.closeSettings();
+    let token = logData.calendarToken;
+    if (!token) {
+        token = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(b => b.toString(16).padStart(2, '0')).join('');
+        logData.calendarToken = token;
+        await setDoc(doc(db, 'logs', LOG_ID), logData);
+    }
+    const url = `${location.origin}/api/calendar?token=${token}`;
+    try {
+        await navigator.clipboard.writeText(url);
+        alert(`Calendar URL copied to clipboard!\n\nPaste it into Calendar → File → New Calendar Subscription\n\n${url}`);
+    } catch {
+        prompt('Copy this URL and subscribe to it in your calendar app:', url);
+    }
+};
 document.addEventListener('click', (e) => { if (!e.target.closest('.settings-dropdown')) window.closeSettings(); });
 window.toggleWeek = (weekId) => {
     const rows = document.querySelectorAll(`.week-day-row[data-week="${weekId}"]`);

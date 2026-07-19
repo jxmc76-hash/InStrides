@@ -11,6 +11,9 @@
       "firebase.json",
       ".firebaserc",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/api/calendar", "function": "calendarFeed" }
     ]
   }
 }

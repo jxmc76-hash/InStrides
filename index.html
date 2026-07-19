@@ -63,6 +63,7 @@
                             <button onclick="window.showTypeModal(); window.closeSettings()">Manage Types</button>
                             <button id="darkModeToggleBtn" onclick="window.toggleDarkMode()">🌙 Dark Mode</button>
                             <button id="hideFutureToggleBtn" onclick="window.toggleHideFuture()">🙈 Hide Future Plans</button>
+                            <button onclick="window.getCalendarUrl()">📅 Calendar Feed</button>
                             <button onclick="window.exportData()">⬇ Export Data</button>
                             <button onclick="document.getElementById('importFileInput').click()">⬆ Import Data</button>
                             <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="window.handleImportFile(event)">
