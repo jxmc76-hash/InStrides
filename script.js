@@ -1745,7 +1745,7 @@ window.sendToThings = async (items, btn) => {
             title: i.text,
             notes: `InStrides${i.type ? ' · ' + i.type : ''} · ${i.date}`,
             tags: ['InStrides'],
-            when: 'today',
+
             list: 'Training Log'
         }
     }));
