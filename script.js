@@ -3807,7 +3807,7 @@ window.getCalendarUrl = async () => {
         logData.calendarToken = token;
         await setDoc(doc(db, 'logs', LOG_ID), logData);
     }
-    const url = `https://us-central1-in-strides.cloudfunctions.net/calendarFeed?token=${token}`;
+    const url = `https://calendarfeed-u6ju5awpxa-uc.a.run.app?token=${token}`;
     try {
         await navigator.clipboard.writeText(url);
         alert(`Calendar URL copied to clipboard!\n\nPaste it into Calendar → File → New Calendar Subscription\n\n${url}`);
