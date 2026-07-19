@@ -1656,7 +1656,7 @@ const renderLearnings = () => {
             <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
             <span class="learning-text">${item.text}</span>
             <span class="learning-date">${item.type ? titleCase(item.type) + ' · ' : ''}${new Date(item.date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
-            ${!item.isDone ? `<button class="things-btn" title="Send to Things 3" onclick="event.preventDefault();window.sendThingsItem(${idx})">Things ↗</button>` : ''}
+            ${!item.isDone ? `<button class="things-btn" title="Send to Things 3" onclick="event.preventDefault();window.sendThingsItem(${idx},this)">Things ↗</button>` : ''}
         </label>`;
 
     const typeOptions = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -1671,8 +1671,9 @@ const renderLearnings = () => {
     </div>`;
 
     if (allPending.length) {
-        const sendAllBtn = `<button class="things-send-all-btn" onclick="window.sendAllToThings()">Send all to Things 3</button>`;
-        html += `<div class="insights-section-title" style="display:flex;align-items:center;justify-content:space-between">To work on ${sendAllBtn}</div>${allPending.map((item, idx) => renderItem(item, idx)).join('')}`;
+        html += `<div class="insights-section-title">To work on</div>
+            <button class="things-send-all-btn" id="thingsSendAllBtn" onclick="window.sendAllToThings(this)">Send all to Things 3</button>
+            ${allPending.map((item, idx) => renderItem(item, idx)).join('')}`;
     }
     if (allDone.length) html += `<div class="insights-section-title" style="margin-top:30px">Done</div>${allDone.map(renderItem).join('')}`;
     if (!allPending.length && !allDone.length) {
@@ -1724,9 +1725,20 @@ const markLearningDone = async (key) => {
     }
 };
 
+// Opens Things 3 via anchor-click (more reliable than location.href for custom URL schemes in PWAs)
+const openThingsUrl = (url) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 200);
+};
+
 // Opens Things 3 with one or more to-do items, then marks them done
-window.sendToThings = async (items) => {
+window.sendToThings = async (items, btn) => {
     if (!items.length) return;
+    if (btn) { btn.textContent = 'Sent ✓'; btn.disabled = true; }
     const data = items.map(i => ({
         type: 'to-do',
         attributes: {
@@ -1737,19 +1749,19 @@ window.sendToThings = async (items) => {
             list: 'Training Log'
         }
     }));
-    window.location.href = `things:///json?data=${encodeURIComponent(JSON.stringify(data))}`;
+    openThingsUrl(`things:///json?data=${encodeURIComponent(JSON.stringify(data))}`);
     for (const i of items) await markLearningDone(i.key);
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     renderLearnings();
 };
 
-window.sendThingsItem = (idx) => {
+window.sendThingsItem = (idx, btn) => {
     const item = window._thingsPending[idx];
-    if (item) window.sendToThings([item]);
+    if (item) window.sendToThings([item], btn);
 };
 
-window.sendAllToThings = () => {
-    if (window._thingsPending?.length) window.sendToThings(window._thingsPending);
+window.sendAllToThings = (btn) => {
+    if (window._thingsPending?.length) window.sendToThings(window._thingsPending, btn);
 };
 
 // --- CORRELATIONS ---
