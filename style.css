@@ -374,6 +374,10 @@ th { background: #f5f5f7; font-size: 0.65rem; font-weight: 800; text-transform: 
 .learning-date { font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; }
 .learning-done .learning-text { text-decoration: line-through; opacity: 0.5; }
 .learning-done { opacity: 0.7; }
+.things-btn { margin-left: auto; flex-shrink: 0; background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 3px 8px; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; white-space: nowrap; }
+.things-btn:hover { border-color: #4e9bff; color: #4e9bff; background: rgba(78,155,255,0.06); }
+.things-send-all-btn { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 3px 10px; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: border-color 0.15s, color 0.15s; white-space: nowrap; }
+.things-send-all-btn:hover { border-color: #4e9bff; color: #4e9bff; }
 [data-theme="dark"] .learning-item { background: #1c1c1e; }
 [data-theme="dark"] .learning-item:hover { background: #23262e; }
 
