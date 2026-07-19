@@ -1653,6 +1653,7 @@ const renderLearnings = () => {
             <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
             <span class="learning-text">${item.text}</span>
             <span class="learning-date">${item.type ? titleCase(item.type) + ' · ' : ''}${new Date(item.date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
+            ${!item.isDone ? `<button class="things-btn" title="Send to Things 3" onclick="event.preventDefault();window.sendToThings([{text:'${item.text.replace(/'/g,"\\'")}',type:'${item.type||''}',date:'${item.date}'}])">Things ↗</button>` : ''}
         </label>`;
 
     const typeOptions = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -1666,7 +1667,10 @@ const renderLearnings = () => {
         <button onclick="window.addTaskFromInput()" class="task-add-btn">+ Add</button>
     </div>`;
 
-    if (allPending.length) html += `<div class="insights-section-title">To work on</div>${allPending.map(renderItem).join('')}`;
+    if (allPending.length) {
+        const sendAllBtn = `<button class="things-send-all-btn" onclick="window.sendToThings(${JSON.stringify(allPending.map(i => ({text:i.text,type:i.type||'',date:i.date})))})">Send all to Things 3</button>`;
+        html += `<div class="insights-section-title" style="display:flex;align-items:center;justify-content:space-between">To work on ${sendAllBtn}</div>${allPending.map(renderItem).join('')}`;
+    }
     if (allDone.length) html += `<div class="insights-section-title" style="margin-top:30px">Done</div>${allDone.map(renderItem).join('')}`;
     if (!allPending.length && !allDone.length) {
         html += '<p class="neutral-msg" style="padding:20px 0">No learnings yet — add some when recording a session, or use the field above.</p>';
@@ -1702,6 +1706,21 @@ window.toggleLearning = async (key) => {
     }
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     renderLearnings();
+};
+
+// Opens Things 3 with one or more to-do items via URL scheme
+window.sendToThings = (items) => {
+    if (!items.length) return;
+    const data = items.map(i => ({
+        type: 'to-do',
+        attributes: {
+            title: i.text,
+            notes: `InStrides${i.type ? ' · ' + i.type : ''} · ${i.date}`,
+            tags: ['InStrides'],
+            when: 'today'
+        }
+    }));
+    window.location.href = `things:///json?data=${encodeURIComponent(JSON.stringify(data))}`;
 };
 
 // --- CORRELATIONS ---
