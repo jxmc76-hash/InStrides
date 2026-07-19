@@ -13,7 +13,7 @@
       "**/node_modules/**"
     ],
     "rewrites": [
-      { "source": "/api/calendar", "function": "calendarFeed" }
+      { "source": "/api/calendar", "function": "calendarFeed", "region": "us-central1" }
     ]
   }
 }
