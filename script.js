@@ -1648,12 +1648,15 @@ const renderLearnings = () => {
     allPending.sort((a, b) => b.date.localeCompare(a.date));
     allDone.sort((a, b) => b.date.localeCompare(a.date));
 
-    const renderItem = (item) => `
+    // Store pending items so onclick handlers can reference by index (avoids JSON-in-attribute escaping)
+    window._thingsPending = allPending.map(i => ({ text: i.text, type: i.type || '', date: i.date, key: i.key }));
+
+    const renderItem = (item, idx) => `
         <label class="learning-item${item.isDone ? ' learning-done' : ''}">
             <input type="checkbox" onchange="window.toggleLearning('${item.key}')" ${item.isDone ? 'checked' : ''}>
             <span class="learning-text">${item.text}</span>
             <span class="learning-date">${item.type ? titleCase(item.type) + ' · ' : ''}${new Date(item.date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}</span>
-            ${!item.isDone ? `<button class="things-btn" title="Send to Things 3" onclick="event.preventDefault();window.sendToThings([{text:'${item.text.replace(/'/g,"\\'")}',type:'${item.type||''}',date:'${item.date}'}])">Things ↗</button>` : ''}
+            ${!item.isDone ? `<button class="things-btn" title="Send to Things 3" onclick="event.preventDefault();window.sendThingsItem(${idx})">Things ↗</button>` : ''}
         </label>`;
 
     const typeOptions = logData.types.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -1668,8 +1671,8 @@ const renderLearnings = () => {
     </div>`;
 
     if (allPending.length) {
-        const sendAllBtn = `<button class="things-send-all-btn" onclick="window.sendToThings(${JSON.stringify(allPending.map(i => ({text:i.text,type:i.type||'',date:i.date})))})">Send all to Things 3</button>`;
-        html += `<div class="insights-section-title" style="display:flex;align-items:center;justify-content:space-between">To work on ${sendAllBtn}</div>${allPending.map(renderItem).join('')}`;
+        const sendAllBtn = `<button class="things-send-all-btn" onclick="window.sendAllToThings()">Send all to Things 3</button>`;
+        html += `<div class="insights-section-title" style="display:flex;align-items:center;justify-content:space-between">To work on ${sendAllBtn}</div>${allPending.map((item, idx) => renderItem(item, idx)).join('')}`;
     }
     if (allDone.length) html += `<div class="insights-section-title" style="margin-top:30px">Done</div>${allDone.map(renderItem).join('')}`;
     if (!allPending.length && !allDone.length) {
@@ -1708,8 +1711,21 @@ window.toggleLearning = async (key) => {
     renderLearnings();
 };
 
-// Opens Things 3 with one or more to-do items via URL scheme
-window.sendToThings = (items) => {
+// Mark a learning/task as done without toggling back
+const markLearningDone = async (key) => {
+    if (key.startsWith('task-')) {
+        const taskId = +key.slice(5);
+        const t = (logData.tasks || []).find(x => x.id === taskId);
+        if (t) t.isDone = true;
+    } else {
+        const done = new Set(logData.completedLearnings || []);
+        done.add(key);
+        logData.completedLearnings = [...done];
+    }
+};
+
+// Opens Things 3 with one or more to-do items, then marks them done
+window.sendToThings = async (items) => {
     if (!items.length) return;
     const data = items.map(i => ({
         type: 'to-do',
@@ -1722,6 +1738,18 @@ window.sendToThings = (items) => {
         }
     }));
     window.location.href = `things:///json?data=${encodeURIComponent(JSON.stringify(data))}`;
+    for (const i of items) await markLearningDone(i.key);
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    renderLearnings();
+};
+
+window.sendThingsItem = (idx) => {
+    const item = window._thingsPending[idx];
+    if (item) window.sendToThings([item]);
+};
+
+window.sendAllToThings = () => {
+    if (window._thingsPending?.length) window.sendToThings(window._thingsPending);
 };
 
 // --- CORRELATIONS ---
