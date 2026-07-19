@@ -14,7 +14,7 @@ const nextDay = (yyyymmdd) => {
     return d.toISOString().slice(0, 10).replace(/-/g, '');
 };
 
-exports.calendarFeed = onRequest({ cors: false }, async (req, res) => {
+exports.calendarFeed = onRequest({ cors: false, invoker: 'public' }, async (req, res) => {
     const token = req.query.token;
     if (!token) return res.status(400).send('Missing token');
 
