@@ -1694,6 +1694,8 @@ window.addTaskFromInput = async () => {
     logData.tasks.push(task);
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     renderLearnings();
+    const thingsData = [{ type: 'to-do', attributes: { title: text, notes: `InStrides${type ? ' · ' + type : ''} · ${task.date}`, tags: ['InStrides'], when: 'today', list: 'Training Log' } }];
+    openThingsUrl(`things:///json?data=${encodeURIComponent(JSON.stringify(thingsData))}`);
 };
 
 window.toggleLearning = async (key) => {
