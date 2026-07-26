@@ -35,6 +35,7 @@ const TYPE_CATEGORIES = [
     { value: 'gym',         label: 'Weight' },
     { value: 'time',        label: 'Time' },
     { value: 'pacing',      label: 'Time + Distance' },
+    { value: 'sit',         label: 'Duration + Score' },
     { value: 'other',       label: 'Other' },
 ];
 
@@ -75,6 +76,15 @@ const aggregateExerciseLabel = (entries, cat) => {
             if (totalDist) parts.push(`${fmtNum(totalDist)}${unit}`);
             if (totalDur) parts.push(`${totalDur}min`);
             return parts.join(' / ');
+        }
+        case 'sit': {
+            const total = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            const scores = entries.filter(e => e.otherRating).map(e => e.otherRating);
+            const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+            const parts = [];
+            if (total) parts.push(`${total}min`);
+            if (avgScore !== null) parts.push(`${avgScore}/10`);
+            return parts.join(' · ');
         }
         case 'other': {
             const vals = entries.filter(e => e.otherRating).map(e => e.otherRating);
@@ -630,7 +640,7 @@ window.updateSleepSubscore = (field, raw) => {
 
 // --- CORE INTERFACE DIALOGS & EXECUTION ---
 window.switchTab = (tab) => {
-    ['log', 'overview', 'insights', 'goals', 'help'].forEach(t => {
+    ['log', 'overview', 'insights', 'goals', 'help', 'analysis'].forEach(t => {
         document.getElementById(`view${t.charAt(0).toUpperCase()+t.slice(1)}`)?.classList.toggle('active', t === tab);
     });
     document.querySelectorAll('.bottom-nav-item').forEach(btn => {
@@ -638,6 +648,7 @@ window.switchTab = (tab) => {
     });
     if (tab === 'overview') renderOverview();
     if (tab === 'goals') { renderThemes(); renderGoals(); renderLearnings(); renderPlan(); }
+    if (tab === 'analysis') renderAnalysisPage();
 };
 
 window.setStrategy = (wantsPlanned) => {
@@ -659,8 +670,12 @@ window.toggleDistanceRow = () => {
     document.getElementById('metricCardio').style.display     = (cat === 'cardio' || cat === 'pacing')   ? 'block' : 'none';
     document.getElementById('metricBodyweight').style.display = cat === 'bodyweight' ? 'block' : 'none';
     document.getElementById('metricGym').style.display        = cat === 'gym'        ? 'block' : 'none';
-    document.getElementById('metricTime').style.display       = (cat === 'time' || cat === 'pacing')     ? 'block' : 'none';
-    document.getElementById('metricOther').style.display      = cat === 'other'      ? 'block' : 'none';
+    document.getElementById('metricTime').style.display       = (cat === 'time' || cat === 'pacing' || cat === 'sit') ? 'block' : 'none';
+    document.getElementById('metricOther').style.display      = (cat === 'other' || cat === 'sit') ? 'block' : 'none';
+    const otherLabel = document.querySelector('#metricOther label');
+    if (otherLabel) otherLabel.textContent = cat === 'sit' ? 'Session score (1–10)' : 'Perceived effort (1–10)';
+    const subTypeEl = document.getElementById('metricSubType');
+    if (subTypeEl) subTypeEl.style.display = !isPlannedStrategy && type && type.toUpperCase().includes('RUN') && cat ? 'block' : 'none';
 };
 
 window.showInputModal = () => {
@@ -681,6 +696,8 @@ window.showInputModal = () => {
     document.getElementById('modalDuration').value = '';
     document.getElementById('modalOtherRating').value = '';
     [0,1,2].forEach(i => { document.getElementById(`learning${i}`).value = ''; });
+    window._selectedSubType = '';
+    document.querySelectorAll('.subtype-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('inputModal').style.display = 'flex';
     window.selectMark(1);
     window.toggleDistanceRow();
@@ -719,6 +736,8 @@ window.editEntry = (id) => {
     document.getElementById('modalWeightUnit').value = entry.weightUnit || 'kg';
     document.getElementById('modalDuration').value = entry.duration || '';
     document.getElementById('modalOtherRating').value = entry.otherRating || '';
+    window._selectedSubType = entry.subType || '';
+    document.querySelectorAll('.subtype-chip').forEach(c => c.classList.toggle('active', c.dataset.value === window._selectedSubType));
     [0,1,2].forEach(i => { document.getElementById(`learning${i}`).value = (entry.learnings || [])[i] || ''; });
     window.selectMark(entry.mark || 1);
     document.getElementById('inputModal').style.display = 'flex';
@@ -778,7 +797,8 @@ window.saveExercise = async () => {
         weight: cat === 'gym' && !isNaN(weightVal) && weightVal > 0 ? weightVal : null,
         weightUnit: document.getElementById('modalWeightUnit').value,
         duration: !isNaN(durationVal) && durationVal > 0 ? durationVal : null,
-        otherRating: cat === 'other' && !isPlannedStrategy ? otherRating : null,
+        otherRating: (cat === 'other' || cat === 'sit') && !isPlannedStrategy ? otherRating : null,
+        subType: !isPlannedStrategy && window._selectedSubType ? window._selectedSubType : null,
         learnings: [0,1,2].map(i => document.getElementById(`learning${i}`).value.trim()).filter(Boolean),
         id: editingId || Date.now()
     };
@@ -3867,6 +3887,22 @@ window.toggleDarkMode = () => {
 };
 applyDarkMode(localStorage.getItem('darkMode') === '1');
 
+// --- COLOUR THEME ---
+window.applyColorTheme = (theme) => {
+    document.documentElement.setAttribute('data-color-theme', theme || '');
+    localStorage.setItem('colorTheme', theme || '');
+    const sel = document.getElementById('colorThemeSelect');
+    if (sel) sel.value = theme || '';
+};
+window.applyColorTheme(localStorage.getItem('colorTheme') || '');
+
+// --- RUN SUB-TYPE ---
+window._selectedSubType = '';
+window.selectRunSubType = (val) => {
+    window._selectedSubType = window._selectedSubType === val ? '' : val;
+    document.querySelectorAll('.subtype-chip').forEach(c => c.classList.toggle('active', c.dataset.value === window._selectedSubType));
+};
+
 // --- HIDE FUTURE PLANS ---
 const applyHideFuture = (on) => {
     document.getElementById('hideFutureToggleBtn')?.classList.toggle('active', on);
@@ -4427,15 +4463,13 @@ const renderPlan = () => {
             const logEntry = s.logEntryId ? logData.entries.find(e => e.id === s.logEntryId) : null;
             const actual = logEntry ? buildActualLabel(logEntry) : '';
 
-            const tickCls = s.isComplete
-                ? 'plan-tick plan-tick-done'
-                : isPastDay ? 'plan-tick plan-tick-missed' : 'plan-tick';
+            const tickCls = s.isComplete ? 'plan-tick plan-tick-done' : 'plan-tick';
             const tickOnclick = s.isComplete
                 ? (s.logEntryId ? `onclick="window.editEntry(${s.logEntryId})"` : '')
-                : isPastDay ? '' : `onclick="window.logPlanSession(${activePlan.id},${s.id})"`;
+                : `onclick="window.logPlanSession(${activePlan.id},${s.id})"`;
 
             html += `<div class="plan-session-card${isToday ? ' plan-session-today' : ''}${s.isComplete ? ' plan-session-done' : ''}">
-                <button class="${tickCls}" ${tickOnclick}>${s.isComplete ? '✓' : isPastDay ? '–' : '○'}</button>
+                <button class="${tickCls}" ${tickOnclick}>${s.isComplete ? '✓' : '○'}</button>
                 <div class="plan-session-info">
                     <div class="plan-session-top">
                         ${s.type && s.type !== 'NONE' ? `<span class="plan-session-type cat-${cat}">${titleCase(s.type)}</span>` : ''}
@@ -4682,6 +4716,59 @@ window.seedHalfMarathonPlan = async () => {
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     if (document.getElementById('viewPlan')?.classList.contains('active')) renderPlan();
     alert('Half marathon plan added! Navigate to the Plan tab to see it.');
+};
+
+// --- ANALYSIS PAGE ---
+const renderAnalysisPage = () => {
+    const container = document.getElementById('viewAnalysis');
+    if (!container) return;
+    const cached = localStorage.getItem('analysisCache');
+    const cachedTime = localStorage.getItem('analysisCacheTime');
+    const cachedDateStr = cachedTime ? new Date(parseInt(cachedTime)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    container.innerHTML = `
+        <div class="analysis-container">
+            <div class="analysis-hero">
+                <h2 class="analysis-title">Performance Analysis</h2>
+                <p class="analysis-subtitle">AI-powered coaching insights from your training data</p>
+            </div>
+            <div class="analysis-actions">
+                <button class="btn-primary-full" id="generateAnalysisBtn" onclick="window.generateAnalysis()">${cached ? 'Regenerate Analysis' : 'Generate Analysis'}</button>
+                ${cached && cachedDateStr ? `<p class="analysis-cached-note">Last generated ${cachedDateStr}</p>` : ''}
+            </div>
+            <div id="analysisOutput" class="analysis-output">${cached ? (typeof marked !== 'undefined' ? marked.parse(cached) : `<pre class="analysis-pre">${cached}</pre>`) : '<p class="analysis-empty">Click <strong>Generate Analysis</strong> to get AI coaching insights based on your training history.</p>'}</div>
+        </div>
+    `;
+};
+
+window.generateAnalysis = async () => {
+    const btn = document.getElementById('generateAnalysisBtn');
+    const output = document.getElementById('analysisOutput');
+    if (!btn || !output) return;
+    btn.disabled = true;
+    btn.textContent = 'Analysing…';
+    output.innerHTML = '<div class="analysis-loading"><div class="analysis-spinner"></div>Analysing your training data…</div>';
+    try {
+        const idToken = await auth.currentUser?.getIdToken();
+        if (!idToken) throw new Error('Not signed in');
+        const resp = await fetch('/api/analysis', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' }
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${resp.status}`);
+        }
+        const { analysis } = await resp.json();
+        localStorage.setItem('analysisCache', analysis);
+        localStorage.setItem('analysisCacheTime', Date.now().toString());
+        output.innerHTML = typeof marked !== 'undefined' ? marked.parse(analysis) : `<pre class="analysis-pre">${analysis}</pre>`;
+        btn.textContent = 'Regenerate Analysis';
+    } catch (err) {
+        output.innerHTML = `<div class="analysis-error">⚠ ${err.message}</div>`;
+        btn.textContent = 'Retry';
+    } finally {
+        btn.disabled = false;
+    }
 };
 
 // --- EXPORT DATA ---
