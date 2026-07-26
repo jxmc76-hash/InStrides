@@ -4722,22 +4722,196 @@ window.seedHalfMarathonPlan = async () => {
 const renderAnalysisPage = () => {
     const container = document.getElementById('viewAnalysis');
     if (!container) return;
-    const cached = localStorage.getItem('analysisCache');
-    const cachedTime = localStorage.getItem('analysisCacheTime');
-    const cachedDateStr = cachedTime ? new Date(parseInt(cachedTime)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-    container.innerHTML = `
-        <div class="analysis-container">
-            <div class="analysis-hero">
-                <h2 class="analysis-title">Performance Analysis</h2>
-                <p class="analysis-subtitle">AI-powered coaching insights from your training data</p>
-            </div>
-            <div class="analysis-actions">
-                <button class="btn-primary-full" id="generateAnalysisBtn" onclick="window.generateAnalysis()">${cached ? 'Regenerate Analysis' : 'Generate Analysis'}</button>
-                ${cached && cachedDateStr ? `<p class="analysis-cached-note">Last generated ${cachedDateStr}</p>` : ''}
-            </div>
-            <div id="analysisOutput" class="analysis-output">${cached ? (typeof marked !== 'undefined' ? marked.parse(cached) : `<pre class="analysis-pre">${cached}</pre>`) : '<p class="analysis-empty">Click <strong>Generate Analysis</strong> to get AI coaching insights based on your training history.</p>'}</div>
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const cutoff = new Date(todayStr + 'T12:00:00Z');
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+
+    const getMonday = (ds) => {
+        const d = new Date(ds + 'T12:00:00Z');
+        d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+        return d.toISOString().split('T')[0];
+    };
+
+    const allCompleted = logData.entries.filter(e => !e.isPlanned);
+    const recent = allCompleted.filter(e => e.date >= cutoffStr);
+
+    // Activity breakdown
+    const typeCounts = {};
+    recent.forEach(e => { if (e.type && e.type !== 'NONE') typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    const topTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const maxTypeCount = topTypes[0]?.[1] || 1;
+
+    // Weekly session counts — last 12 weeks
+    const weekSessionMap = {};
+    recent.forEach(e => { const w = getMonday(e.date); weekSessionMap[w] = (weekSessionMap[w] || 0) + 1; });
+    const week12Starts = Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(todayStr + 'T12:00:00Z');
+        d.setDate(d.getDate() - (11 - i) * 7);
+        return getMonday(d.toISOString().split('T')[0]);
+    });
+    const week12Counts = week12Starts.map(w => weekSessionMap[w] || 0);
+    const maxWeekly = Math.max(...week12Counts, 1);
+    const avgWeekly = week12Counts.reduce((a, b) => a + b, 0) / 12;
+
+    // Weekly distance (cardio) — last 12 weeks
+    const weekDistMap = {};
+    recent.forEach(e => {
+        const cat = getTypeCategory(e.type);
+        if ((cat === 'cardio' || cat === 'pacing') && e.distance) {
+            const w = getMonday(e.date);
+            weekDistMap[w] = (weekDistMap[w] || 0) + e.distance;
+        }
+    });
+    const week12Dists = week12Starts.map(w => Math.round((weekDistMap[w] || 0) * 10) / 10);
+    const hasCardio = week12Dists.some(v => v > 0);
+    const maxDist = Math.max(...week12Dists, 1);
+    const distUnit = recent.find(e => e.distanceUnit)?.distanceUnit || 'km';
+
+    // Mark distribution
+    const markDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const markedEntries = recent.filter(e => e.mark >= 1 && e.mark <= 5);
+    markedEntries.forEach(e => markDist[e.mark]++);
+    const avgMark = markedEntries.length ? markedEntries.reduce((s, e) => s + e.mark, 0) / markedEntries.length : null;
+    const maxMarkCount = Math.max(...Object.values(markDist), 1);
+    const markLabels = { 1: 'Terrible', 2: 'Poor', 3: 'OK', 4: 'Good', 5: 'Great' };
+    const markColours = { 1: '#ef4444', 2: '#f97316', 3: '#eab308', 4: '#22c55e', 5: '#10b981' };
+
+    // Day of week frequency
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    recent.forEach(e => { dayCounts[(new Date(e.date + 'T12:00:00Z').getUTCDay() + 6) % 7]++; });
+    const maxDayCount = Math.max(...dayCounts, 1);
+
+    // Current streak
+    const activeDates = new Set(allCompleted.map(e => e.date));
+    let streak = 0, checkDate = todayStr;
+    if (!activeDates.has(checkDate)) {
+        const y = new Date(checkDate + 'T12:00:00Z'); y.setUTCDate(y.getUTCDate() - 1);
+        checkDate = y.toISOString().split('T')[0];
+    }
+    while (activeDates.has(checkDate)) {
+        streak++;
+        const sd = new Date(checkDate + 'T12:00:00Z'); sd.setUTCDate(sd.getUTCDate() - 1);
+        checkDate = sd.toISOString().split('T')[0];
+    }
+
+    // Sleep → performance correlation (sleep score vs next-day mark)
+    const sleepByDate = {}, markByDate = {};
+    allCompleted.forEach(e => {
+        const sl = e.customMetricData?.SLEEP ?? e.customMetricData?.SLEEP_DURATION;
+        if (sl != null && !isNaN(+sl)) { sleepByDate[e.date] = sleepByDate[e.date] || []; sleepByDate[e.date].push(+sl); }
+        if (e.mark >= 1 && e.mark <= 5 && e.type && e.type !== 'NONE') { markByDate[e.date] = markByDate[e.date] || []; markByDate[e.date].push(e.mark); }
+    });
+    const sleepPairs = [];
+    Object.entries(sleepByDate).forEach(([date, scores]) => {
+        const nd = new Date(date + 'T12:00:00Z'); nd.setUTCDate(nd.getUTCDate() + 1);
+        const marks = markByDate[nd.toISOString().split('T')[0]] || markByDate[date];
+        if (marks?.length) sleepPairs.push([scores.reduce((a, b) => a + b) / scores.length, marks.reduce((a, b) => a + b) / marks.length]);
+    });
+    const pearsonR = (pairs) => {
+        if (pairs.length < 5) return null;
+        const n = pairs.length, xs = pairs.map(p => p[0]), ys = pairs.map(p => p[1]);
+        const mx = xs.reduce((a, b) => a + b) / n, my = ys.reduce((a, b) => a + b) / n;
+        const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
+        const den = Math.sqrt(xs.reduce((s, x) => s + (x - mx) ** 2, 0) * ys.reduce((s, y) => s + (y - my) ** 2, 0));
+        return den ? Math.round(num / den * 100) / 100 : null;
+    };
+    const sleepCorr = pearsonR(sleepPairs);
+    const corrDesc = (r) => {
+        if (r === null) return null;
+        const abs = Math.abs(r), dir = r >= 0 ? 'positive' : 'negative';
+        const str = abs >= 0.7 ? 'strong' : abs >= 0.4 ? 'moderate' : abs >= 0.2 ? 'weak' : 'negligible';
+        return { r, label: `r = ${r.toFixed(2)}`, desc: `${str} ${dir}`, colour: r >= 0.4 ? '#10b981' : r <= -0.4 ? '#ef4444' : 'var(--text-muted)' };
+    };
+    const sleepCorrResult = corrDesc(sleepCorr);
+
+    // Effort → mark correlation (otherRating vs mark, same day)
+    const effortPairs = [];
+    recent.forEach(e => {
+        if (e.otherRating && e.mark >= 1 && e.mark <= 5) effortPairs.push([e.otherRating, e.mark]);
+    });
+    const effortCorrResult = corrDesc(pearsonR(effortPairs));
+
+    // Duration → mark correlation
+    const durPairs = recent.filter(e => e.duration && e.mark >= 1 && e.mark <= 5).map(e => [e.duration, e.mark]);
+    const durCorrResult = corrDesc(pearsonR(durPairs));
+
+    const bar = (val, max, colour = 'var(--primary)', h = 6) =>
+        `<div class="ci-bar-outer" style="height:${h}px"><div class="ci-bar-inner" style="width:${Math.round(val / max * 100)}%;background:${colour};height:${h}px"></div></div>`;
+
+    const weekBarHTML = (counts, max, colour = 'var(--primary)') => counts.map(c =>
+        `<div class="ci-col"><div class="ci-col-wrap"><div class="ci-col-bar" style="height:${c > 0 ? Math.max(3, Math.round(c / max * 52)) : 0}px;background:${colour}"></div></div><div class="ci-col-val">${c || ''}</div></div>`
+    ).join('');
+
+    container.innerHTML = `<div class="analysis-container">
+        <div class="analysis-hero">
+            <h2 class="analysis-title">Training Insights</h2>
+            <p class="analysis-subtitle">Last 90 days &middot; ${recent.length} sessions logged</p>
         </div>
-    `;
+
+        <div class="ci-stat-grid">
+            <div class="ci-stat"><div class="ci-stat-val">${streak}</div><div class="ci-stat-lbl">Day streak</div></div>
+            <div class="ci-stat"><div class="ci-stat-val">${avgWeekly.toFixed(1)}</div><div class="ci-stat-lbl">Avg / week</div></div>
+            ${avgMark !== null ? `<div class="ci-stat"><div class="ci-stat-val">${avgMark.toFixed(1)}<span style="font-size:0.9rem">/5</span></div><div class="ci-stat-lbl">Avg quality</div></div>` : ''}
+            <div class="ci-stat"><div class="ci-stat-val">${allCompleted.length}</div><div class="ci-stat-lbl">All-time</div></div>
+        </div>
+
+        <div class="ci-section">
+            <div class="ci-section-title">Weekly sessions &middot; last 12 weeks</div>
+            <div class="ci-cols">${weekBarHTML(week12Counts, maxWeekly)}</div>
+        </div>
+
+        ${hasCardio ? `<div class="ci-section">
+            <div class="ci-section-title">Weekly distance (${distUnit}) &middot; last 12 weeks</div>
+            <div class="ci-cols">${weekBarHTML(week12Dists, maxDist, '#06b6d4')}</div>
+        </div>` : ''}
+
+        ${topTypes.length ? `<div class="ci-section">
+            <div class="ci-section-title">Activity breakdown</div>
+            ${topTypes.map(([type, count]) => `<div class="ci-row">
+                <span class="ci-row-lbl">${titleCase(type)}</span>
+                <div class="ci-row-bar">${bar(count, maxTypeCount)}</div>
+                <span class="ci-row-val">${count}</span>
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div class="ci-section">
+            <div class="ci-section-title">Training by day of week</div>
+            <div class="ci-cols">${dayNames.map((d, i) => `
+                <div class="ci-col${dayCounts[i] === maxDayCount && dayCounts[i] > 0 ? ' ci-col-peak' : ''}">
+                    <div class="ci-col-wrap"><div class="ci-col-bar" style="height:${dayCounts[i] > 0 ? Math.max(3, Math.round(dayCounts[i] / maxDayCount * 52)) : 0}px;background:${dayCounts[i] === maxDayCount && dayCounts[i] > 0 ? 'var(--primary)' : 'var(--border)'}"></div></div>
+                    <div class="ci-col-val">${d}</div>
+                </div>`).join('')}
+        </div>
+
+        ${markedEntries.length >= 3 ? `<div class="ci-section">
+            <div class="ci-section-title">Session quality distribution</div>
+            ${[5, 4, 3, 2, 1].map(m => `<div class="ci-row">
+                <span class="ci-row-lbl">${markLabels[m]}</span>
+                <div class="ci-row-bar">${bar(markDist[m], maxMarkCount, markColours[m])}</div>
+                <span class="ci-row-val">${markDist[m]}</span>
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div class="ci-section">
+            <div class="ci-section-title">Correlations</div>
+            ${[
+                sleepCorrResult ? { label: 'Sleep quality → next-day performance', res: sleepCorrResult, n: sleepPairs.length } : sleepPairs.length < 5 ? { label: 'Sleep → performance', res: null, note: `Need ${5 - sleepPairs.length} more paired days` } : null,
+                effortCorrResult ? { label: 'Effort score → session mark', res: effortCorrResult, n: effortPairs.length } : effortPairs.length > 0 && effortPairs.length < 5 ? { label: 'Effort → mark', res: null, note: `Need ${5 - effortPairs.length} more data points` } : null,
+                durCorrResult ? { label: 'Duration → session mark', res: durCorrResult, n: durPairs.length } : null,
+            ].filter(Boolean).map(item => `
+                <div class="ci-corr-row">
+                    <div class="ci-corr-lbl">${item.label}</div>
+                    ${item.res ? `
+                        <div class="ci-corr-val" style="color:${item.res.colour}">${item.res.label}</div>
+                        <div class="ci-corr-desc">${item.res.desc}${item.n ? ` · ${item.n} data points` : ''}</div>
+                    ` : `<div class="ci-corr-val" style="color:var(--text-muted)">${item.note}</div>`}
+                </div>
+            `).join('') || '<div class="ci-empty-note">Log more sessions with quality ratings to see correlations.</div>'}
+        </div>
+    </div>`;
 };
 
 window.generateAnalysis = async () => {
