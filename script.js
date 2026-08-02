@@ -4676,30 +4676,28 @@ window.seedHalfMarathonPlan = async () => {
             S(22, '2026-08-10', 'Tempo — 4 km @ 4:50/km (Cutback)', false),
             S(23, '2026-08-12', 'Long — 14 km @ 5:30–6:00/km (Cutback)', false),
             S(24, '2026-08-15', 'Speed — 8×400m @ 4:00/km, 75s jog (Cutback)', false),
-            // Week 9 — Peak
+            // Week 9 — Peak (long moved Mon 19→Thu 20 Aug, 19 Aug unavailable)
             S(25, '2026-08-17', 'Tempo — 6 km @ 4:50/km', false),
-            S(26, '2026-08-19', 'Long — 18 km, last 4 km @ 4:42/km', false),
+            S(26, '2026-08-20', 'Long — 18 km, last 4 km @ 4:42/km (GP)', false),
             S(27, '2026-08-22', 'Speed — 3×1600m @ 4:15/km, 2:30 jog', false),
-            // Week 10 — Peak
+            // Week 10 — Peak (speed dropped, 27–30 Aug unavailable)
             S(28, '2026-08-24', 'Tempo — 7 km @ 4:50/km', false),
-            S(29, '2026-08-26', 'Long — 20 km @ 5:30–6:00/km', false),
-            S(30, '2026-08-29', 'Speed — 4×1200m @ 4:15/km, 2min jog', false),
-            // Week 11 — Peak (highest load)
+            S(29, '2026-08-26', 'Long — 20 km @ 5:30–6:00/km (E)', false),
+            // Week 11 — Peak (highest load, no adjustments)
             S(31, '2026-08-31', 'Tempo — 8 km @ 4:45/km', false),
-            S(32, '2026-09-02', 'Long — 21 km, last 5 km @ 4:42/km', false),
+            S(32, '2026-09-02', 'Long — 21 km, last 5 km @ 4:42/km (GP)', false),
             S(33, '2026-09-05', 'Speed — 5×1000m @ 4:15/km, 2min jog', false),
             // Week 12 — Cutback
-            S(34, '2026-09-07', 'Tempo — 5 km @ 4:50/km (Cutback)', false),
-            S(35, '2026-09-09', 'Long — 15 km @ 5:30–6:00/km (Cutback)', false),
-            S(36, '2026-09-12', 'Speed — 6×600m @ 4:00/km, 90s jog (Cutback)', false),
-            // Week 13 — Sharpen
-            S(37, '2026-09-14', 'Tempo — 6 km @ 4:42/km (Goal Pace)', false),
-            S(38, '2026-09-16', 'Long — 19 km, middle 8 km @ 4:42/km', false),
+            S(34, '2026-09-07', 'Tempo — 5 km @ 4:50/km', false),
+            S(35, '2026-09-09', 'Long — 15 km @ 5:30–6:00/km (E)', false),
+            S(36, '2026-09-12', 'Speed — 6×600m @ 4:00/km, 90s jog', false),
+            // Week 13 — Sharpen (long moved Wed 16→Thu 17 Sep, 16 Sep unavailable)
+            S(37, '2026-09-14', 'Tempo — 6 km @ 4:42/km (GP)', false),
+            S(38, '2026-09-17', 'Long — 19 km, middle 8 km @ 4:42/km (GP)', false),
             S(39, '2026-09-19', 'Speed — 4×1200m @ 4:15/km, 2min jog', false),
-            // Week 14 — Sharpen
-            S(40, '2026-09-21', 'Tempo — 5 km @ 4:42/km (Goal Pace)', false),
-            S(41, '2026-09-23', 'Long — 16 km, last 6 km @ 4:42/km', false),
-            S(42, '2026-09-26', 'Speed — 6×800m @ 4:15/km, 90s jog', false),
+            // Week 14 — Enforced rest + sharpener (tempo dropped, most of week unavailable)
+            S(41, '2026-09-23', 'Long — 16 km, last 6 km @ 4:42/km (GP)', false),
+            S(42, '2026-09-26', '5K RACE — race hard, near-max effort (sharpener, ~2.5 weeks out)', false),
             // Week 15 — Taper
             S(43, '2026-09-28', 'Tempo — 4 km @ 4:42/km (Goal Pace, Taper)', false),
             S(44, '2026-09-30', 'Long — 13 km @ 5:30–6:00/km (Taper)', false),
@@ -4715,6 +4713,50 @@ window.seedHalfMarathonPlan = async () => {
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     if (document.getElementById('viewPlan')?.classList.contains('active')) renderPlan();
     alert('Half marathon plan added! Navigate to the Plan tab to see it.');
+};
+
+window.patchHalfMarathonPlan = async () => {
+    const planIdx = (logData.trainingPlans || []).findIndex(p => p.title.includes('Half Marathon'));
+    if (planIdx === -1) { alert('Half marathon plan not found.'); return; }
+    const sessions = logData.trainingPlans[planIdx].sessions;
+
+    // Week 9: Long moved 19→20 Aug
+    const s26 = sessions.find(s => s.id === 26);
+    if (s26) { s26.date = '2026-08-20'; s26.target = 'Long — 18 km, last 4 km @ 4:42/km (GP)'; }
+
+    // Week 10: Speed session (ID 30) dropped
+    logData.trainingPlans[planIdx].sessions = logData.trainingPlans[planIdx].sessions.filter(s => s.id !== 30);
+
+    // Week 11: update long target with (GP) label
+    const s29 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 29);
+    if (s29) s29.target = 'Long — 20 km @ 5:30–6:00/km (E)';
+    const s32 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 32);
+    if (s32) s32.target = 'Long — 21 km, last 5 km @ 4:42/km (GP)';
+
+    // Week 12: remove "(Cutback)" labels
+    const s34 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 34);
+    if (s34) s34.target = 'Tempo — 5 km @ 4:50/km';
+    const s35 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 35);
+    if (s35) s35.target = 'Long — 15 km @ 5:30–6:00/km (E)';
+    const s36 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 36);
+    if (s36) s36.target = 'Speed — 6×600m @ 4:00/km, 90s jog';
+
+    // Week 13: Long moved 16→17 Sep; tempo updated to GP label
+    const s37 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 37);
+    if (s37) s37.target = 'Tempo — 6 km @ 4:42/km (GP)';
+    const s38 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 38);
+    if (s38) { s38.date = '2026-09-17'; s38.target = 'Long — 19 km, middle 8 km @ 4:42/km (GP)'; }
+
+    // Week 14: Tempo (ID 40) dropped; Speed replaced with 5K race
+    logData.trainingPlans[planIdx].sessions = logData.trainingPlans[planIdx].sessions.filter(s => s.id !== 40);
+    const s41 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 41);
+    if (s41) s41.target = 'Long — 16 km, last 6 km @ 4:42/km (GP)';
+    const s42 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 42);
+    if (s42) s42.target = '5K RACE — race hard, near-max effort (sharpener, ~2.5 weeks out)';
+
+    await setDoc(doc(db, 'logs', LOG_ID), logData);
+    renderPlan();
+    alert('Plan updated! Weeks 9–14 adjusted for unavailable dates.');
 };
 
 // --- EXPORT DATA ---
