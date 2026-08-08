@@ -698,6 +698,8 @@ window.showInputModal = () => {
     window._selectedSubType = '';
     document.querySelectorAll('.subtype-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('inputModal').style.display = 'flex';
+    const submitBtn = document.getElementById('submitEntryBtn');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Entry'; }
     window.selectMark(1);
     window.toggleDistanceRow();
 };
@@ -765,6 +767,10 @@ window.markPlanDone = async () => {
 };
 
 window.saveExercise = async () => {
+    const submitBtn = document.getElementById('submitEntryBtn');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+    const restoreBtn = () => { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Entry'; } };
+    try {
     const type = document.getElementById('modalType').value;
     const cat = getTypeCategory(type);
     const distVal = parseFloat(document.getElementById('modalDistance').value);
@@ -824,6 +830,10 @@ window.saveExercise = async () => {
                 if (document.getElementById('viewPlan')?.classList.contains('active')) renderPlan();
             }
         }
+    }
+    } catch(err) {
+        console.error('saveExercise failed:', err);
+        restoreBtn();
     }
 };
 
@@ -2029,6 +2039,10 @@ const renderOverview = () => {
                 return avg % 1 === 0 ? `${avg}` : avg.toFixed(1);
             }
         }
+        if (cat === 'sit') {
+            const dur = entries.reduce((s, e) => s + (e.duration || 0), 0);
+            return dur ? `${dur}m` : '';
+        }
         return '';
     };
 
@@ -2264,6 +2278,14 @@ const renderShortTermCharts = (completed) => {
         }));
     };
 
+    const rollingAvg = (points, window7 = 7) => {
+        return points.map((pt, i, arr) => {
+            const slice = arr.slice(Math.max(0, i - window7 + 1), i + 1);
+            const avg = slice.reduce((s, p) => s + p.value, 0) / slice.length;
+            return { label: pt.label, value: +avg.toFixed(1) };
+        });
+    };
+
     // VO2 Max with carry-forward: use last known value per week
     const weeklyVo2CarryForward = () => {
         const byDate = {};
@@ -2402,9 +2424,9 @@ const renderShortTermCharts = (completed) => {
         }
         return `${arrow} Last 3 days averaged <strong>${a3}/${max}</strong>${trend}.`;
     };
-    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration (/50)',       dailyVal(e => e.customMetricData?.['SLEEP_DURATION']),     '#3b82f6', '/50',  'bar', 50,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_DURATION'], 50));
-    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime (/30)',        dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME']),      '#10b981', '/30',  'bar', 30,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_BEDTIME'], 30));
-    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions (/20)', dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS']), '#f97316', '/20', 'bar', 20, false, false, sleepSummary(e => e.customMetricData?.['SLEEP_INTERRUPTIONS'], 20));
+    makeStChart('st-sleep-dur',  'chartStSleepDur',  'Sleep · Duration — 7d avg (/50)',       rollingAvg(dailyVal(e => e.customMetricData?.['SLEEP_DURATION'])),     '#3b82f6', '/50',  'line', 50,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_DURATION'], 50));
+    makeStChart('st-sleep-bed',  'chartStSleepBed',  'Sleep · Bedtime — 7d avg (/30)',        rollingAvg(dailyVal(e => e.customMetricData?.['SLEEP_BEDTIME'])),      '#10b981', '/30',  'line', 30,  false, false, sleepSummary(e => e.customMetricData?.['SLEEP_BEDTIME'], 30));
+    makeStChart('st-sleep-intr', 'chartStSleepIntr', 'Sleep · Interruptions — 7d avg (/20)', rollingAvg(dailyVal(e => e.customMetricData?.['SLEEP_INTERRUPTIONS'])), '#f97316', '/20', 'line', 20, false, false, sleepSummary(e => e.customMetricData?.['SLEEP_INTERRUPTIONS'], 20));
 };
 
 const renderLongTermCharts = (completed) => {
