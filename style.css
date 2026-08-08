@@ -43,11 +43,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro
 
 .action-bar { display: flex; gap: 10px; align-items: center; }
 .settings-dropdown { position: relative; }
-.settings-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); background: white; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); min-width: 180px; overflow: hidden; z-index: 200; }
+.settings-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); background: white; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); min-width: 200px; overflow: hidden; z-index: 200; }
 .settings-menu.open { display: block; }
-.settings-menu button { display: block; width: 100%; text-align: left; padding: 12px 18px; border: none; background: none; font-family: inherit; font-size: 0.82rem; font-weight: 700; color: var(--text-main); cursor: pointer; }
+.settings-menu button { display: block; width: 100%; text-align: left; padding: 9px 16px; border: none; background: none; font-family: inherit; font-size: 0.82rem; font-weight: 700; color: var(--text-main); cursor: pointer; }
 .settings-menu button:hover { background: #f8f9fa; }
-.settings-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.settings-divider { height: 1px; background: var(--border); margin: 3px 0; }
+.settings-section-label { display: block; padding: 8px 16px 2px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); pointer-events: none; }
 .nav-btn { padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.75rem; cursor: pointer; border: none; transition: transform 0.12s ease, box-shadow 0.12s ease; }
 .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(29,107,243,0.25); }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(29,107,243,0.3); }
