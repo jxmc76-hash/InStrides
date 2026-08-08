@@ -4794,3 +4794,109 @@ window.exportData = () => {
     URL.revokeObjectURL(url);
     window.closeSettings();
 };
+
+window.exportCoachSummary = () => {
+    const from = prompt('Export activities from date (YYYY-MM-DD):', '2026-06-01');
+    if (!from) return;
+
+    const entries = (logData.entries || [])
+        .filter(e => !e.isPlanned && e.date >= from)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (!entries.length) { alert('No activities found from that date.'); return; }
+
+    const fmt = (d, opts) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', opts);
+    const toDate = entries[entries.length - 1].date;
+    const fromFmt = fmt(from, { day: 'numeric', month: 'long', year: 'numeric' });
+    const toFmt   = fmt(toDate, { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const kmDist = e => (e.distance || 0) * (e.distanceUnit === 'mi' ? 1.609 : 1);
+    const isRunLike = e => e.type === 'RUN' || getTypeCategory(e.type) === 'cardio';
+
+    const runs = entries.filter(isRunLike);
+    const totalKm = runs.reduce((s, e) => s + kmDist(e), 0);
+    const firstDate = new Date(entries[0].date + 'T00:00:00');
+    const lastDate  = new Date(toDate + 'T00:00:00');
+    const weeks = Math.max(1, Math.ceil((lastDate - firstDate + 1) / (7 * 86400000)));
+
+    const getWeekStart = ds => {
+        const d = new Date(ds + 'T00:00:00');
+        const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().split('T')[0];
+    };
+
+    const byWeek = {};
+    entries.forEach(e => { const w = getWeekStart(e.date); (byWeek[w] = byWeek[w] || []).push(e); });
+
+    const lines = [
+        `# InStrides Training Summary`,
+        `**Period:** ${fromFmt} – ${toFmt}`,
+        '',
+        '## At a Glance',
+        `- **Total activities:** ${entries.length}`,
+    ];
+    if (runs.length) {
+        lines.push(`- **Runs:** ${runs.length} | **Total distance:** ${totalKm.toFixed(1)} km`);
+        lines.push(`- **Average weekly distance:** ${(totalKm / weeks).toFixed(1)} km`);
+        const lr = runs.reduce((mx, e) => kmDist(e) > kmDist(mx) ? e : mx, runs[0]);
+        lines.push(`- **Longest run:** ${kmDist(lr).toFixed(1)} km on ${fmt(lr.date, { day: 'numeric', month: 'short', year: 'numeric' })}`);
+    }
+    lines.push('', '---', '', '## Weekly Log', '');
+
+    Object.keys(byWeek).sort().forEach(ws => {
+        const wEnd = new Date(ws + 'T00:00:00'); wEnd.setDate(wEnd.getDate() + 6);
+        const wFmt = `${fmt(ws, { day: 'numeric', month: 'short' })} – ${wEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+        const wKm  = byWeek[ws].filter(isRunLike).reduce((s, e) => s + kmDist(e), 0);
+        lines.push(`### ${wFmt}`);
+        if (wKm > 0) lines.push(`*${wKm.toFixed(1)} km running this week*`);
+        lines.push('');
+
+        byWeek[ws].forEach(e => {
+            const cat = getTypeCategory(e.type);
+            const dateFmt = fmt(e.date, { weekday: 'short', day: 'numeric', month: 'short' });
+
+            let detail = '';
+            if (e.distance && (cat === 'cardio' || e.type === 'RUN')) {
+                const kd = kmDist(e);
+                detail += `${e.distance}${e.distanceUnit || 'km'}`;
+                if (e.duration) {
+                    const pace = e.duration / kd;
+                    detail += ` in ${e.duration} min (${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}/km)`;
+                }
+            } else if (e.duration) {
+                detail += `${e.duration} min`;
+            }
+            if (e.subType) detail += ` · ${e.subType}`;
+            if ((cat === 'other' || cat === 'sit') && e.otherRating) detail += ` · effort ${e.otherRating}/10`;
+
+            lines.push(`**${dateFmt}** — ${e.type}${detail ? ` | ${detail}` : ''}`);
+            if (e.details) lines.push(`  > ${e.details}`);
+            if (e.learnings && e.learnings.length) lines.push(`  > Learnings: ${e.learnings.join('; ')}`);
+            lines.push('');
+        });
+    });
+
+    // Metrics summary
+    const metricAvg = (key) => {
+        const vals = entries.filter(e => e.customMetricData?.[key] != null).map(e => e.customMetricData[key]);
+        return vals.length ? { avg: (vals.reduce((a, b) => a + b, 0) / vals.length), n: vals.length, first: vals[0], last: vals[vals.length - 1] } : null;
+    };
+    const sleep = metricAvg('SLEEP'), energy = metricAvg('ENERGY'), weight = metricAvg('WEIGHT'), vo2 = metricAvg('VO2MAX');
+    if (sleep || energy || weight || vo2) {
+        lines.push('---', '', '## Tracked Metrics', '');
+        if (sleep)  lines.push(`- **Sleep score** (${sleep.n} readings): avg ${sleep.avg.toFixed(0)}/100`);
+        if (energy) lines.push(`- **Energy** (${energy.n} readings): avg ${energy.avg.toFixed(1)}/10`);
+        if (weight) lines.push(`- **Weight**: ${weight.first} kg → ${weight.last} kg over this period`);
+        if (vo2)    lines.push(`- **VO2 Max**: latest ${vo2.last} mL/kg/min`);
+        lines.push('');
+    }
+
+    lines.push('---', `*Exported from InStrides on ${fmt(new Date().toISOString().split('T')[0], { day: 'numeric', month: 'long', year: 'numeric' })}*`);
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `instrides-coach-${from}.md`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    window.closeSettings();
+};
