@@ -75,6 +75,7 @@
                             <button id="hideFutureToggleBtn" onclick="window.toggleHideFuture()">🙈 Hide Future Plans</button>
                             <button onclick="window.getCalendarUrl()">📅 Calendar Feed</button>
                             <button onclick="window.exportData()">⬇ Export Data</button>
+                            <button onclick="window.exportCoachSummary()">🏃 Export Coach Summary</button>
                             <button onclick="document.getElementById('importFileInput').click()">⬆ Import Data</button>
                             <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="window.handleImportFile(event)">
                             <button onclick="document.getElementById('ahImportInput').click()"> Import Apple Health</button>
@@ -693,7 +694,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=243"></script>
+    <script type="module" src="script.js?v=244"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.warn);
