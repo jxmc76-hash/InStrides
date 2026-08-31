@@ -4740,45 +4740,46 @@ window.seedHalfMarathonPlan = async () => {
 window.patchHalfMarathonPlan = async () => {
     const planIdx = (logData.trainingPlans || []).findIndex(p => p.title.includes('Half Marathon'));
     if (planIdx === -1) { alert('Half marathon plan not found.'); return; }
-    const sessions = logData.trainingPlans[planIdx].sessions;
 
-    // Week 9: Long moved 19→20 Aug
-    const s26 = sessions.find(s => s.id === 26);
-    if (s26) { s26.date = '2026-08-20'; s26.target = 'Long — 18 km, last 4 km @ 4:42/km (GP)'; }
+    // Keep all sessions before 31 Aug (completed earlier weeks)
+    const kept = logData.trainingPlans[planIdx].sessions.filter(s => s.date < '2026-08-31');
 
-    // Week 10: Speed session (ID 30) dropped
-    logData.trainingPlans[planIdx].sessions = logData.trainingPlans[planIdx].sessions.filter(s => s.id !== 30);
+    const newSessions = [
+        { id: 101, date: '2026-08-31', type: 'Long',    target: '21 km, last 5 km @ GP',         isComplete: true,  logEntryId: null },
+        { id: 102, date: '2026-09-02', type: 'Tempo',   target: '6 km @ 4:48/km',                isComplete: false, logEntryId: null },
+        { id: 103, date: '2026-09-05', type: 'Parkrun', target: '5 km',                           isComplete: false, logEntryId: null },
+        { id: 104, date: '2026-09-06', type: 'Race',    target: '10K race',                       isComplete: false, logEntryId: null },
+        { id: 105, date: '2026-09-07', type: 'Rest',    target: 'Rest',                           isComplete: false, logEntryId: null },
+        { id: 106, date: '2026-09-09', type: 'Long',    target: '16 km, last 5 km @ GP',          isComplete: false, logEntryId: null },
+        { id: 107, date: '2026-09-12', type: 'Speed',   target: '5×1000m @ 4:15/km',             isComplete: false, logEntryId: null },
+        { id: 108, date: '2026-09-14', type: 'Easy',    target: '5–6 km',                         isComplete: false, logEntryId: null },
+        { id: 109, date: '2026-09-15', type: 'Rest',    target: 'Rest',                           isComplete: false, logEntryId: null },
+        { id: 110, date: '2026-09-18', type: 'Rest',    target: 'Rest / short easy shakeout',     isComplete: false, logEntryId: null },
+        { id: 111, date: '2026-09-19', type: 'Rest',    target: 'Flight out — no training',       isComplete: false, logEntryId: null },
+        { id: 112, date: '2026-09-23', type: 'Long',    target: '14 km easy',                     isComplete: false, logEntryId: null },
+        { id: 113, date: '2026-09-26', type: 'Race',    target: '5K race — evening flight home',  isComplete: false, logEntryId: null },
+        { id: 114, date: '2026-09-28', type: 'Tempo',   target: '4 km @ 4:50/km',                isComplete: false, logEntryId: null },
+        { id: 115, date: '2026-09-30', type: 'Long',    target: '14 km, last 3 km @ GP',          isComplete: false, logEntryId: null },
+        { id: 116, date: '2026-10-03', type: 'Speed',   target: '4×400m @ 4:00/km',              isComplete: false, logEntryId: null },
+        { id: 117, date: '2026-10-05', type: 'Easy',    target: '8 km',                           isComplete: false, logEntryId: null },
+        { id: 118, date: '2026-10-07', type: 'Easy',    target: '6–8 km, light strides',          isComplete: false, logEntryId: null },
+        { id: 119, date: '2026-10-08', type: 'Strides', target: '3×400m @ GP',                   isComplete: false, logEntryId: null },
+        { id: 120, date: '2026-10-11', type: 'Race',    target: 'HALF MARATHON — 21.1 km',        isComplete: false, logEntryId: null },
+    ];
 
-    // Week 11: update long target with (GP) label
-    const s29 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 29);
-    if (s29) s29.target = 'Long — 20 km @ 5:30–6:00/km (E)';
-    const s32 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 32);
-    if (s32) s32.target = 'Long — 21 km, last 5 km @ 4:42/km (GP)';
+    // Carry over completion + linked log entry for 31 Aug if already saved
+    const existing31 = logData.trainingPlans[planIdx].sessions.find(s => s.date === '2026-08-31');
+    if (existing31) {
+        newSessions[0].isComplete  = existing31.isComplete  ?? true;
+        newSessions[0].logEntryId  = existing31.logEntryId  ?? null;
+    }
 
-    // Week 12: remove "(Cutback)" labels
-    const s34 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 34);
-    if (s34) s34.target = 'Tempo — 5 km @ 4:50/km';
-    const s35 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 35);
-    if (s35) s35.target = 'Long — 15 km @ 5:30–6:00/km (E)';
-    const s36 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 36);
-    if (s36) s36.target = 'Speed — 6×600m @ 4:00/km, 90s jog';
-
-    // Week 13: Long moved 16→17 Sep; tempo updated to GP label
-    const s37 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 37);
-    if (s37) s37.target = 'Tempo — 6 km @ 4:42/km (GP)';
-    const s38 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 38);
-    if (s38) { s38.date = '2026-09-17'; s38.target = 'Long — 19 km, middle 8 km @ 4:42/km (GP)'; }
-
-    // Week 14: Tempo (ID 40) dropped; Speed replaced with 5K race
-    logData.trainingPlans[planIdx].sessions = logData.trainingPlans[planIdx].sessions.filter(s => s.id !== 40);
-    const s41 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 41);
-    if (s41) s41.target = 'Long — 16 km, last 6 km @ 4:42/km (GP)';
-    const s42 = logData.trainingPlans[planIdx].sessions.find(s => s.id === 42);
-    if (s42) s42.target = '5K RACE — race hard, near-max effort (sharpener, ~2.5 weeks out)';
+    logData.trainingPlans[planIdx].sessions = [...kept, ...newSessions];
+    logData.trainingPlans[planIdx].endDate  = '2026-10-11';
 
     await setDoc(doc(db, 'logs', LOG_ID), logData);
     renderPlan();
-    alert('Plan updated! Weeks 9–14 adjusted for unavailable dates.');
+    alert('Plan updated — 20 sessions from 31 Aug through 11 Oct.');
 };
 
 // --- EXPORT DATA ---
