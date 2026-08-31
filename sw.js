@@ -1,4 +1,4 @@
-const CACHE = 'traininglog-v20';
+const CACHE = 'traininglog-v21';
 const FBv = '10.7.1';
 
 // Pre-cache everything the app needs to start offline
@@ -7,7 +7,7 @@ const SHELL = [
     '/logo.png',
     '/favicon.ico',
     '/manifest.json',
-    '/script.js?v=244',
+    '/script.js?v=245',
     '/style.css?v=173',
     `https://www.gstatic.com/firebasejs/${FBv}/firebase-app.js`,
     `https://www.gstatic.com/firebasejs/${FBv}/firebase-firestore.js`,
