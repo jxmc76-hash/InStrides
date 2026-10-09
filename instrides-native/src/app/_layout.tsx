@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter, useSegments } from 'expo-router';
-import { auth } from '../src/lib/firebase';
+import { auth } from '../lib/firebase';
 import 'react-native-gesture-handler';
 
 export default function RootLayout() {

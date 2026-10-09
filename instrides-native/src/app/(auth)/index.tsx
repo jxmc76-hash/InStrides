@@ -4,8 +4,8 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, useColorScheme, Alert,
 } from 'react-native';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../src/lib/firebase';
-import { Colors } from '../../src/constants/Colors';
+import { auth } from '../../lib/firebase';
+import { Colors } from '../../constants/Colors';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

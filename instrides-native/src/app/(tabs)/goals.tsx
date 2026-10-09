@@ -1,8 +1,8 @@
 import { View, Text, FlatList, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLogData } from '../../src/lib/useLogData';
-import { Colors } from '../../src/constants/Colors';
-import type { Goal } from '../../src/constants/types';
+import { useLogData } from '../../lib/useLogData';
+import { Colors } from '../../constants/Colors';
+import type { Goal } from '../../constants/types';
 
 function GoalRow({ goal, scheme }: { goal: Goal; scheme: 'light' | 'dark' }) {
   const c = Colors[scheme];

@@ -3,9 +3,9 @@ import {
   View, Text, SectionList, TouchableOpacity, StyleSheet, useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLogData } from '../../src/lib/useLogData';
-import { Colors } from '../../src/constants/Colors';
-import type { TrainingPlanSession } from '../../src/constants/types';
+import { useLogData } from '../../lib/useLogData';
+import { Colors } from '../../constants/Colors';
+import type { TrainingPlanSession } from '../../constants/types';
 
 const SESSION_TYPE_COLORS: Record<string, string> = {
   Long: '#FF5500', Tempo: '#6366f1', Speed: '#f59e0b', Race: '#ef4444',

@@ -5,9 +5,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useLogData } from '../../src/lib/useLogData';
-import { Colors } from '../../src/constants/Colors';
-import type { Entry } from '../../src/constants/types';
+import { useLogData } from '../../lib/useLogData';
+import { Colors } from '../../constants/Colors';
+import type { Entry } from '../../constants/types';
 
 const TYPE_COLORS: Record<string, string> = {
   RUN: '#FF5500', GYM: '#6366f1', YOGA: '#10b981', SWIM: '#0ea5e9',
