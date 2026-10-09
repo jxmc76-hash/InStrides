@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, useColorScheme } from 'react-native';
-import { useLogData } from '../../src/lib/useLogData';
-import { Colors } from '../../src/constants/Colors';
+import { useLogData } from '../../lib/useLogData';
+import { Colors } from '../../constants/Colors';
 
 function StatCard({ label, value, unit, scheme }: { label: string; value: string; unit?: string; scheme: 'light' | 'dark' }) {
   const c = Colors[scheme];

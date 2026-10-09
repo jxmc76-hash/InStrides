@@ -1,8 +1,8 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useLogData } from '../src/lib/useLogData';
-import { Colors } from '../src/constants/Colors';
+import { useLogData } from '../lib/useLogData';
+import { Colors } from '../constants/Colors';
 
 function Row({ label, value, scheme }: { label: string; value: string; scheme: 'light' | 'dark' }) {
   const c = Colors[scheme];

@@ -4,8 +4,8 @@ import {
   useColorScheme, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useLogData } from '../src/lib/useLogData';
-import { Colors } from '../src/constants/Colors';
+import { useLogData } from '../lib/useLogData';
+import { Colors } from '../constants/Colors';
 
 const CATEGORIES: Record<string, string> = {
   RUN: 'cardio', CYCLE: 'cardio', SWIM: 'cardio', WALK: 'cardio',
