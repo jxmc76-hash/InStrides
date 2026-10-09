@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, useColorScheme,
+  KeyboardAvoidingView, Platform, ActivityIndicator, useColorScheme, Alert,
 } from 'react-native';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../src/lib/firebase';
 import { Colors } from '../../src/constants/Colors';
 
@@ -15,6 +15,19 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Enter your email first', 'Type your email address above, then tap Forgot Password.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      Alert.alert('Email sent', `Check your inbox at ${email.trim()} for a password reset link.`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message.replace('Firebase: ', '') : 'Failed to send reset email');
+    }
+  };
 
   const handleAuth = async () => {
     setError('');
@@ -75,6 +88,12 @@ export default function LoginScreen() {
               ? <ActivityIndicator color="#fff" />
               : <Text style={styles.btnText}>{isRegister ? 'Create Account' : 'Sign In'}</Text>}
           </TouchableOpacity>
+
+          {!isRegister && (
+            <TouchableOpacity onPress={handleForgotPassword}>
+              <Text style={[styles.forgot, { color: c.textMuted }]}>Forgot password?</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity onPress={() => setIsRegister(!isRegister)}>
@@ -104,5 +123,6 @@ const styles = StyleSheet.create({
   },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   toggle: { textAlign: 'center', fontSize: 14, paddingVertical: 8 },
+  forgot: { textAlign: 'center', fontSize: 13, paddingTop: 4 },
   error: { color: '#FF3B30', fontSize: 13, textAlign: 'center' },
 });
