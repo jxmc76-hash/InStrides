@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from '@firebase/firestore';
 import { db, auth } from './firebase';
 import type { LogData, Entry } from '../constants/types';
 
