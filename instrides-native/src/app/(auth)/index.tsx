@@ -1,14 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, useColorScheme, Alert,
 } from 'react-native';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential } from '@firebase/auth';
-import * as Google from 'expo-auth-session/providers/google';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from '@firebase/auth';
 import { auth } from '../../lib/firebase';
 import { Colors } from '../../constants/Colors';
-
-const GOOGLE_WEB_CLIENT_ID = '974987405170-d1v8kpc36m7lrq5091l7a31v9l5fdp3v.apps.googleusercontent.com';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -18,23 +15,6 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      setLoading(true);
-      signInWithCredential(auth, credential)
-        .catch((e: unknown) => {
-          setError(e instanceof Error ? e.message.replace('Firebase: ', '') : 'Google sign-in failed');
-          setLoading(false);
-        });
-    }
-  }, [response]);
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
@@ -109,20 +89,6 @@ export default function LoginScreen() {
               : <Text style={styles.btnText}>{isRegister ? 'Create Account' : 'Sign In'}</Text>}
           </TouchableOpacity>
 
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
-            <Text style={[styles.dividerText, { color: c.textMuted }]}>or</Text>
-            <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.googleBtn, { borderColor: c.border, backgroundColor: c.background }]}
-            onPress={() => promptAsync()}
-            disabled={!request || loading}
-          >
-            <Text style={[styles.googleBtnText, { color: c.text }]}>Continue with Google</Text>
-          </TouchableOpacity>
-
           {!isRegister && (
             <TouchableOpacity onPress={handleForgotPassword}>
               <Text style={[styles.forgot, { color: c.textMuted }]}>Forgot password?</Text>
@@ -156,13 +122,6 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4,
   },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  googleBtn: {
-    borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center',
-  },
-  googleBtnText: { fontSize: 16, fontWeight: '600' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13 },
   toggle: { textAlign: 'center', fontSize: 14, paddingVertical: 8 },
   forgot: { textAlign: 'center', fontSize: 13, paddingTop: 4 },
   error: { color: '#FF3B30', fontSize: 13, textAlign: 'center' },
