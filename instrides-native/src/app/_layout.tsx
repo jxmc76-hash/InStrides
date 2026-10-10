@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged } from '@firebase/auth';
-import * as WebBrowser from 'expo-web-browser';
 import { auth } from '../lib/firebase';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
