@@ -29,8 +29,6 @@ export default function RootLayout() {
     if (user && inAuth) router.replace('/(tabs)');
   }, [user, authReady, segments]);
 
-  if (!authReady) return null;
-
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
