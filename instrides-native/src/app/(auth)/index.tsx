@@ -5,11 +5,8 @@ import {
 } from 'react-native';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential } from '@firebase/auth';
 import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
 import { auth } from '../../lib/firebase';
 import { Colors } from '../../constants/Colors';
-
-WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_WEB_CLIENT_ID = '974987405170-d1v8kpc36m7lrq5091l7a31v9l5fdp3v.apps.googleusercontent.com';
 
