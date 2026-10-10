@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, useColorScheme, Alert,
 } from 'react-native';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from '@firebase/auth';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential } from '@firebase/auth';
 import { auth } from '../../lib/firebase';
 import { Colors } from '../../constants/Colors';
+
+WebBrowser.maybeCompleteAuthSession();
+
+// Web client ID — find this in Firebase Console:
+// Authentication → Sign-in method → Google → Web SDK configuration → Web client ID
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -15,6 +23,30 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
+
+  const [, response, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_WEB_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      setLoading(true);
+      signInWithCredential(auth, credential)
+        .catch((e: unknown) =>
+          setError(e instanceof Error ? e.message.replace('Firebase: ', '') : 'Google sign-in failed')
+        )
+        .finally(() => setLoading(false));
+    } else if (response?.type === 'error') {
+      setError('Google sign-in was cancelled or failed');
+    }
+  }, [response]);
+
+  const handleGoogleSignIn = () => {
+    setError('');
+    promptGoogleAsync();
+  };
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
@@ -94,6 +126,21 @@ export default function LoginScreen() {
               <Text style={[styles.forgot, { color: c.textMuted }]}>Forgot password?</Text>
             </TouchableOpacity>
           )}
+
+          <View style={styles.divider}>
+            <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
+            <Text style={[styles.dividerText, { color: c.textMuted }]}>or</Text>
+            <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleBtn, { borderColor: c.border, backgroundColor: c.background }]}
+            onPress={handleGoogleSignIn}
+            disabled={loading}
+          >
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={[styles.googleText, { color: c.text }]}>Continue with Google</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={() => setIsRegister(!isRegister)}>
@@ -122,6 +169,15 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4,
   },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13 },
+  googleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderRadius: 12, paddingVertical: 13, gap: 10,
+  },
+  googleIcon: { fontSize: 16, fontWeight: '900', color: '#4285F4' },
+  googleText: { fontSize: 16, fontWeight: '600' },
   toggle: { textAlign: 'center', fontSize: 14, paddingVertical: 8 },
   forgot: { textAlign: 'center', fontSize: 13, paddingTop: 4 },
   error: { color: '#FF3B30', fontSize: 13, textAlign: 'center' },
