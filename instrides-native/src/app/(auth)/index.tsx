@@ -11,7 +11,7 @@ import { Colors } from '../../constants/Colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_WEB_CLIENT_ID = 'REPLACE_WITH_YOUR_WEB_CLIENT_ID';
+const GOOGLE_WEB_CLIENT_ID = '974987405170-d1v8kpc36m7lrq5091l7a31v9l5fdp3v.apps.googleusercontent.com';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
