@@ -1,0 +1,55 @@
+# Fallback project spec for XcodeGen (https://github.com/yonaskolb/XcodeGen).
+# InStrides.xcodeproj is checked in and should open directly in Xcode 16+.
+# If it ever gets into a bad state, regenerate it with:  brew install xcodegen && xcodegen
+name: InStrides
+options:
+  bundleIdPrefix: com.instrides
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+targets:
+  InStrides:
+    type: application
+    platform: iOS
+    sources: [InStrides]
+    entitlements:
+      path: Config/InStrides.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.developer.healthkit.background-delivery: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.instrides.ios
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_KEY_CFBundleDisplayName: InStrides
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.healthcare-fitness
+        INFOPLIST_KEY_NSHealthShareUsageDescription: InStrides reads your workouts, heart rate, HRV, VO2 max and sleep to track your training load, fitness and recovery.
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+  InStridesTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [InStridesTests]
+    dependencies:
+      - target: InStrides
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.instrides.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  InStrides:
+    build:
+      targets:
+        InStrides: all
+        InStridesTests: [test]
+    test:
+      targets: [InStridesTests]
