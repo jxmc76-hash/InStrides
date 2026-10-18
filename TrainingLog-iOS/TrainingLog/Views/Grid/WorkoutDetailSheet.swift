@@ -20,9 +20,17 @@ struct WorkoutDetailSheet: View {
                     } header: {
                         HStack {
                             Circle().fill(workout.type.color).frame(width: 8, height: 8)
-                            Text(workout.type.displayName)
-                                .font(.subheadline.bold())
-                                .foregroundStyle(workout.type.color)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(workout.type.displayName)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(workout.type.color)
+                                if let src = workout.sourceName {
+                                    Text(src)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .textCase(nil)
+                                }
+                            }
                             Spacer()
                             Text(Self.timeFmt.string(from: workout.startDate))
                                 .font(.caption)

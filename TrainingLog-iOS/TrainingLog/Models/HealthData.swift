@@ -8,6 +8,7 @@ struct HealthWorkout: Identifiable, Sendable {
     let duration: TimeInterval      // seconds
     let distance: Double?           // meters
     let calories: Double?
+    let sourceName: String?
 
     var durationMinutes: Int { Int(duration / 60) }
     var distanceKm: Double? { distance.map { $0 / 1000 } }
@@ -27,6 +28,8 @@ struct HealthWorkout: Identifiable, Sendable {
         self.duration = hkWorkout.duration
         self.distance = hkWorkout.totalDistance?.doubleValue(for: .meter())
         self.calories = hkWorkout.totalEnergyBurned?.doubleValue(for: .kilocalorie())
+        let name = hkWorkout.sourceRevision.source.name
+        self.sourceName = name == "Health" ? nil : name
     }
 }
 
