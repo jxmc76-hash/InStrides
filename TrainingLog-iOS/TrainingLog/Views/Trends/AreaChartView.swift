@@ -30,7 +30,8 @@ struct AreaChartView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.subheadline.bold())
+                .font(.footnote.bold())
+                .foregroundStyle(.secondary)
 
             if data.isEmpty {
                 Text("No data")
@@ -103,11 +104,12 @@ struct AreaChartView: View {
                         }
                     }
                 }
-                .frame(height: 120)
+                .frame(height: 130)
                 .padding(.trailing, 32)
             }
         }
-        .padding()
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
     }
 }

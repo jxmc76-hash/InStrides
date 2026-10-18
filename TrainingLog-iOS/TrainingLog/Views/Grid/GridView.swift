@@ -68,34 +68,35 @@ struct GridView: View {
     private var gridBody: some View {
         let grouped = groupByWeek(hk.dailyData)
         ForEach(grouped, id: \.week) { group in
+            weekHeader(for: group.days)
             ForEach(group.days) { day in
                 GridRow(day: day, columns: columns) { workouts in
                     selectedWorkouts = workouts
                 }
             }
-            Divider()
-                .overlay(Color.secondary.opacity(0.4))
-                .padding(.horizontal, 16)
-                .background(
-                    Rectangle()
-                        .fill(Color(uiColor: .systemBackground))
-                        .frame(height: 1)
-                        .overlay(
-                            GeometryReader { geo in
-                                Path { path in
-                                    let y = geo.size.height / 2
-                                    var x = 0.0
-                                    while x < geo.size.width {
-                                        path.move(to: CGPoint(x: x, y: y))
-                                        path.addLine(to: CGPoint(x: x + 6, y: y))
-                                        x += 12
-                                    }
-                                }
-                                .stroke(Color.secondary.opacity(0.35), lineWidth: 1)
-                            }
-                        )
-                )
         }
+    }
+
+    private func weekHeader(for days: [DailyHealthData]) -> some View {
+        let cal = Calendar.current
+        let fmt = DateFormatter()
+        fmt.dateFormat = "d MMM"
+        let sorted = days.sorted { $0.date < $1.date }
+        let label: String = {
+            guard let first = sorted.first, let last = sorted.last else { return "" }
+            let d1 = cal.component(.day, from: first.date)
+            let d2 = fmt.string(from: last.date)
+            return "\(d1)–\(d2)"
+        }()
+        return HStack {
+            Text(label)
+                .font(.caption2.bold())
+                .foregroundStyle(.secondary)
+                .padding(.leading, 16)
+                .padding(.vertical, 6)
+            Spacer()
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 
     private struct WeekGroup {
@@ -146,7 +147,7 @@ struct GridRow: View {
                 } label: {
                     if total > 0 {
                         Text("\(total)")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
@@ -161,7 +162,7 @@ struct GridRow: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 5)
         .padding(.trailing, 8)
     }
 }

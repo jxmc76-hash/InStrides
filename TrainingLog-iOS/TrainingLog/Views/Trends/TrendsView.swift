@@ -14,9 +14,10 @@ struct TrendsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     InsightCard(summary: buildSummary())
                         .padding(.horizontal, 16)
+                        .padding(.top, 8)
 
                     Picker("Period", selection: $period) {
                         ForEach(TrendPeriod.allCases, id: \.self) { p in

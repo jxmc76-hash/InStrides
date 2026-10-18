@@ -146,7 +146,7 @@ struct LogView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 
     @ViewBuilder
@@ -159,8 +159,8 @@ struct LogView: View {
         HStack(spacing: 0) {
             Text("Wk avg")
                 .frame(width: 72, alignment: .leading)
-                .font(.caption2.bold())
-                .foregroundStyle(.secondary)
+                .font(.caption.bold())
+                .foregroundStyle(.primary)
 
             summaryCell(avgSleep.map { formatSleep($0) } ?? "—", width: 72)
             summaryCell(avgEnergy.map { "\($0)" } ?? "—", width: 64)
@@ -174,7 +174,7 @@ struct LogView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.07))
+        .background(.ultraThinMaterial)
     }
 
     private func colHeader(_ title: String, width: CGFloat, color: Color = .secondary) -> some View {
