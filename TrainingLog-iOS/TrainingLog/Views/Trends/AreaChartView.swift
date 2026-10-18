@@ -45,26 +45,36 @@ struct AreaChartView: View {
                             x: .value("Date", point.date),
                             y: .value(unit, point.value)
                         )
-                        .foregroundStyle(color.gradient.opacity(0.3))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [color.opacity(0.25), color.opacity(0.03)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
 
                         LineMark(
                             x: .value("Date", point.date),
                             y: .value(unit, point.value)
                         )
+                        .interpolationMethod(.catmullRom)
                         .foregroundStyle(color)
                         .lineStyle(StrokeStyle(lineWidth: 2))
+                    }
 
+                    // Single dot on the last data point only
+                    if let last = data.last {
                         PointMark(
-                            x: .value("Date", point.date),
-                            y: .value(unit, point.value)
+                            x: .value("Date", last.date),
+                            y: .value(unit, last.value)
                         )
                         .foregroundStyle(color)
-                        .symbolSize(20)
+                        .symbolSize(28)
                     }
 
                     RuleMark(y: .value("Avg", average))
-                        .foregroundStyle(.secondary.opacity(0.6))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                        .foregroundStyle(.secondary.opacity(0.45))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
                         .annotation(position: .trailing, alignment: .center) {
                             Text(String(format: "%.1f", average))
                                 .font(.caption2)
