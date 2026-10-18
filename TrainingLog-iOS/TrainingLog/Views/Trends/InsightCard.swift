@@ -9,10 +9,6 @@ final class InsightViewModel {
     var error: String? = nil
 
     func refresh(summary: String) async {
-        guard LanguageModelSession.isAvailable else {
-            error = "On-device AI not available on this device."
-            return
-        }
         isLoading = true
         error = nil
         text = ""
@@ -27,7 +23,7 @@ final class InsightViewModel {
             let response = try await session.respond(to: prompt)
             text = response.content
         } catch {
-            self.error = "Could not generate insights. Try again."
+            self.error = "On-device AI not available on this device, or could not generate insights."
         }
         isLoading = false
     }
