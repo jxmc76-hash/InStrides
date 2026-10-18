@@ -61,7 +61,7 @@ struct PlanView: View {
                     Button {
                         nlPlan = plan
                     } label: {
-                        Label("Edit with AI", systemImage: "sparkles")
+                        Label(plan.sessions.isEmpty ? "Build plan with AI" : "Edit with AI", systemImage: "sparkles")
                             .font(.subheadline)
                     }
                 }
