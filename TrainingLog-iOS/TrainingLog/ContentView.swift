@@ -38,7 +38,7 @@ struct ContentView: View {
             await scheduleEnergyReminder(time: userStore.reminderTime)
             checkForWorkoutPrompts()
         }
-        .onChange(of: healthKit.dailyData) { _, _ in
+        .onChange(of: healthKit.dailyData.count) { _, _ in
             checkForWorkoutPrompts()
         }
         .sheet(item: $workoutPrompt) { prompt in
