@@ -1,0 +1,27 @@
+name: TrainingLog
+options:
+  bundleIdPrefix: com.traininglog
+  deploymentTarget:
+    iOS: "26.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_STRICT_CONCURRENCY: complete
+
+targets:
+  TrainingLog:
+    type: application
+    platform: iOS
+    sources:
+      - path: TrainingLog
+    settings:
+      base:
+        INFOPLIST_FILE: TrainingLog/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TrainingLog/TrainingLog.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.traininglog.app
+        TARGETED_DEVICE_FAMILY: "1"
