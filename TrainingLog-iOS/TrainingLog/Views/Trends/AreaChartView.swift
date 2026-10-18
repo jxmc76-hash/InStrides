@@ -18,6 +18,15 @@ struct AreaChartView: View {
         return data.map(\.value).reduce(0, +) / Double(data.count)
     }
 
+    private var yDomain: ClosedRange<Double> {
+        let vals = data.map(\.value)
+        guard let lo = vals.min(), let hi = vals.max(), lo < hi else {
+            return 0...1
+        }
+        let pad = (hi - lo) * 0.15
+        return (lo - pad)...(hi + pad)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
@@ -62,9 +71,7 @@ struct AreaChartView: View {
                                 .foregroundStyle(.secondary)
                         }
                 }
-                .frame(height: 120)
-                .padding(.trailing, 32)
-                .chartYScale(domain: .automatic(includesZero: false))
+                .chartYScale(domain: yDomain)
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisValueLabel {
@@ -86,6 +93,8 @@ struct AreaChartView: View {
                         }
                     }
                 }
+                .frame(height: 120)
+                .padding(.trailing, 32)
             }
         }
         .padding()
