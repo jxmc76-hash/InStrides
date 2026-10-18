@@ -5,16 +5,21 @@ import Observation
 @MainActor
 final class UserStore {
     var selectedColumns: [WorkoutType] = WorkoutType.allCases
-    var energyByDate: [String: Int] = [:]       // "yyyy-MM-dd" -> 1..5
-    var notesByDate: [String: String] = [:]     // "yyyy-MM-dd" -> text
+    var energyByDate: [String: Int] = [:]
+    var notesByDate: [String: String] = [:]
     var gymWeightByWorkoutID: [UUID: Double] = [:]
-    var effortByWorkoutID: [UUID: Int] = [:]       // workoutID -> 1..10
+    var effortByWorkoutID: [UUID: Int] = [:]
+    var reminderTime: Date = {
+        var c = DateComponents(); c.hour = 7; c.minute = 0
+        return Calendar.current.date(from: c) ?? Date()
+    }()
 
-    private let columnsKey = "selectedColumns"
-    private let energyKey  = "energyByDate"
-    private let notesKey   = "notesByDate"
-    private let gymKey     = "gymWeights"
-    private let effortKey  = "effortByWorkout"
+    private let columnsKey      = "selectedColumns"
+    private let energyKey       = "energyByDate"
+    private let notesKey        = "notesByDate"
+    private let gymKey          = "gymWeights"
+    private let effortKey       = "effortByWorkout"
+    private let reminderTimeKey = "reminderTime"
 
     init() { load() }
 
@@ -58,6 +63,7 @@ final class UserStore {
         let effortEncoded = Dictionary(uniqueKeysWithValues:
             effortByWorkoutID.map { (k, v) in (k.uuidString, v) })
         UserDefaults.standard.set(effortEncoded, forKey: effortKey)
+        UserDefaults.standard.set(reminderTime.timeIntervalSinceReferenceDate, forKey: reminderTimeKey)
     }
 
     private func load() {
@@ -73,6 +79,10 @@ final class UserStore {
         if let raw = UserDefaults.standard.dictionary(forKey: effortKey) as? [String: Int] {
             effortByWorkoutID = Dictionary(uniqueKeysWithValues:
                 raw.compactMap { (k, v) in UUID(uuidString: k).map { ($0, v) } })
+        }
+        let interval = UserDefaults.standard.double(forKey: reminderTimeKey)
+        if interval != 0 {
+            reminderTime = Date(timeIntervalSinceReferenceDate: interval)
         }
     }
 }

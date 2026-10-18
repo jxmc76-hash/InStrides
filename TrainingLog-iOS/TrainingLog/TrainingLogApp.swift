@@ -8,29 +8,28 @@ struct TrainingLogApp: App {
         WindowGroup {
             ContentView()
                 .modelContainer(for: [TrainingPlan.self, PlanSession.self])
-                .task { await scheduleEnergyReminder() }
         }
     }
+}
 
-    private func scheduleEnergyReminder() async {
-        let center = UNUserNotificationCenter.current()
-        let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
-        guard granted else { return }
+func scheduleEnergyReminder(time: Date) async {
+    let center = UNUserNotificationCenter.current()
+    let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
+    guard granted else { return }
 
-        // Remove any existing energy reminder before rescheduling
-        center.removePendingNotificationRequests(withIdentifiers: ["energy-reminder"])
+    center.removePendingNotificationRequests(withIdentifiers: ["energy-reminder"])
 
-        let content = UNMutableNotificationContent()
-        content.title = "Training Log"
-        content.body = "How's your energy today? Tap to log it."
-        content.sound = .default
+    let content = UNMutableNotificationContent()
+    content.title = "Training Log"
+    content.body = "How's your energy today? Tap to log it."
+    content.sound = .default
 
-        var components = DateComponents()
-        components.hour = 7
-        components.minute = 0
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+    let cal = Calendar.current
+    var components = DateComponents()
+    components.hour = cal.component(.hour, from: time)
+    components.minute = cal.component(.minute, from: time)
+    let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
 
-        let request = UNNotificationRequest(identifier: "energy-reminder", content: content, trigger: trigger)
-        try? await center.add(request)
-    }
+    let request = UNNotificationRequest(identifier: "energy-reminder", content: content, trigger: trigger)
+    try? await center.add(request)
 }

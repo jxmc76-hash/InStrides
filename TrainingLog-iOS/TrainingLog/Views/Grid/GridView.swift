@@ -5,6 +5,7 @@ struct GridView: View {
     @Environment(UserStore.self) private var userStore
     @State private var selectedWorkouts: [HealthWorkout]? = nil
     @State private var showColumnPicker = false
+    @State private var showSettings = false
 
     private var columns: [WorkoutType] { userStore.selectedColumns }
 
@@ -22,12 +23,18 @@ struct GridView: View {
             .navigationTitle("Training Overview")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showColumnPicker = true
-                    } label: {
-                        Image(systemName: "slider.horizontal.3")
+                    HStack(spacing: 16) {
+                        Button { showSettings = true } label: {
+                            Image(systemName: "gear")
+                        }
+                        Button { showColumnPicker = true } label: {
+                            Image(systemName: "slider.horizontal.3")
+                        }
                     }
                 }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet()
             }
             .sheet(isPresented: $showColumnPicker) {
                 ColumnPickerSheet(selected: Binding(

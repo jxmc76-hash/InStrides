@@ -22,6 +22,7 @@ struct ContentView: View {
         .environment(userStore)
         .task {
             await healthKit.requestAuthorization()
+            await scheduleEnergyReminder(time: userStore.reminderTime)
         }
     }
 }
