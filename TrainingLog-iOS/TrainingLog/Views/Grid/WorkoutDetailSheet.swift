@@ -88,6 +88,33 @@ struct WorkoutDetailSheet: View {
         case .sit:
             row("Duration", value: "\(workout.durationMinutes) min")
         }
+
+        effortRow(for: workout)
+    }
+
+    @ViewBuilder
+    private func effortRow(for workout: HealthWorkout) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Effort")
+                .foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                ForEach(1...10, id: \.self) { i in
+                    let selected = (userStore.effort(for: workout.id) ?? 0) >= i
+                    Button {
+                        userStore.setEffort(i, for: workout.id)
+                    } label: {
+                        Text("\(i)")
+                            .font(.caption.bold())
+                            .frame(width: 28, height: 28)
+                            .background(selected ? workout.type.color : Color.secondary.opacity(0.15),
+                                        in: RoundedRectangle(cornerRadius: 6))
+                            .foregroundStyle(selected ? .white : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     private func row(_ label: String, value: String) -> some View {
