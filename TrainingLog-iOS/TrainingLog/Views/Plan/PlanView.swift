@@ -7,6 +7,7 @@ struct PlanView: View {
     @State private var showAddPlan = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
+    @State private var nlPlan: TrainingPlan? = nil
 
     var body: some View {
         NavigationStack {
@@ -55,6 +56,12 @@ struct PlanView: View {
                         Label("Add Session", systemImage: "plus.circle")
                             .font(.subheadline)
                     }
+                    Button {
+                        nlPlan = plan
+                    } label: {
+                        Label("Edit with AI", systemImage: "sparkles")
+                            .font(.subheadline)
+                    }
                 }
             }
         }
@@ -76,6 +83,9 @@ struct PlanView: View {
         )) { item in
             LinkWorkoutSheet(plan: item.plan, session: item.session,
                              workouts: hk.dailyData.flatMap(\.workouts))
+        }
+        .sheet(item: $nlPlan) { plan in
+            NaturalLanguagePlanSheet(plan: plan)
         }
     }
 
