@@ -53,7 +53,7 @@ struct AreaChartView: View {
                         .lineStyle(StrokeStyle(lineWidth: 2))
                     }
 
-                    // Single dot on the last data point only
+                    // Single dot on the last data point, with latest value label
                     if let last = data.last {
                         PointMark(
                             x: .value("Date", last.date),
@@ -61,17 +61,17 @@ struct AreaChartView: View {
                         )
                         .foregroundStyle(color)
                         .symbolSize(28)
+                        .annotation(position: .trailing, alignment: .center) {
+                            Text(String(format: "%.1f", last.value))
+                                .font(.caption2.bold())
+                                .foregroundStyle(color)
+                        }
                     }
 
                     if showAverage {
                         RuleMark(y: .value("Avg", average))
                             .foregroundStyle(.secondary.opacity(0.45))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
-                            .annotation(position: .trailing, alignment: .center) {
-                                Text(String(format: "%.1f", average))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
                     }
                 }
                 .chartYScale(domain: yDomain)
