@@ -1,9 +1,20 @@
 import SwiftUI
 
+enum WorkoutPrompt: Identifiable {
+    case depth(HealthWorkout)
+    case gymWeight(HealthWorkout)
+
+    var id: UUID {
+        switch self {
+        case .depth(let w), .gymWeight(let w): return w.id
+        }
+    }
+}
+
 struct ContentView: View {
     @State private var healthKit = HealthKitManager()
     @State private var userStore = UserStore()
-    @State private var depthPromptWorkout: HealthWorkout? = nil
+    @State private var workoutPrompt: WorkoutPrompt? = nil
 
     var body: some View {
         TabView {
@@ -24,21 +35,36 @@ struct ContentView: View {
         .task {
             await healthKit.requestAuthorization()
             await scheduleEnergyReminder(time: userStore.reminderTime)
-            checkForUnscoredSitWorkouts()
+            checkForWorkoutPrompts()
         }
         .onChange(of: healthKit.dailyData) { _, _ in
-            checkForUnscoredSitWorkouts()
+            checkForWorkoutPrompts()
         }
-        .sheet(item: $depthPromptWorkout) { workout in
-            DepthPromptSheet(workout: workout)
+        .sheet(item: $workoutPrompt) { prompt in
+            switch prompt {
+            case .depth(let workout):
+                DepthPromptSheet(workout: workout)
+            case .gymWeight(let workout):
+                GymWeightEntrySheet(workout: workout)
+            }
         }
     }
 
-    private func checkForUnscoredSitWorkouts() {
+    private func checkForWorkoutPrompts() {
         let today = Calendar.current.startOfDay(for: Date())
-        let todaySits = healthKit.dailyData
-            .first { Calendar.current.startOfDay(for: $0.date) == today }?
-            .workouts(for: .sit) ?? []
-        depthPromptWorkout = todaySits.first { userStore.effort(for: $0.id) == nil }
+        guard let todayData = healthKit.dailyData.first(where: {
+            Calendar.current.startOfDay(for: $0.date) == today
+        }) else { return }
+
+        // Gym with no weight logged takes priority
+        if let gym = todayData.workouts(for: .gym).first(where: { userStore.gymWeight(for: $0.id) == nil }) {
+            workoutPrompt = .gymWeight(gym)
+            return
+        }
+
+        // SIT with no depth score
+        if let sit = todayData.workouts(for: .sit).first(where: { userStore.effort(for: $0.id) == nil }) {
+            workoutPrompt = .depth(sit)
+        }
     }
 }
