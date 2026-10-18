@@ -42,7 +42,7 @@ struct LogView: View {
     private var headerRow: some View {
         HStack(spacing: 0) {
             colHeader("Date",    width: 72)
-            colHeader("Sleep",   width: 64)
+            colHeader("Sleep",   width: 72)
             colHeader("Energy",  width: 64)
             colHeader("VO₂",     width: 64)
             colHeader("Weight",  width: 64)
@@ -96,8 +96,8 @@ struct LogView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            // Sleep score
-            cell(day.sleep.map { "\($0.score)" } ?? "—", width: 64)
+            // Sleep duration
+            cell(day.sleep.map { formatSleep($0.totalMinutes) } ?? "—", width: 72)
 
             // Energy (tappable)
             Button {
@@ -151,7 +151,7 @@ struct LogView: View {
 
     @ViewBuilder
     private func weekSummaryRow(for days: [DailyHealthData]) -> some View {
-        let avgSleep = avg(days.compactMap { $0.sleep?.score }.map { Double($0) })
+        let avgSleep = avg(days.compactMap { $0.sleep?.totalMinutes })
         let avgEnergy = avgInt(days.compactMap { d in userStore.energy(for: d.date) })
         let avgVo2 = avg(days.compactMap { $0.vo2Max })
         let avgWeight = avg(days.compactMap { $0.weight })
@@ -162,7 +162,7 @@ struct LogView: View {
                 .font(.caption2.bold())
                 .foregroundStyle(.secondary)
 
-            summaryCell(avgSleep.map { "\(Int($0))" } ?? "—", width: 64)
+            summaryCell(avgSleep.map { formatSleep($0) } ?? "—", width: 72)
             summaryCell(avgEnergy.map { "\($0)" } ?? "—", width: 64)
             summaryCell(avgVo2.map { String(format: "%.1f", $0) } ?? "—", width: 64)
             summaryCell(avgWeight.map { String(format: "%.1f", $0) } ?? "—", width: 64)
@@ -208,6 +208,12 @@ struct LogView: View {
                     .frame(width: 7, height: 7)
             }
         }
+    }
+
+    private func formatSleep(_ minutes: Double) -> String {
+        let h = Int(minutes) / 60
+        let m = Int(minutes) % 60
+        return h > 0 ? "\(h)h\(m > 0 ? " \(m)m" : "")" : "\(m)m"
     }
 
     private func avg(_ vals: [Double]) -> Double? {

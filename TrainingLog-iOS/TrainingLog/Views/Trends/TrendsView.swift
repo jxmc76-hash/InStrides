@@ -68,39 +68,10 @@ struct TrendsView: View {
                       color: .orange)
         .padding(.horizontal, 16)
 
-        AreaChartView(title: "Weekly Avg Sleep Score",
-                      unit: "score",
-                      data: weeklyAvgSleepScore(weeks: weeks),
+        AreaChartView(title: "Weekly Avg Sleep Duration",
+                      unit: "hours",
+                      data: weeklyAvgSleepDuration(weeks: weeks),
                       color: .indigo)
-        .padding(.horizontal, 16)
-
-        sleepBreakdownCharts(weeks: weeks)
-    }
-
-    @ViewBuilder
-    private func sleepBreakdownCharts(weeks: [WeekBucket]) -> some View {
-        AreaChartView(title: "Sleep Duration /50",
-                      unit: "pts",
-                      data: weeklyMetric(weeks: weeks) { day in
-                          day.sleep.map { min($0.totalMinutes / 480.0 * 50, 50) }
-                      },
-                      color: .purple)
-        .padding(.horizontal, 16)
-
-        AreaChartView(title: "Bedtime Score /30",
-                      unit: "pts",
-                      data: weeklyMetric(weeks: weeks) { day in
-                          day.sleep.map { Double($0.score - max(0, Int(min($0.totalMinutes / 480 * 50, 50))) - max(0, 20 - $0.interruptions * 4)) }
-                      },
-                      color: Color(hex: "#8B5CF6"))
-        .padding(.horizontal, 16)
-
-        AreaChartView(title: "Sleep Interruptions /20",
-                      unit: "pts",
-                      data: weeklyMetric(weeks: weeks) { day in
-                          day.sleep.map { Double(max(0, 20 - $0.interruptions * 4)) }
-                      },
-                      color: Color(hex: "#A78BFA"))
         .padding(.horizontal, 16)
     }
 
@@ -186,19 +157,11 @@ struct TrendsView: View {
         }
     }
 
-    private func weeklyAvgSleepScore(weeks: [WeekBucket]) -> [ChartDataPoint] {
+    private func weeklyAvgSleepDuration(weeks: [WeekBucket]) -> [ChartDataPoint] {
         weeks.compactMap { w in
-            let vals = w.days.compactMap { $0.sleep?.score }
+            let vals = w.days.compactMap { $0.sleep?.totalMinutes }
             guard !vals.isEmpty else { return nil }
-            return ChartDataPoint(date: w.start, value: Double(vals.reduce(0, +)) / Double(vals.count))
-        }
-    }
-
-    private func weeklyMetric(weeks: [WeekBucket], extract: (DailyHealthData) -> Double?) -> [ChartDataPoint] {
-        weeks.compactMap { w in
-            let vals = w.days.compactMap(extract)
-            guard !vals.isEmpty else { return nil }
-            return ChartDataPoint(date: w.start, value: vals.reduce(0, +) / Double(vals.count))
+            return ChartDataPoint(date: w.start, value: vals.reduce(0, +) / Double(vals.count) / 60)
         }
     }
 
@@ -233,7 +196,7 @@ struct TrendsView: View {
         let weights = weeklyAvgWeight(weeks: weeks)
         let vo2s = weeklyVO2(weeks: weeks)
         let energy = weeklyAvgEnergy(weeks: weeks)
-        let sleep = weeklyAvgSleepScore(weeks: weeks)
+        let sleep = weeklyAvgSleepDuration(weeks: weeks)
 
         var lines: [String] = ["Last 12 weeks summary:"]
         if let last = runKm.last, let first = runKm.first {
@@ -249,7 +212,7 @@ struct TrendsView: View {
             lines.append("Latest avg energy: \(String(format: "%.1f", e.value))/5")
         }
         if let s = sleep.last {
-            lines.append("Latest avg sleep score: \(String(format: "%.0f", s.value))/100")
+            lines.append("Latest avg sleep duration: \(String(format: "%.1f", s.value)) hours")
         }
         return lines.joined(separator: "\n")
     }
