@@ -47,25 +47,35 @@ struct LogView: View {
         .background(.bar)
     }
 
+    private var carryForwardWeight: [Date: Double] {
+        var result: [Date: Double] = [:]
+        var last: Double? = nil
+        for day in hk.dailyData.reversed() {
+            if let w = day.weight { last = w }
+            result[day.date] = last
+        }
+        return result
+    }
+
+    private var carryForwardVO2: [Date: Double] {
+        var result: [Date: Double] = [:]
+        var last: Double? = nil
+        for day in hk.dailyData.reversed() {
+            if let v = day.vo2Max { last = v }
+            result[day.date] = last
+        }
+        return result
+    }
+
     @ViewBuilder
     private var bodyRows: some View {
         let grouped = groupByWeek(hk.dailyData)
-        // Build carry-forward maps (data is newest-first, so reverse for forward fill)
-        let allDays = hk.dailyData.reversed() as [DailyHealthData]
-        var lastWeight: Double? = nil
-        var lastVO2: Double? = nil
-        var weightFill: [Date: Double] = [:]
-        var vo2Fill: [Date: Double] = [:]
-        for day in allDays {
-            if let w = day.weight { lastWeight = w }
-            if let v = day.vo2Max { lastVO2 = v }
-            weightFill[day.date] = lastWeight
-            vo2Fill[day.date] = lastVO2
-        }
+        let wFill = carryForwardWeight
+        let vFill = carryForwardVO2
         ForEach(grouped, id: \.week) { group in
             weekSummaryRow(for: group.days)
             ForEach(group.days) { day in
-                dayRow(day, weight: weightFill[day.date], vo2: vo2Fill[day.date])
+                dayRow(day, weight: wFill[day.date], vo2: vFill[day.date])
                 Divider().padding(.leading, 16)
             }
         }
