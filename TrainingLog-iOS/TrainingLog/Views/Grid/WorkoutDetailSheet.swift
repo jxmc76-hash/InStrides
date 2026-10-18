@@ -87,9 +87,8 @@ struct WorkoutDetailSheet: View {
 
         case .sit:
             row("Duration", value: "\(workout.durationMinutes) min")
+            effortRow(for: workout)
         }
-
-        effortRow(for: workout)
     }
 
     @ViewBuilder
