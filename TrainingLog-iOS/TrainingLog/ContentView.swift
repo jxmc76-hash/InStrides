@@ -30,6 +30,7 @@ struct ContentView: View {
             TrendsView()
                 .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
         }
+        .tint(.orange)
         .environment(healthKit)
         .environment(userStore)
         .task {

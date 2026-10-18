@@ -21,7 +21,8 @@ struct GridView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationTitle("Training Overview")
+            .navigationTitle("TrainingLog")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
