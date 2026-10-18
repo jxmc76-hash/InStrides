@@ -110,7 +110,7 @@ struct LogView: View {
 
     @ViewBuilder
     private func weekSummaryRow(for days: [DailyHealthData]) -> some View {
-        let avgSleep = avg(days.compactMap { $0.sleep?.score })
+        let avgSleep = avg(days.compactMap { $0.sleep?.score }.map { Double($0) })
         let avgEnergy = avgInt(days.compactMap { d in userStore.energy(for: d.date) })
         let avgVo2 = avg(days.compactMap { $0.vo2Max })
         let avgWeight = avg(days.compactMap { $0.weight })
