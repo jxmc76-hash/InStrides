@@ -1,9 +1,12 @@
 import SwiftUI
+import UIKit
 
 struct DepthPromptSheet: View {
     let workout: HealthWorkout
     @Environment(UserStore.self) private var userStore
     @Environment(\.dismiss) private var dismiss
+
+    private let haptic = UIImpactFeedbackGenerator(style: .light)
 
     var body: some View {
         @Bindable var store = userStore
@@ -23,6 +26,7 @@ struct DepthPromptSheet: View {
                     ForEach(1...10, id: \.self) { i in
                         let selected = (userStore.effort(for: workout.id) ?? 0) >= i
                         Button {
+                            haptic.impactOccurred()
                             userStore.setEffort(i, for: workout.id)
                         } label: {
                             Text("\(i)")

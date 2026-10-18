@@ -21,7 +21,21 @@ final class UserStore {
     private let effortKey       = "effortByWorkout"
     private let reminderTimeKey = "reminderTime"
 
-    init() { load() }
+    // iCloud KV store; falls back to UserDefaults when iCloud is unavailable
+    private let cloud = NSUbiquitousKeyValueStore.default
+
+    init() {
+        load()
+        // Merge any changes that arrived from iCloud while the app was not running
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: cloud,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.load() }
+        }
+        cloud.synchronize()
+    }
 
     func setEnergy(_ value: Int, for date: Date) {
         energyByDate[key(date)] = value
@@ -54,33 +68,54 @@ final class UserStore {
     }
 
     private func save() {
+        cloud.set(selectedColumns.map(\.rawValue), forKey: columnsKey)
+        cloud.set(energyByDate, forKey: energyKey)
+        cloud.set(notesByDate, forKey: notesKey)
+        let gymEncoded = Dictionary(uniqueKeysWithValues:
+            gymWeightByWorkoutID.map { (k, v) in (k.uuidString, v) })
+        cloud.set(gymEncoded, forKey: gymKey)
+        let effortEncoded = Dictionary(uniqueKeysWithValues:
+            effortByWorkoutID.map { (k, v) in (k.uuidString, v) })
+        cloud.set(effortEncoded, forKey: effortKey)
+        cloud.set(reminderTime.timeIntervalSinceReferenceDate, forKey: reminderTimeKey)
+        cloud.synchronize()
+
+        // Mirror to UserDefaults as a local fallback
         UserDefaults.standard.set(selectedColumns.map(\.rawValue), forKey: columnsKey)
         UserDefaults.standard.set(energyByDate, forKey: energyKey)
         UserDefaults.standard.set(notesByDate, forKey: notesKey)
-        let gymEncoded = Dictionary(uniqueKeysWithValues:
-            gymWeightByWorkoutID.map { (k, v) in (k.uuidString, v) })
         UserDefaults.standard.set(gymEncoded, forKey: gymKey)
-        let effortEncoded = Dictionary(uniqueKeysWithValues:
-            effortByWorkoutID.map { (k, v) in (k.uuidString, v) })
         UserDefaults.standard.set(effortEncoded, forKey: effortKey)
         UserDefaults.standard.set(reminderTime.timeIntervalSinceReferenceDate, forKey: reminderTimeKey)
     }
 
     private func load() {
-        if let raw = UserDefaults.standard.stringArray(forKey: columnsKey) {
+        // Prefer iCloud; fall back to UserDefaults for each key individually
+        func strings(_ key: String) -> [String]? {
+            (cloud.array(forKey: key) as? [String]) ?? UserDefaults.standard.stringArray(forKey: key)
+        }
+        func dict<V>(_ key: String) -> [String: V]? {
+            (cloud.dictionary(forKey: key) as? [String: V]) ?? (UserDefaults.standard.dictionary(forKey: key) as? [String: V])
+        }
+        func double(_ key: String) -> Double {
+            let v = cloud.double(forKey: key)
+            return v != 0 ? v : UserDefaults.standard.double(forKey: key)
+        }
+
+        if let raw = strings(columnsKey) {
             selectedColumns = raw.compactMap(WorkoutType.init(rawValue:))
         }
-        energyByDate = UserDefaults.standard.dictionary(forKey: energyKey) as? [String: Int] ?? [:]
-        notesByDate = UserDefaults.standard.dictionary(forKey: notesKey) as? [String: String] ?? [:]
-        if let raw = UserDefaults.standard.dictionary(forKey: gymKey) as? [String: Double] {
+        energyByDate = dict(energyKey) ?? [:]
+        notesByDate  = dict(notesKey)  ?? [:]
+        if let raw: [String: Double] = dict(gymKey) {
             gymWeightByWorkoutID = Dictionary(uniqueKeysWithValues:
                 raw.compactMap { (k, v) in UUID(uuidString: k).map { ($0, v) } })
         }
-        if let raw = UserDefaults.standard.dictionary(forKey: effortKey) as? [String: Int] {
+        if let raw: [String: Int] = dict(effortKey) {
             effortByWorkoutID = Dictionary(uniqueKeysWithValues:
                 raw.compactMap { (k, v) in UUID(uuidString: k).map { ($0, v) } })
         }
-        let interval = UserDefaults.standard.double(forKey: reminderTimeKey)
+        let interval = double(reminderTimeKey)
         if interval != 0 {
             reminderTime = Date(timeIntervalSinceReferenceDate: interval)
         }

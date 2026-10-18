@@ -20,6 +20,7 @@ struct GridView: View {
                     }
                 }
             }
+            .refreshable { await hk.fetchAll() }
             .navigationTitle("Training Overview")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

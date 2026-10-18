@@ -22,6 +22,7 @@ struct LogView: View {
                     .padding(.bottom, 32)
                 }
             }
+            .refreshable { await hk.fetchAll() }
             .navigationTitle("Log")
             .sheet(item: Binding(
                 get: { energyPickerDate.map { EnergyPickerItem(date: $0) } },

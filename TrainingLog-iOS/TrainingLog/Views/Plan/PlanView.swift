@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct PlanView: View {
     @Environment(HealthKitManager.self) private var hk
@@ -8,6 +9,7 @@ struct PlanView: View {
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
     @State private var nlPlan: TrainingPlan? = nil
+    private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         NavigationStack {
@@ -152,6 +154,7 @@ struct PlanView: View {
             }
 
             Button {
+                haptic.impactOccurred()
                 session.isComplete.toggle()
             } label: {
                 Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
