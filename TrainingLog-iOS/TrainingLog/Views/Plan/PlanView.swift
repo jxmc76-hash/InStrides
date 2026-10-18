@@ -131,7 +131,7 @@ struct PlanView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(session.type)
+                    Text(session.type.uppercased())
                         .font(.caption.bold())
                         .foregroundStyle(sessionColor(session.type))
                 }
