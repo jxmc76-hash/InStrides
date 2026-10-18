@@ -4,6 +4,7 @@ struct LogView: View {
     @Environment(HealthKitManager.self) private var hk
     @Environment(UserStore.self) private var userStore
     @State private var energyPickerDate: Date? = nil
+    @State private var selectedWorkouts: [HealthWorkout]? = nil
 
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "d MMM"; return f
@@ -27,6 +28,12 @@ struct LogView: View {
                 set: { _ in energyPickerDate = nil }
             )) { item in
                 EnergyPickerSheet(date: item.date)
+            }
+            .sheet(item: Binding(
+                get: { selectedWorkouts.map { SelectedWorkoutsItem(workouts: $0) } },
+                set: { _ in selectedWorkouts = nil }
+            )) { item in
+                WorkoutDetailSheet(workouts: item.workouts)
             }
         }
     }
@@ -125,10 +132,17 @@ struct LogView: View {
             // Workout durations
             ForEach(userStore.selectedColumns) { col in
                 let mins = day.totalDuration(for: col)
-                Text(mins > 0 ? "\(mins)" : "—")
-                    .frame(width: 64)
-                    .font(.caption)
-                    .foregroundStyle(mins > 0 ? col.color : Color.secondary)
+                let workouts = day.workouts(for: col)
+                Button {
+                    if !workouts.isEmpty { selectedWorkouts = workouts }
+                } label: {
+                    Text(mins > 0 ? "\(mins)" : "—")
+                        .frame(width: 64)
+                        .font(.caption)
+                        .foregroundStyle(mins > 0 ? col.color : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(workouts.isEmpty)
             }
         }
         .padding(.horizontal, 16)
@@ -224,4 +238,9 @@ struct LogView: View {
 struct EnergyPickerItem: Identifiable {
     let id = UUID()
     let date: Date
+}
+
+struct SelectedWorkoutsItem: Identifiable {
+    let id = UUID()
+    let workouts: [HealthWorkout]
 }
