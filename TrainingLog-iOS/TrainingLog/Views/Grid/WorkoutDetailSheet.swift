@@ -87,14 +87,14 @@ struct WorkoutDetailSheet: View {
 
         case .sit:
             row("Duration", value: "\(workout.durationMinutes) min")
-            effortRow(for: workout)
+            depthRow(for: workout)
         }
     }
 
     @ViewBuilder
-    private func effortRow(for workout: HealthWorkout) -> some View {
+    private func depthRow(for workout: HealthWorkout) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Effort")
+            Text("Depth")
                 .foregroundStyle(.secondary)
             HStack(spacing: 6) {
                 ForEach(1...10, id: \.self) { i in
