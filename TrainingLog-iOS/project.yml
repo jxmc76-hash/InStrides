@@ -23,6 +23,6 @@ targets:
       base:
         INFOPLIST_FILE: TrainingLog/Info.plist
         CODE_SIGN_ENTITLEMENTS: TrainingLog/TrainingLog.entitlements
-        PRODUCT_BUNDLE_IDENTIFIER: com.traininglog.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.johnmccarthy.traininglog
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
