@@ -19,7 +19,7 @@ struct GridView: View {
                     }
                 }
             }
-            .navigationTitle("Grid")
+            .navigationTitle("Training Overview")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

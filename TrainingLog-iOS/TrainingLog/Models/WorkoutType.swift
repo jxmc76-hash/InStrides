@@ -33,7 +33,9 @@ enum WorkoutType: String, CaseIterable, Identifiable, Codable {
     }
 
     static func from(hkType: HKWorkoutActivityType) -> WorkoutType? {
-        WorkoutType.allCases.first { $0.hkWorkoutActivityType == hkType }
+        // Map both traditional and functional strength training to gym
+        if hkType == .functionalStrengthTraining { return .gym }
+        return WorkoutType.allCases.first { $0.hkWorkoutActivityType == hkType }
     }
 }
 

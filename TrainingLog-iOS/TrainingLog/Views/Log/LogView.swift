@@ -35,7 +35,6 @@ struct LogView: View {
     private var headerRow: some View {
         HStack(spacing: 0) {
             colHeader("Date",    width: 72)
-            colHeader("Notes",   width: 120)
             colHeader("Sleep",   width: 64)
             colHeader("Energy",  width: 64)
             colHeader("VO₂",     width: 64)
@@ -51,30 +50,34 @@ struct LogView: View {
     @ViewBuilder
     private var bodyRows: some View {
         let grouped = groupByWeek(hk.dailyData)
+        // Build carry-forward maps (data is newest-first, so reverse for forward fill)
+        let allDays = hk.dailyData.reversed() as [DailyHealthData]
+        var lastWeight: Double? = nil
+        var lastVO2: Double? = nil
+        var weightFill: [Date: Double] = [:]
+        var vo2Fill: [Date: Double] = [:]
+        for day in allDays {
+            if let w = day.weight { lastWeight = w }
+            if let v = day.vo2Max { lastVO2 = v }
+            weightFill[day.date] = lastWeight
+            vo2Fill[day.date] = lastVO2
+        }
         ForEach(grouped, id: \.week) { group in
             weekSummaryRow(for: group.days)
             ForEach(group.days) { day in
-                dayRow(day)
+                dayRow(day, weight: weightFill[day.date], vo2: vo2Fill[day.date])
                 Divider().padding(.leading, 16)
             }
         }
     }
 
     @ViewBuilder
-    private func dayRow(_ day: DailyHealthData) -> some View {
+    private func dayRow(_ day: DailyHealthData, weight: Double?, vo2: Double?) -> some View {
         HStack(spacing: 0) {
             Text(Self.dateFmt.string(from: day.date))
                 .frame(width: 72, alignment: .leading)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
-            // Notes
-            let note = userStore.note(for: day.date) ?? ""
-            Text(note.isEmpty ? "—" : note)
-                .frame(width: 120, alignment: .leading)
-                .font(.caption)
-                .foregroundStyle(note.isEmpty ? Color.secondary : Color.primary)
-                .lineLimit(1)
 
             // Sleep score
             cell(day.sleep.map { "\($0.score)" } ?? "—", width: 64)
@@ -89,11 +92,25 @@ struct LogView: View {
             }
             .buttonStyle(.plain)
 
-            // VO2 Max
-            cell(day.vo2Max.map { String(format: "%.1f", $0) } ?? "—", width: 64)
+            // VO2 Max (carry-forward, muted if not today's reading)
+            if let v = vo2 {
+                Text(String(format: "%.1f", v))
+                    .frame(width: 64)
+                    .font(.caption)
+                    .foregroundStyle(day.vo2Max != nil ? Color.primary : Color.secondary)
+            } else {
+                cell("—", width: 64)
+            }
 
-            // Weight
-            cell(day.weight.map { String(format: "%.1f", $0) } ?? "—", width: 64)
+            // Weight (carry-forward, muted if not today's reading)
+            if let w = weight {
+                Text(String(format: "%.1f", w))
+                    .frame(width: 64)
+                    .font(.caption)
+                    .foregroundStyle(day.weight != nil ? Color.primary : Color.secondary)
+            } else {
+                cell("—", width: 64)
+            }
 
             // Workout durations
             ForEach(userStore.selectedColumns) { col in
@@ -120,8 +137,6 @@ struct LogView: View {
                 .frame(width: 72, alignment: .leading)
                 .font(.caption2.bold())
                 .foregroundStyle(.secondary)
-
-            Color.clear.frame(width: 120)
 
             summaryCell(avgSleep.map { "\(Int($0))" } ?? "—", width: 64)
             summaryCell(avgEnergy.map { "\($0)" } ?? "—", width: 64)
