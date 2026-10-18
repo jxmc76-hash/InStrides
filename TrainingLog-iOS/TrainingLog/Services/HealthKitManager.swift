@@ -36,7 +36,7 @@ final class HealthKitManager {
         defer { isLoading = false }
 
         let end = Date()
-        let start = Calendar.current.date(byAdding: .year, value: -1, to: end)!
+        let start = Date.distantPast
 
         async let workouts = fetchWorkouts(from: start, to: end)
         async let weights = fetchWeight(from: start, to: end)
