@@ -25,3 +25,4 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TrainingLog/TrainingLog.entitlements
         PRODUCT_BUNDLE_IDENTIFIER: com.traininglog.app
         TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
