@@ -85,19 +85,22 @@ struct TrendsView: View {
         AreaChartView(title: "Monthly Running Distance (km)",
                       unit: "km",
                       data: monthlyRunDistance(months: months),
-                      color: WorkoutType.run.color)
+                      color: WorkoutType.run.color,
+                      showYear: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Weight (kg)",
                       unit: "kg",
                       data: monthlyAvgWeight(months: months),
-                      color: .blue)
+                      color: .blue,
+                      showYear: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly VO₂ Max",
                       unit: "mL/kg/min",
                       data: monthlyVO2(months: months),
-                      color: .teal)
+                      color: .teal,
+                      showYear: true)
         .padding(.horizontal, 16)
     }
 

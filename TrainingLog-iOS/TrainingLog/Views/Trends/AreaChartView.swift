@@ -12,6 +12,7 @@ struct AreaChartView: View {
     let unit: String
     let data: [ChartDataPoint]
     let color: Color
+    var showYear: Bool = false
 
     private var average: Double {
         guard !data.isEmpty else { return 0 }
@@ -83,12 +84,13 @@ struct AreaChartView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks { value in
+                    AxisMarks(values: .stride(by: showYear ? .year : .month)) { value in
                         if let date = value.as(Date.self) {
                             AxisValueLabel {
-                                Text(date, format: .dateTime.month(.abbreviated))
+                                Text(date, format: showYear ? .dateTime.year() : .dateTime.month(.abbreviated))
                                     .font(.caption2)
                             }
+                            AxisGridLine()
                         }
                     }
                 }
