@@ -45,8 +45,12 @@ final class HealthKitManager {
 
         let (ws, wts, vs, sl) = await (workouts, weights, vo2s, sleepRaw)
 
+        // Derive actual earliest date from fetched data to avoid iterating from distantPast
+        let allDates: [Date] = ws.map(\.startDate) + wts.map(\.0) + vs.map(\.0) + sl.map(\.startDate)
+        let actualStart = allDates.min() ?? end
+
         dailyData = buildDailyData(workouts: ws, weights: wts, vo2s: vs, sleep: sl,
-                                    from: start, to: end)
+                                    from: actualStart, to: end)
     }
 
     // MARK: - Private fetch helpers
