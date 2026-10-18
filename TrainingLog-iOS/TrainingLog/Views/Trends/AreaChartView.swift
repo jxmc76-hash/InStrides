@@ -18,6 +18,14 @@ struct AreaChartView: View {
         return data.map(\.value).reduce(0, +) / Double(data.count)
     }
 
+    private var yMin: Double {
+        guard let min = data.map(\.value).min() else { return 0 }
+        let range = (data.map(\.value).max() ?? min) - min
+        // If range is tiny relative to values, pad below so changes are visible
+        let pad = range < min * 0.1 ? min * 0.05 : 0
+        return max(0, min - pad)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
@@ -63,6 +71,10 @@ struct AreaChartView: View {
                         }
                 }
                 .frame(height: 120)
+                .chartYScale(domain: yMin...)
+                .chartPlotStyle { plot in
+                    plot.padding(.trailing, 36)
+                }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisValueLabel {
