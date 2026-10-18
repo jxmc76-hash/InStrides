@@ -42,18 +42,6 @@ struct AreaChartView: View {
             } else {
                 Chart {
                     ForEach(data) { point in
-                        AreaMark(
-                            x: .value("Date", point.date),
-                            y: .value(unit, point.value)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [color.opacity(0.25), color.opacity(0.03)],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
-
                         LineMark(
                             x: .value("Date", point.date),
                             y: .value(unit, point.value)
