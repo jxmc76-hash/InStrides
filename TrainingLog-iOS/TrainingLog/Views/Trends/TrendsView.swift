@@ -48,31 +48,36 @@ struct TrendsView: View {
         AreaChartView(title: "Weekly Running Distance (km)",
                       unit: "km",
                       data: weeklyRunDistance(weeks: weeks),
-                      color: WorkoutType.run.color)
+                      color: WorkoutType.run.color,
+                      showAverage: false)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Weight (kg)",
                       unit: "kg",
                       data: weeklyAvgWeight(weeks: weeks),
-                      color: .blue)
+                      color: .blue,
+                      showAverage: false)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly VO₂ Max",
                       unit: "mL/kg/min",
                       data: weeklyVO2(weeks: weeks),
-                      color: .teal)
+                      color: .teal,
+                      showAverage: false)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Energy",
                       unit: "score",
                       data: weeklyAvgEnergy(weeks: weeks),
-                      color: .orange)
+                      color: .orange,
+                      showAverage: false)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Sleep Duration",
                       unit: "hours",
                       data: weeklyAvgSleepDuration(weeks: weeks),
-                      color: .indigo)
+                      color: .indigo,
+                      showAverage: false)
         .padding(.horizontal, 16)
     }
 

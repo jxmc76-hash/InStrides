@@ -13,6 +13,7 @@ struct AreaChartView: View {
     let data: [ChartDataPoint]
     let color: Color
     var showYear: Bool = false
+    var showAverage: Bool = true
 
     private var average: Double {
         guard !data.isEmpty else { return 0 }
@@ -62,14 +63,16 @@ struct AreaChartView: View {
                         .symbolSize(28)
                     }
 
-                    RuleMark(y: .value("Avg", average))
-                        .foregroundStyle(.secondary.opacity(0.45))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
-                        .annotation(position: .trailing, alignment: .center) {
-                            Text(String(format: "%.1f", average))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                    if showAverage {
+                        RuleMark(y: .value("Avg", average))
+                            .foregroundStyle(.secondary.opacity(0.45))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
+                            .annotation(position: .trailing, alignment: .center) {
+                                Text(String(format: "%.1f", average))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                    }
                 }
                 .chartYScale(domain: yDomain)
                 .chartYAxis {
