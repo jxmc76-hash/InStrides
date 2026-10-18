@@ -36,7 +36,7 @@ final class HealthKitManager {
         defer { isLoading = false }
 
         let end = Date()
-        let start = Date.distantPast
+        let start = Calendar.current.date(byAdding: .year, value: -3, to: end)!
 
         async let workouts = fetchWorkouts(from: start, to: end)
         async let weights = fetchWeight(from: start, to: end)
@@ -45,12 +45,8 @@ final class HealthKitManager {
 
         let (ws, wts, vs, sl) = await (workouts, weights, vo2s, sleepRaw)
 
-        // Derive actual earliest date from fetched data to avoid iterating from distantPast
-        let allDates: [Date] = ws.map(\.startDate) + wts.map(\.0) + vs.map(\.0) + sl.map(\.startDate)
-        let actualStart = allDates.min() ?? end
-
         dailyData = buildDailyData(workouts: ws, weights: wts, vo2s: vs, sleep: sl,
-                                    from: actualStart, to: end)
+                                    from: start, to: end)
     }
 
     // MARK: - Private fetch helpers
