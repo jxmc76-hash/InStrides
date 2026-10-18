@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View, Text, SectionList, TouchableOpacity, StyleSheet, useColorScheme,
+  Modal, Pressable, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLogData } from '../../lib/useLogData';
 import { Colors } from '../../constants/Colors';
 import type { TrainingPlanSession } from '../../constants/types';
+import { useHealthKit, type HealthWorkout } from '../../lib/useHealthKit';
 
 const SESSION_TYPE_COLORS: Record<string, string> = {
   Long: '#FF5500', Tempo: '#6366f1', Speed: '#f59e0b', Race: '#ef4444',
@@ -31,18 +33,83 @@ function isToday(dateStr: string) {
   return dateStr === today;
 }
 
-interface SessionRowProps {
+// Map plan session type to HealthKit workout type
+const PLAN_TO_HK: Record<string, string> = {
+  Long: 'RUN', Tempo: 'RUN', Speed: 'RUN', Easy: 'RUN', Parkrun: 'RUN', Strides: 'RUN',
+  Run: 'RUN', Swim: 'SWIM', Gym: 'GYM', Yoga: 'YOGA', Mindfulness: 'SIT',
+};
+
+interface LinkModalProps {
   session: TrainingPlanSession;
-  onTick: () => void;
+  workouts: HealthWorkout[];
+  visible: boolean;
+  onClose: () => void;
+  onLink: (workoutId: string) => void;
   scheme: 'light' | 'dark';
 }
 
-function SessionRow({ session, onTick, scheme }: SessionRowProps) {
+function LinkModal({ session, workouts, visible, onClose, onLink, scheme }: LinkModalProps) {
+  const c = Colors[scheme];
+  const relevant = workouts.filter(w => {
+    const hkType = PLAN_TO_HK[session.type];
+    return w.type === hkType && w.startDate.startsWith(session.date);
+  });
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.linkSheet, { backgroundColor: c.card }]} onPress={() => {}}>
+          <View style={[styles.modalHandle, { backgroundColor: c.border }]} />
+          <Text style={[styles.linkTitle, { color: c.text }]}>Link a workout</Text>
+          <Text style={[styles.linkSub, { color: c.textMuted }]}>{session.type} · {fmtSessionDate(session.date)}</Text>
+
+          {relevant.length === 0 ? (
+            <Text style={[styles.linkEmpty, { color: c.textMuted }]}>No matching workouts found in Apple Health for this date.</Text>
+          ) : (
+            <FlatList
+              data={relevant}
+              keyExtractor={w => w.id}
+              renderItem={({ item: w }) => (
+                <TouchableOpacity
+                  style={[styles.workoutOption, { borderColor: c.border }]}
+                  onPress={() => { onLink(w.id); onClose(); }}
+                >
+                  <View>
+                    <Text style={[styles.optionType, { color: c.text }]}>{w.type}</Text>
+                    <Text style={[styles.optionMeta, { color: c.textMuted }]}>
+                      {w.duration}min{w.distance ? ` · ${w.distance.toFixed(2)}km` : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="link-outline" size={20} color={Colors.primary} />
+                </TouchableOpacity>
+              )}
+            />
+          )}
+
+          <TouchableOpacity style={[styles.closeBtn, { backgroundColor: c.border }]} onPress={onClose}>
+            <Text style={[styles.closeBtnText, { color: c.text }]}>Cancel</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+interface SessionRowProps {
+  session: TrainingPlanSession;
+  onTick: () => void;
+  onOpenLink: () => void;
+  linkedWorkoutId?: string;
+  scheme: 'light' | 'dark';
+}
+
+function SessionRow({ session, onTick, onOpenLink, linkedWorkoutId, scheme }: SessionRowProps) {
   const c = Colors[scheme];
   const past = isPast(session.date);
   const today = isToday(session.date);
   const color = sessionColor(session.type);
   const muted = past && !session.isComplete;
+  const isLinked = !!linkedWorkoutId;
 
   return (
     <View style={[styles.sessionRow, { backgroundColor: c.card }, today && { borderColor: Colors.primary, borderWidth: 1.5 }]}>
@@ -59,6 +126,13 @@ function SessionRow({ session, onTick, scheme }: SessionRowProps) {
         <Text style={[styles.sessionTarget, { color: muted ? c.textMuted : c.text }]} numberOfLines={2}>
           {session.target}
         </Text>
+        {isLinked ? (
+          <Text style={[styles.linkedLabel, { color: Colors[scheme].success }]}>✓ Linked to Health workout</Text>
+        ) : past ? (
+          <TouchableOpacity onPress={onOpenLink} hitSlop={8}>
+            <Text style={[styles.linkLabel, { color: Colors.primary }]}>Link workout →</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       <TouchableOpacity onPress={onTick} style={styles.tickBtn} hitSlop={12}>
         <Ionicons
@@ -76,6 +150,13 @@ export default function PlanScreen() {
   const rawScheme = useColorScheme();
   const scheme = (rawScheme ?? 'light') as 'light' | 'dark';
   const c = Colors[scheme];
+  const { data: healthData } = useHealthKit();
+
+  const [linkModal, setLinkModal] = useState<TrainingPlanSession | null>(null);
+  // sessionId -> healthWorkoutId
+  const [linkedWorkouts, setLinkedWorkouts] = useState<Record<number, string>>({});
+
+  const allWorkouts = useMemo(() => healthData.flatMap(d => d.workouts), [healthData]);
 
   const plan = logData.trainingPlans.find((p) => p.title.toLowerCase().includes('half marathon'));
 
@@ -137,6 +218,17 @@ export default function PlanScreen() {
         </View>
       </View>
 
+      {linkModal && (
+        <LinkModal
+          session={linkModal}
+          workouts={allWorkouts}
+          visible
+          onClose={() => setLinkModal(null)}
+          onLink={(id) => setLinkedWorkouts(prev => ({ ...prev, [linkModal.id]: id }))}
+          scheme={scheme}
+        />
+      )}
+
       <SectionList
         sections={sections}
         keyExtractor={(s) => String(s.id)}
@@ -150,6 +242,8 @@ export default function PlanScreen() {
             session={item}
             scheme={scheme}
             onTick={() => tickPlanSession(plan.id, item.id)}
+            onOpenLink={() => setLinkModal(item)}
+            linkedWorkoutId={linkedWorkouts[item.id]}
           />
         )}
       />
@@ -183,4 +277,22 @@ const styles = StyleSheet.create({
   sessionType: { fontSize: 13, fontWeight: '700' },
   sessionTarget: { fontSize: 15, fontWeight: '500', lineHeight: 20 },
   tickBtn: { padding: 2 },
+  linkedLabel: { fontSize: 12, fontWeight: '600', marginTop: 4 },
+  linkLabel: { fontSize: 12, fontWeight: '600', marginTop: 4 },
+
+  // Link modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  linkSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40, maxHeight: '70%' },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  linkTitle: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  linkSub: { fontSize: 13, marginBottom: 16 },
+  linkEmpty: { fontSize: 14, textAlign: 'center', paddingVertical: 24, lineHeight: 22 },
+  workoutOption: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8,
+  },
+  optionType: { fontSize: 15, fontWeight: '700' },
+  optionMeta: { fontSize: 13, marginTop: 2 },
+  closeBtn: { marginTop: 12, padding: 14, borderRadius: 12, alignItems: 'center' },
+  closeBtnText: { fontSize: 15, fontWeight: '600' },
 });
