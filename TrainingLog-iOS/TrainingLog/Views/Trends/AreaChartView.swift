@@ -105,18 +105,30 @@ struct AreaChartView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: showYear ? .year : .month)) { value in
-                        if let date = value.as(Date.self) {
-                            AxisValueLabel {
-                                Text(date, format: showYear ? .dateTime.year() : .dateTime.month(.abbreviated))
-                                    .font(.caption2)
+                    if useBarChart {
+                        AxisMarks(values: .automatic) { value in
+                            if let date = value.as(Date.self) {
+                                AxisValueLabel {
+                                    Text(date, format: showYear ? .dateTime.month(.abbreviated).year() : .dateTime.month(.abbreviated))
+                                        .font(.caption2)
+                                }
+                                AxisGridLine()
                             }
-                            AxisGridLine()
+                        }
+                    } else {
+                        AxisMarks(values: .stride(by: showYear ? .year : .month)) { value in
+                            if let date = value.as(Date.self) {
+                                AxisValueLabel {
+                                    Text(date, format: showYear ? .dateTime.year() : .dateTime.month(.abbreviated))
+                                        .font(.caption2)
+                                }
+                                AxisGridLine()
+                            }
                         }
                     }
                 }
                 .frame(height: 130)
-                .padding(.trailing, 32)
+                .padding(.trailing, useBarChart ? 0 : 32)
             }
             }
             .padding(.horizontal, 16)

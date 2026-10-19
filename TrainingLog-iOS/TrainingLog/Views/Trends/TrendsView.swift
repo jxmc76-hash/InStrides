@@ -15,10 +15,6 @@ struct TrendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    InsightCard(summary: buildSummary())
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-
                     Picker("Period", selection: $period) {
                         ForEach(TrendPeriod.allCases, id: \.self) { p in
                             Text(p.rawValue).tag(p)
@@ -28,6 +24,8 @@ struct TrendsView: View {
                     .padding(.horizontal, 16)
 
                     if period == .shortTerm {
+                        InsightCard(summary: buildSummary())
+                            .padding(.horizontal, 16)
                         shortTermCharts
                     } else {
                         longTermCharts
@@ -175,9 +173,11 @@ struct TrendsView: View {
 
     private func allMonths() -> [MonthBucket] {
         let cal = Calendar.current
+        let currentMonthStart = cal.dateInterval(of: .month, for: .now)?.start ?? .now
         var groups: [Date: [DailyHealthData]] = [:]
         for day in hk.dailyData {
             let ms = cal.dateInterval(of: .month, for: day.date)?.start ?? day.date
+            guard ms < currentMonthStart else { continue }
             groups[ms, default: []].append(day)
         }
         return groups.keys.sorted().map { MonthBucket(start: $0, days: groups[$0]!) }
