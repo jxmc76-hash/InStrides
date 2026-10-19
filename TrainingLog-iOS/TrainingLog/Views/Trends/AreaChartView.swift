@@ -64,15 +64,18 @@ struct AreaChartView: View {
                             if useBarChart {
                                 BarMark(
                                     x: .value("Month", barLabel(point.date)),
-                                    y: .value(unit, point.value)
+                                    y: .value(unit, point.value),
+                                    width: .fixed(32)
                                 )
                                 .foregroundStyle(color)
                                 .cornerRadius(4)
                                 .annotation(position: .overlay, alignment: .top) {
                                     Text(String(format: "%.0f", point.value))
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.system(size: 9, weight: .bold))
                                         .foregroundStyle(.white)
-                                        .padding(.top, 5)
+                                        .padding(.top, 4)
+                                        .minimumScaleFactor(0.5)
+                                        .lineLimit(1)
                                 }
                             } else {
                                 LineMark(
@@ -140,7 +143,7 @@ struct AreaChartView: View {
                     if data.count > 12 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             chartContent
-                                .frame(width: CGFloat(data.count) * (useBarChart ? 28 : 20))
+                                .frame(width: CGFloat(data.count) * (useBarChart ? 44 : 20))
                         }
                         .defaultScrollAnchor(.trailing)
                     } else {
