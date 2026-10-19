@@ -66,7 +66,6 @@ struct EditPlanTableSheet: View {
     }
 }
 
-@MainActor
 private struct SessionTableRow: View {
     @Bindable var session: PlanSession
 
