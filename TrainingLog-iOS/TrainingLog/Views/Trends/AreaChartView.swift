@@ -60,7 +60,7 @@ struct AreaChartView: View {
                     .frame(height: 120)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
-                Chart {
+                let chartContent = Chart {
                     ForEach(data) { point in
                         if useBarChart {
                             BarMark(
@@ -136,7 +136,16 @@ struct AreaChartView: View {
                     }
                 }
                 .frame(height: 130)
-                .padding(.trailing, useBarChart ? 0 : 32)
+
+                if useBarChart && data.count > 12 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        chartContent
+                            .frame(width: CGFloat(data.count) * 28)
+                    }
+                } else {
+                    chartContent
+                        .padding(.trailing, useBarChart ? 0 : 32)
+                }
             }
             }
             .padding(.horizontal, 16)
