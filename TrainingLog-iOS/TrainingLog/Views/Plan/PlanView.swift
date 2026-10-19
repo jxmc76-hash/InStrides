@@ -20,14 +20,11 @@ struct PlanView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if plans.isEmpty {
-                    emptyState
-                } else {
-                    planList
-                }
+            if plans.isEmpty {
+                emptyState
+            } else {
+                planList
             }
-            .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
         }
     }
 
@@ -52,11 +49,10 @@ struct PlanView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showAddPlan = true } label: {
-                    Image(systemName: "plus")
-                }
+                Button { showAddPlan = true } label: { Image(systemName: "plus") }
             }
         }
+        .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
     }
 
     @ViewBuilder
@@ -113,6 +109,7 @@ struct PlanView: View {
                 }
             }
         }
+        .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
         .sheet(item: $showAddSession) { plan in
             AddSessionSheet(plan: plan)
         }

@@ -27,6 +27,7 @@ struct AddPlanSheet: View {
                     Button("Create") {
                         let plan = TrainingPlan(title: title, startDate: startDate, endDate: endDate)
                         context.insert(plan)
+                        try? context.save()
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
