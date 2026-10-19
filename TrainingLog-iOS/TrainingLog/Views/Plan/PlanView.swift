@@ -4,7 +4,8 @@ import UIKit
 
 struct PlanView: View {
     @Environment(HealthKitManager.self) private var hk
-    @Environment(\.modelContext) private var context
+    @Environment(\.modelContainer) private var container
+    private var context: ModelContext { container.mainContext }
     @EnvironmentObject var userStore: UserStore
     @State private var plans: [TrainingPlan] = []
     @State private var showAddPlan = false
