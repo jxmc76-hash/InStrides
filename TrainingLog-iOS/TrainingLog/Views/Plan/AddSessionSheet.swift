@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct AddPlanSheet: View {
-    let onCreate: (String, Date, Date) -> Void
+    @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var startDate = Date()
@@ -25,7 +25,13 @@ struct AddPlanSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        onCreate(title, startDate, endDate)
+                        let plan = TrainingPlan(
+                            title: title.trimmingCharacters(in: .whitespaces),
+                            startDate: startDate,
+                            endDate: endDate
+                        )
+                        context.insert(plan)
+                        try? context.save()
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
