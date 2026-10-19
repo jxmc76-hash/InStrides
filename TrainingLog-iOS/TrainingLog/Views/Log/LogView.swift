@@ -49,12 +49,15 @@ struct LogView: View {
                 set: { _ in energyPickerDate = nil }
             )) { item in
                 EnergyPickerSheet(date: item.date)
+                    .environment(userStore)
             }
             .sheet(item: Binding(
                 get: { selectedWorkouts.map { SelectedWorkoutsItem(workouts: $0) } },
                 set: { _ in selectedWorkouts = nil }
             )) { item in
                 WorkoutDetailSheet(workouts: item.workouts)
+                    .environment(userStore)
+                    .environment(hk)
             }
         }
     }

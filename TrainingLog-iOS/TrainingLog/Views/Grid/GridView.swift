@@ -45,6 +45,7 @@ struct GridView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsSheet()
+                    .environment(userStore)
             }
             .sheet(isPresented: $showColumnPicker) {
                 ColumnPickerSheet(selected: Binding(
@@ -57,6 +58,8 @@ struct GridView: View {
                 set: { _ in selectedWorkouts = nil }
             )) { item in
                 WorkoutDetailSheet(workouts: item.workouts)
+                    .environment(userStore)
+                    .environment(hk)
             }
         }
     }

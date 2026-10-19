@@ -51,8 +51,12 @@ struct ContentView: View {
             switch prompt {
             case .depth(let workout):
                 DepthPromptSheet(workout: workout)
+                    .environment(userStore)
+                    .environment(healthKit)
             case .gymWeight(let workout):
                 GymWeightEntrySheet(workout: workout)
+                    .environment(userStore)
+                    .environment(healthKit)
             }
         }
     }
