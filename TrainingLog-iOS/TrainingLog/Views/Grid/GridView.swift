@@ -13,12 +13,6 @@ struct GridView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    Text("TrainingLog")
-                        .font(.largeTitle.bold())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
                     LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                         Section {
                             gridBody
@@ -29,21 +23,9 @@ struct GridView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("TrainingLog")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 4) {
-                        Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
-                            .resizable()
-                            .frame(width: 26, height: 26)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .font(.caption.bold())
-                            .foregroundStyle(.orange)
-                        Text("TrainingLog")
-                            .font(.caption.bold())
-                            .foregroundStyle(.primary)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
                         Button { showSettings = true } label: {

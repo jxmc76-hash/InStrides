@@ -10,12 +10,6 @@ struct LogView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    Text("TrainingLog")
-                        .font(.largeTitle.bold())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
                 LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                     let grouped = groupByWeek(hk.dailyData)
                     ForEach(grouped, id: \.week) { group in
@@ -40,22 +34,8 @@ struct LogView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 4) {
-                        Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
-                            .resizable()
-                            .frame(width: 26, height: 26)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .font(.caption.bold())
-                            .foregroundStyle(.orange)
-                        Text("TrainingLog")
-                            .font(.caption.bold())
-                            .foregroundStyle(.primary)
-                    }
-                }
-            }
+            .navigationTitle("TrainingLog")
+            .navigationBarTitleDisplayMode(.large)
             .sheet(item: Binding(
                 get: { energyPickerDate.map { EnergyPickerItem(date: $0) } },
                 set: { _ in energyPickerDate = nil }

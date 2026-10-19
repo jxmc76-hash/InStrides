@@ -15,12 +15,6 @@ struct TrendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    Text("TrainingLog")
-                        .font(.largeTitle.bold())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-
                     Picker("Period", selection: $period) {
                         ForEach(TrendPeriod.allCases, id: \.self) { p in
                             Text(p.rawValue).tag(p)
@@ -37,22 +31,8 @@ struct TrendsView: View {
                 }
                 .padding(.bottom, 32)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 4) {
-                        Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
-                            .resizable()
-                            .frame(width: 26, height: 26)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .font(.caption.bold())
-                            .foregroundStyle(.orange)
-                        Text("TrainingLog")
-                            .font(.caption.bold())
-                            .foregroundStyle(.primary)
-                    }
-                }
-            }
+            .navigationTitle("TrainingLog")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 
