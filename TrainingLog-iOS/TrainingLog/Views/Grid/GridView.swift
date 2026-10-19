@@ -38,6 +38,18 @@ struct GridView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
+                        Button {
+                            let grouped = groupByWeek(hk.dailyData)
+                            if collapsedWeeks.count == grouped.count {
+                                collapsedWeeks = []
+                            } else {
+                                collapsedWeeks = Set(grouped.map(\.week))
+                            }
+                        } label: {
+                            Image(systemName: collapsedWeeks.count == groupByWeek(hk.dailyData).count
+                                  ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 13))
+                        }
                         Button { showSettings = true } label: {
                             Image(systemName: "gear")
                         }
@@ -152,7 +164,7 @@ struct GridView: View {
                     let count = days.reduce(0) { $0 + ($1.totalDuration(for: col) > 0 ? 1 : 0) }
                     Text(count > 0 ? "\(count)" : "")
                         .font(.caption2.bold())
-                        .foregroundStyle(allFive ? Color.yellow.opacity(0.9) : col.color.opacity(0.8))
+                        .foregroundStyle(allFive ? Color.primary : col.color.opacity(0.8))
                         .frame(maxWidth: .infinity)
                 }
             }
