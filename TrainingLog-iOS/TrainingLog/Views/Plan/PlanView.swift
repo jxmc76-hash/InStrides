@@ -308,13 +308,11 @@ struct PlanView: View {
 
     @discardableResult
     private func fetchPlans() -> [TrainingPlan] {
-        let descriptor = FetchDescriptor<TrainingPlan>(
-            sortBy: [SortDescriptor(\TrainingPlan.startDate)]
-        )
+        let descriptor = FetchDescriptor<TrainingPlan>()
         do {
             let result = try context.fetch(descriptor)
             debugMessage = "fetch: \(result.count) plans"
-            return result
+            return result.sorted { $0.startDate < $1.startDate }
         } catch {
             debugMessage = "fetch error: \(error)"
             return []
