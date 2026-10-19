@@ -26,7 +26,13 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
+        .sheet(isPresented: $showAddPlan) {
+            AddPlanSheet { title, start, end in
+                let plan = TrainingPlan(title: title, startDate: start, endDate: end)
+                context.insert(plan)
+                try? context.save()
+            }
+        }
     }
 
     @ViewBuilder
