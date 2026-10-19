@@ -38,6 +38,10 @@ struct ContentView: View {
                 .environment(healthKit)
                 .environmentObject(userStore)
                 .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
+
+            InsightsView()
+                .environment(healthKit)
+                .tabItem { Label("Insights", systemImage: "brain") }
         }
         .tint(.orange)
         .environment(healthKit)
