@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var healthKit = HealthKitManager()
     @State private var userStore = UserStore()
     @State private var workoutPrompt: WorkoutPrompt? = nil
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TabView {
@@ -40,6 +41,11 @@ struct ContentView: View {
         }
         .onChange(of: healthKit.dailyData.count) { _, _ in
             checkForWorkoutPrompts()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await healthKit.fetchAll() }
+            }
         }
         .sheet(item: $workoutPrompt) { prompt in
             switch prompt {
