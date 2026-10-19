@@ -62,6 +62,14 @@ struct PlanView: View {
             ForEach(plans) { plan in
                 Section {
                     planHeader(plan)
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                tablePlan = plan
+                            } label: {
+                                Label("Edit Sessions", systemImage: "tablecells")
+                            }
+                            .tint(.blue)
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 context.delete(plan)
@@ -83,12 +91,6 @@ struct PlanView: View {
                         showAddSession = plan
                     } label: {
                         Label("Add Session", systemImage: "plus.circle")
-                            .font(.subheadline)
-                    }
-                    Button {
-                        tablePlan = plan
-                    } label: {
-                        Label("Edit All Sessions", systemImage: "tablecells")
                             .font(.subheadline)
                     }
                 }
