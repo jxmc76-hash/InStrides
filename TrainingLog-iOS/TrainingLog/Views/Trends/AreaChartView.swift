@@ -141,7 +141,6 @@ struct AreaChartView: View {
                     }
                 }
                 .frame(height: useBarChart ? 170 : 130)
-                .clipped(false)
 
                 if data.count > 12 {
                     ScrollView(.horizontal, showsIndicators: false) {
