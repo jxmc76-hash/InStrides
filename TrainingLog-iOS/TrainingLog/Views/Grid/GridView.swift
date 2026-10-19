@@ -12,18 +12,35 @@ struct GridView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-                    Section {
-                        gridBody
-                    } header: {
-                        headerRow
+                VStack(spacing: 0) {
+                    Text("Grid")
+                        .font(.largeTitle.bold())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+                    LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                        Section {
+                            gridBody
+                        } header: {
+                            headerRow
+                        }
                     }
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationTitle("TrainingLog")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "figure.run")
+                            .font(.caption.bold())
+                            .foregroundStyle(.orange)
+                        Text("TrainingLog")
+                            .font(.caption.bold())
+                            .foregroundStyle(.primary)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
                         Button { showSettings = true } label: {

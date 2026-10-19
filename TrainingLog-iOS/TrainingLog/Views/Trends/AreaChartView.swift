@@ -23,10 +23,12 @@ struct AreaChartView: View {
     }
 
     private var yDomain: ClosedRange<Double> {
-        let vals = data.map(\.value)
-        guard let lo = vals.min(), let hi = vals.max(), lo < hi else {
-            return 0...1
+        if useBarChart {
+            let hi = data.map(\.value).max() ?? 1
+            return 0...(hi * 1.15)
         }
+        let vals = data.map(\.value)
+        guard let lo = vals.min(), let hi = vals.max(), lo < hi else { return 0...1 }
         let pad = (hi - lo) * 0.15
         return (lo - pad)...(hi + pad)
     }
@@ -59,8 +61,8 @@ struct AreaChartView: View {
                                 x: .value("Date", point.date),
                                 y: .value(unit, point.value)
                             )
-                            .foregroundStyle(color.opacity(0.85))
-                            .cornerRadius(3)
+                            .foregroundStyle(color)
+                            .cornerRadius(4)
                         } else {
                             LineMark(
                                 x: .value("Date", point.date),
@@ -106,13 +108,12 @@ struct AreaChartView: View {
                 }
                 .chartXAxis {
                     if useBarChart {
-                        AxisMarks(values: .automatic) { value in
+                        AxisMarks(values: .stride(by: .month)) { value in
                             if let date = value.as(Date.self) {
                                 AxisValueLabel {
                                     Text(date, format: showYear ? .dateTime.month(.abbreviated).year() : .dateTime.month(.abbreviated))
                                         .font(.caption2)
                                 }
-                                AxisGridLine()
                             }
                         }
                     } else {

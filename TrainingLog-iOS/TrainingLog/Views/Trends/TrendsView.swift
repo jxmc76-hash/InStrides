@@ -15,6 +15,12 @@ struct TrendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    Text("Trends")
+                        .font(.largeTitle.bold())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+
                     Picker("Period", selection: $period) {
                         ForEach(TrendPeriod.allCases, id: \.self) { p in
                             Text(p.rawValue).tag(p)
@@ -33,8 +39,19 @@ struct TrendsView: View {
                 }
                 .padding(.bottom, 32)
             }
-            .navigationTitle("TrainingLog")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "figure.run")
+                            .font(.caption.bold())
+                            .foregroundStyle(.orange)
+                        Text("TrainingLog")
+                            .font(.caption.bold())
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }
         }
     }
 

@@ -24,6 +24,12 @@ struct PlanView: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 16) {
+            Text("Plan")
+                .font(.largeTitle.bold())
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            Spacer()
             Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 56))
                 .foregroundStyle(.secondary)
@@ -35,10 +41,21 @@ struct PlanView: View {
                 .multilineTextAlignment(.center)
             Button("Create Plan") { showAddPlan = true }
                 .buttonStyle(.borderedProminent)
+            Spacer()
         }
-        .padding(32)
-        .navigationTitle("TrainingLog")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 4) {
+                    Image(systemName: "figure.run")
+                        .font(.caption.bold())
+                        .foregroundStyle(.orange)
+                    Text("TrainingLog")
+                        .font(.caption.bold())
+                        .foregroundStyle(.primary)
+                }
+            }
+        }
         .sheet(isPresented: $showAddPlan) {
             AddPlanSheet()
         }
@@ -47,6 +64,13 @@ struct PlanView: View {
     @ViewBuilder
     private var planList: some View {
         List {
+            Section {
+                Text("Plan")
+                    .font(.largeTitle.bold())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .padding(.top, 4)
+            }
             ForEach(plans) { plan in
                 Section {
                     planHeader(plan)
@@ -68,9 +92,18 @@ struct PlanView: View {
                 }
             }
         }
-        .navigationTitle("TrainingLog")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 4) {
+                    Image(systemName: "figure.run")
+                        .font(.caption.bold())
+                        .foregroundStyle(.orange)
+                    Text("TrainingLog")
+                        .font(.caption.bold())
+                        .foregroundStyle(.primary)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showAddPlan = true } label: {
                     Image(systemName: "plus")
