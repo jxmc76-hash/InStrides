@@ -36,7 +36,7 @@ struct AreaChartView: View {
     private var yDomain: ClosedRange<Double> {
         if useBarChart {
             let hi = data.map(\.value).max() ?? 1
-            return 0...(hi * 1.1)
+            return 0...(hi * 1.35)
         }
         let vals = data.map(\.value)
         guard let lo = vals.min(), let hi = vals.max(), lo < hi else { return 0...1 }
@@ -73,12 +73,11 @@ struct AreaChartView: View {
                                 y: .value(unit, point.value)
                             )
                             .foregroundStyle(color)
-                            .cornerRadius(3)
-                            .annotation(position: .overlay, alignment: .top) {
+                            .cornerRadius(4)
+                            .annotation(position: .top, alignment: .center, spacing: 3) {
                                 Text(String(format: "%.0f", point.value))
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.top, 4)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(color)
                             }
                         } else {
                             LineMark(
@@ -125,7 +124,7 @@ struct AreaChartView: View {
                 }
                 .chartXAxis {
                     if useBarChart {
-                        AxisMarks(preset: .automatic, values: .automatic) { _ in
+                        AxisMarks(values: data.map { barLabel($0.date) }) { _ in
                             AxisValueLabel()
                                 .font(.system(size: 9))
                         }
@@ -141,7 +140,8 @@ struct AreaChartView: View {
                         }
                     }
                 }
-                .frame(height: useBarChart ? 150 : 130)
+                .frame(height: useBarChart ? 170 : 130)
+                .clipped(false)
 
                 if data.count > 12 {
                     ScrollView(.horizontal, showsIndicators: false) {
