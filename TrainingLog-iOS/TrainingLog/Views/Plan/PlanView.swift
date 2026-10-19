@@ -26,6 +26,7 @@ struct PlanView: View {
                 planList
             }
         }
+        .sheet(isPresented: $showAddPlan) { AddPlanSheet() }
     }
 
     @ViewBuilder
@@ -47,8 +48,12 @@ struct PlanView: View {
         }
         .navigationTitle("Plan")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showAddPlan) {
-            AddPlanSheet()
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showAddPlan = true } label: {
+                    Image(systemName: "plus")
+                }
+            }
         }
     }
 
@@ -106,7 +111,6 @@ struct PlanView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddPlan) { AddPlanSheet() }
         .sheet(item: $showAddSession) { plan in
             AddSessionSheet(plan: plan)
         }
