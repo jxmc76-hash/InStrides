@@ -7,6 +7,7 @@ struct AddPlanSheet: View {
     @State private var title = ""
     @State private var startDate = Date()
     @State private var endDate = Calendar.current.date(byAdding: .month, value: 3, to: Date())!
+    @State private var saveError: String?
 
     var body: some View {
         NavigationStack {
@@ -15,6 +16,11 @@ struct AddPlanSheet: View {
                     TextField("e.g. London Marathon 2026", text: $title)
                     DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                     DatePicker("Race Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                }
+                if let err = saveError {
+                    Section {
+                        Text(err).foregroundStyle(.red).font(.caption)
+                    }
                 }
             }
             .navigationTitle("New Plan")
@@ -31,8 +37,12 @@ struct AddPlanSheet: View {
                             endDate: endDate
                         )
                         context.insert(plan)
-                        try? context.save()
-                        dismiss()
+                        do {
+                            try context.save()
+                            dismiss()
+                        } catch {
+                            saveError = error.localizedDescription
+                        }
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
