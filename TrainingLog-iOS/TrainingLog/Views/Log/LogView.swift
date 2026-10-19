@@ -139,9 +139,9 @@ struct DayLogCard: View {
     let day: DailyHealthData
     let weight: Double?
     let vo2: Double?
-    let userStore: UserStore
     let onTapEnergy: () -> Void
     let onTapWorkout: ([HealthWorkout]) -> Void
+    @Environment(UserStore.self) private var userStore
 
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f
