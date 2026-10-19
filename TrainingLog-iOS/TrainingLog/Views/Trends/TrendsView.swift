@@ -17,7 +17,7 @@ struct TrendsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
+                    Image("Logo")
                         .resizable()
                         .frame(width: 28, height: 28)
                         .clipShape(RoundedRectangle(cornerRadius: 7))
