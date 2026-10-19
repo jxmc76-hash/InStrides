@@ -6,6 +6,10 @@ struct GridView: View {
     @State private var selectedWorkouts: [HealthWorkout]? = nil
     @State private var showColumnPicker = false
     @State private var showSettings = false
+    @State private var collapsedWeeks: Set<Date> = []
+    @State private var collapseInitialised = false
+
+    private let collapseThreshold = 12 // weeks
 
     private var columns: [WorkoutType] { userStore.selectedColumns }
 
@@ -87,17 +91,33 @@ struct GridView: View {
     @ViewBuilder
     private var gridBody: some View {
         let grouped = groupByWeek(hk.dailyData)
+        let cutoff = Calendar.current.date(byAdding: .weekOfYear, value: -collapseThreshold, to: .now) ?? .now
         ForEach(grouped, id: \.week) { group in
-            weekHeader(for: group.days)
-            ForEach(group.days) { day in
-                GridRow(day: day, columns: columns) { workouts in
-                    selectedWorkouts = workouts
+            weekHeader(for: group.days, collapsed: collapsedWeeks.contains(group.week)) {
+                if collapsedWeeks.contains(group.week) {
+                    collapsedWeeks.remove(group.week)
+                } else {
+                    collapsedWeeks.insert(group.week)
                 }
+            }
+            if !collapsedWeeks.contains(group.week) {
+                ForEach(group.days) { day in
+                    GridRow(day: day, columns: columns) { workouts in
+                        selectedWorkouts = workouts
+                    }
+                }
+            }
+        }
+        .onAppear {
+            guard !collapseInitialised else { return }
+            collapseInitialised = true
+            for group in grouped where group.week < cutoff {
+                collapsedWeeks.insert(group.week)
             }
         }
     }
 
-    private func weekHeader(for days: [DailyHealthData]) -> some View {
+    private func weekHeader(for days: [DailyHealthData], collapsed: Bool, onTap: @escaping () -> Void) -> some View {
         let cal = Calendar.current
         let fmt = DateFormatter()
         fmt.dateFormat = "d MMM"
@@ -110,28 +130,34 @@ struct GridView: View {
         }()
         let activeTypes = Set(days.flatMap { $0.workouts }.map { $0.type })
         let allFive = columns.count >= 5 && columns.allSatisfy { activeTypes.contains($0) }
-        return HStack(spacing: 0) {
-            HStack(spacing: 3) {
-                Text(label)
-                    .font(.caption2.bold())
-                    .foregroundStyle(.secondary)
-                if allFive {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.yellow)
+        return Button(action: onTap) {
+            HStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                    Text(label)
+                        .font(.caption2.bold())
+                        .foregroundStyle(.secondary)
+                    if allFive {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.yellow)
+                    }
+                }
+                .frame(width: 72, alignment: .leading)
+                .padding(.leading, 12)
+                .padding(.vertical, 6)
+                ForEach(columns) { col in
+                    let count = days.reduce(0) { $0 + ($1.totalDuration(for: col) > 0 ? 1 : 0) }
+                    Text(count > 0 ? "\(count)" : "")
+                        .font(.caption2.bold())
+                        .foregroundStyle(allFive ? Color.yellow.opacity(0.9) : col.color.opacity(0.8))
+                        .frame(maxWidth: .infinity)
                 }
             }
-            .frame(width: 72, alignment: .leading)
-            .padding(.leading, 16)
-            .padding(.vertical, 6)
-            ForEach(columns) { col in
-                let count = days.reduce(0) { $0 + ($1.totalDuration(for: col) > 0 ? 1 : 0) }
-                Text(count > 0 ? "\(count)" : "")
-                    .font(.caption2.bold())
-                    .foregroundStyle(allFive ? Color.yellow.opacity(0.9) : col.color.opacity(0.8))
-                    .frame(maxWidth: .infinity)
-            }
         }
+        .buttonStyle(.plain)
         .background(allFive ? Color.yellow.opacity(0.18) : Color(uiColor: .systemGroupedBackground))
         .overlay(allFive ? RoundedRectangle(cornerRadius: 6).stroke(Color.yellow.opacity(0.7), lineWidth: 1.5).padding(.horizontal, 8) : nil)
     }
