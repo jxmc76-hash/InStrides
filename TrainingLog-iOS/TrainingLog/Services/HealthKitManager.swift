@@ -22,16 +22,19 @@ final class HealthKitManager {
     }
 
     func requestAuthorization() async {
+        print("[HK] isHealthDataAvailable=\(HKHealthStore.isHealthDataAvailable())")
         guard HKHealthStore.isHealthDataAvailable() else { return }
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
+            print("[HK] authorization succeeded, fetching...")
             await fetchAll()
         } catch {
-            print("HealthKit authorization failed: \(error)")
+            print("[HK] authorization failed: \(error)")
         }
     }
 
     func fetchAll() async {
+        print("[HK] fetchAll start")
         isLoading = true
         defer { isLoading = false }
 
@@ -45,8 +48,10 @@ final class HealthKitManager {
 
         let (ws, wts, vs, sl) = await (workouts, weights, vo2s, sleepRaw)
 
+        print("[HK] fetchAll complete: \(ws.count) workouts, \(wts.count) weights, \(vs.count) vo2, \(sl.count) sleep")
         dailyData = buildDailyData(workouts: ws, weights: wts, vo2s: vs, sleep: sl,
                                     from: start, to: end)
+        print("[HK] dailyData set: \(dailyData.count) days")
     }
 
     // MARK: - Private fetch helpers
