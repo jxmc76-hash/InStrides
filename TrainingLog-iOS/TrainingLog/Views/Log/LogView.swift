@@ -18,7 +18,6 @@ struct LogView: View {
                                     day: day,
                                     weight: carryForwardWeight[day.date],
                                     vo2: carryForwardVO2[day.date],
-                                    userStore: userStore,
                                     onTapEnergy: { energyPickerDate = day.date },
                                     onTapWorkout: { selectedWorkouts = $0 }
                                 )
