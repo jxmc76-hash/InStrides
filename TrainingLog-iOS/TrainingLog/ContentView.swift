@@ -20,15 +20,23 @@ struct ContentView: View {
     var body: some View {
         TabView {
             GridView()
+                .environment(healthKit)
+                .environment(userStore)
                 .tabItem { Label("Grid", systemImage: "grid") }
 
             LogView()
+                .environment(healthKit)
+                .environment(userStore)
                 .tabItem { Label("Log", systemImage: "list.bullet") }
 
             PlanView()
+                .environment(healthKit)
+                .environment(userStore)
                 .tabItem { Label("Plan", systemImage: "calendar") }
 
             TrendsView()
+                .environment(healthKit)
+                .environment(userStore)
                 .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
         }
         .tint(.orange)
