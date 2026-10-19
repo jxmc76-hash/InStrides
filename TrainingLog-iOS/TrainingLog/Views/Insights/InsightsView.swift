@@ -102,8 +102,22 @@ struct InsightsView: View {
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        ForEach(Array(insights.enumerated()), id: \.offset) { _, insight in
+        let insightItems = Array(insights.prefix(4))
+        let focusItems = insights.count > 4 ? Array(insights.suffix(from: 4)) : []
+
+        ForEach(Array(insightItems.enumerated()), id: \.offset) { _, insight in
             InsightCardView(text: insight)
+        }
+
+        if !focusItems.isEmpty {
+            Text("Focus next month")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+
+            ForEach(Array(focusItems.enumerated()), id: \.offset) { _, focus in
+                InsightCardView(text: focus, accent: .orange)
+            }
         }
     }
 
@@ -123,22 +137,35 @@ struct InsightsView: View {
         let session = LanguageModelSession()
         let prompt = """
         You are a personal training coach analysing an athlete's workout data. \
-        Based on the data below, provide exactly 5 concise, personalised insights. \
-        Each insight should be on its own line starting with a relevant emoji. \
-        Focus on: (1) what the athlete has done in the past 4 weeks, \
-        (2) how that compares to their previous activity, and \
-        (3) what will happen if they continue at the current trajectory — are they building, maintaining, or declining? \
-        Be specific with numbers. Be honest but encouraging. Keep each insight to 1-2 sentences.
+        Activity types: RUN=running, YOGA=yoga, GYM=strength training, SWIM=swimming, SIT=meditation (mindfulness, not sit-ups). \
+        Based on the data below, respond in two sections:
+
+        Section 1 — "INSIGHTS" (exactly 4 lines):
+        Each line starts with a relevant emoji. \
+        Cover: what was done in the last 4 weeks, how it compares to the prior 4 weeks, and the trajectory if current pace continues. \
+        Be specific with numbers. Be honest but encouraging. No markdown bold or asterisks.
+
+        Section 2 — "FOCUS" (exactly 3 lines):
+        Three things to concentrate on in the next month. \
+        Each line starts with a relevant emoji, names the focus area, and explains in one sentence why it matters based on the data. \
+        No markdown bold or asterisks.
+
+        Format your response exactly as:
+        INSIGHTS
+        [4 insight lines]
+        FOCUS
+        [3 focus lines]
 
         \(summary)
         """
 
         do {
             let response = try await session.respond(to: prompt)
-            let lines = response.content
+            let cleaned = response.content.replacingOccurrences(of: "**", with: "")
+            let lines = cleaned
                 .components(separatedBy: "\n")
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
+                .filter { !$0.isEmpty && $0 != "INSIGHTS" && $0 != "FOCUS" }
             insights = lines
             lastGenerated = .now
         } catch {
@@ -222,6 +249,7 @@ struct InsightsView: View {
 
 struct InsightCardView: View {
     let text: String
+    var accent: Color? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -235,6 +263,12 @@ struct InsightCardView: View {
         }
         .padding(16)
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            accent.map { color in
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(color.opacity(0.4), lineWidth: 1.5)
+            }
+        )
     }
 
     private var leadingEmoji: String {
