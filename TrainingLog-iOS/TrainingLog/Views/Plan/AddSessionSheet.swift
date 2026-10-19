@@ -2,12 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct AddPlanSheet: View {
-    let context: ModelContext
+    let onCreated: (TrainingPlan) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var startDate = Date()
     @State private var endDate = Calendar.current.date(byAdding: .month, value: 3, to: Date())!
-    @State private var saveError: String?
 
     var body: some View {
         NavigationStack {
@@ -16,11 +15,6 @@ struct AddPlanSheet: View {
                     TextField("e.g. London Marathon 2026", text: $title)
                     DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                     DatePicker("Race Date", selection: $endDate, in: startDate..., displayedComponents: .date)
-                }
-                if let err = saveError {
-                    Section {
-                        Text(err).foregroundStyle(.red).font(.caption)
-                    }
                 }
             }
             .navigationTitle("New Plan")
@@ -36,13 +30,8 @@ struct AddPlanSheet: View {
                             startDate: startDate,
                             endDate: endDate
                         )
-                        context.insert(plan)
-                        do {
-                            try context.save()
-                            dismiss()
-                        } catch {
-                            saveError = error.localizedDescription
-                        }
+                        onCreated(plan)
+                        dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }

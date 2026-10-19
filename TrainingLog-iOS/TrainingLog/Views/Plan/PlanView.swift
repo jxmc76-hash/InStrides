@@ -26,8 +26,13 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan, onDismiss: fetchPlans) {
-            AddPlanSheet(context: context)
+        .sheet(isPresented: $showAddPlan) {
+            AddPlanSheet { plan in
+                context.insert(plan)
+                try? context.save()
+                plans.append(plan)
+                plans.sort { $0.startDate < $1.startDate }
+            }
         }
         .onAppear(perform: fetchPlans)
     }
