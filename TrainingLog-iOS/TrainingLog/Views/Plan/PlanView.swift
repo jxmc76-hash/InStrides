@@ -12,6 +12,7 @@ struct PlanView: View {
     @State private var editPlan: TrainingPlan? = nil
     @State private var editSession: PlanSession? = nil
     @State private var tablePlan: TrainingPlan? = nil
+    @State private var planToDelete: TrainingPlan? = nil
     private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
@@ -62,17 +63,9 @@ struct PlanView: View {
             ForEach(plans) { plan in
                 Section {
                     planHeader(plan)
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                tablePlan = plan
-                            } label: {
-                                Label("Edit Sessions", systemImage: "tablecells")
-                            }
-                            .tint(.blue)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
-                                context.delete(plan)
+                                planToDelete = plan
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -131,6 +124,20 @@ struct PlanView: View {
         .sheet(item: $tablePlan) { plan in
             EditPlanTableSheet(plan: plan)
         }
+        .alert("Delete Plan?", isPresented: Binding(
+            get: { planToDelete != nil },
+            set: { if !$0 { planToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let plan = planToDelete { context.delete(plan) }
+                planToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { planToDelete = nil }
+        } message: {
+            if let plan = planToDelete {
+                Text(""\(plan.title)" and all its sessions will be permanently deleted.")
+            }
+        }
     }
 
     @ViewBuilder
@@ -140,22 +147,35 @@ struct PlanView: View {
         let race = plan.endDate
         let daysLeft = Calendar.current.dateComponents([.day], from: .now, to: race).day ?? 0
 
-        Button {
-            editPlan = plan
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(plan.title).font(.headline)
-                HStack(spacing: 20) {
-                    stat("\(max(0, daysLeft))", label: "days left")
-                    stat("\(done)/\(total)", label: "sessions")
-                    stat("\(total > 0 ? (done * 100 / total) : 0)%", label: "complete")
+        HStack(alignment: .top) {
+            Button {
+                editPlan = plan
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(plan.title).font(.headline)
+                    HStack(spacing: 20) {
+                        stat("\(max(0, daysLeft))", label: "days left")
+                        stat("\(done)/\(total)", label: "sessions")
+                        stat("\(total > 0 ? (done * 100 / total) : 0)%", label: "complete")
+                    }
+                    ProgressView(value: total > 0 ? Double(done) / Double(total) : 0)
+                        .tint(.orange)
                 }
-                ProgressView(value: total > 0 ? Double(done) / Double(total) : 0)
-                    .tint(.orange)
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Button {
+                tablePlan = plan
+            } label: {
+                Image(systemName: "tablecells")
+                    .foregroundStyle(.orange)
+                    .padding(.top, 4)
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 
     private func stat(_ value: String, label: String) -> some View {
