@@ -27,7 +27,7 @@ struct PlanView: View {
             }
         }
         .sheet(isPresented: $showAddPlan) {
-            AddPlanSheet()
+            AddPlanSheet(context: context)
         }
     }
 
