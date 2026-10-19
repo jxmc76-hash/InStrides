@@ -20,13 +20,15 @@ struct PlanView: View {
 
     var body: some View {
         NavigationStack {
-            if plans.isEmpty {
-                emptyState
-            } else {
-                planList
+            Group {
+                if plans.isEmpty {
+                    emptyState
+                } else {
+                    planList
+                }
             }
+            .sheet(isPresented: $showAddPlan) { AddPlanSheet() }
         }
-        .sheet(isPresented: $showAddPlan) { AddPlanSheet() }
     }
 
     @ViewBuilder
