@@ -19,7 +19,12 @@ struct AreaChartView: View {
 
     private func barLabel(_ date: Date) -> String {
         let f = DateFormatter()
-        f.dateFormat = showYear ? "MMM yy" : "d MMM"
+        if showYear {
+            let month = Calendar.current.component(.month, from: date)
+            f.dateFormat = month == 1 ? "MMM ''yy" : "MMM"
+        } else {
+            f.dateFormat = "d MMM"
+        }
         return f.string(from: date)
     }
 
