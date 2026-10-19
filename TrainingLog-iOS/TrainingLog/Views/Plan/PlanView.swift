@@ -45,14 +45,6 @@ struct PlanView: View {
         }
         .navigationTitle("Plan")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Image("Logo")
-                    .resizable()
-                    .frame(width: 28, height: 28)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-            }
-        }
         .sheet(isPresented: $showAddPlan) {
             AddPlanSheet()
         }
@@ -94,12 +86,6 @@ struct PlanView: View {
         .navigationTitle("Plan")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Image("Logo")
-                    .resizable()
-                    .frame(width: 28, height: 28)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showAddPlan = true } label: {
                     Image(systemName: "plus")

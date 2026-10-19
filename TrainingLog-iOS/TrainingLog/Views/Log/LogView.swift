@@ -36,14 +36,6 @@ struct LogView: View {
             .refreshable { await hk.fetchAll() }
             .navigationTitle("Log")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Image("Logo")
-                        .resizable()
-                        .frame(width: 28, height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
-                }
-            }
             .sheet(item: Binding(
                 get: { energyPickerDate.map { EnergyPickerItem(date: $0) } },
                 set: { _ in energyPickerDate = nil }

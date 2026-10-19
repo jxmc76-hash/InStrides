@@ -15,14 +15,6 @@ struct TrendsView: View {
             }
             .navigationTitle("Trends")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Image("Logo")
-                        .resizable()
-                        .frame(width: 28, height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
-                }
-            }
         }
     }
 
