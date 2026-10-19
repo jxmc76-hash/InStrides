@@ -27,7 +27,7 @@ struct GridView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationTitle("Grid")
+            .navigationTitle("Overview")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

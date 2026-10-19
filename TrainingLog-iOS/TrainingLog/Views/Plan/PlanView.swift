@@ -6,7 +6,9 @@ struct PlanView: View {
     @Environment(HealthKitManager.self) private var hk
     @Environment(\.modelContext) private var context
     @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
+    @EnvironmentObject var userStore: UserStore
     @State private var showAddPlan = false
+    @State private var isSyncingCalendar = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
     @State private var editPlan: TrainingPlan? = nil
@@ -86,6 +88,18 @@ struct PlanView: View {
         .navigationTitle("Plan")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    Task { await syncCalendar() }
+                } label: {
+                    if isSyncingCalendar {
+                        ProgressView().scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "calendar.badge.plus")
+                    }
+                }
+                .disabled(isSyncingCalendar || plans.isEmpty)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showAddPlan = true } label: {
                     Image(systemName: "plus")
@@ -265,6 +279,17 @@ struct PlanView: View {
 
     private func fmtDate(_ date: Date) -> String {
         Self.dateFmt.string(from: date)
+    }
+
+    private func syncCalendar() async {
+        isSyncingCalendar = true
+        var allIDs = userStore.calendarEventsBySessionKey
+        for plan in plans {
+            let updated = await CalendarSyncManager.shared.sync(plan: plan, eventIDs: allIDs)
+            allIDs.merge(updated) { _, new in new }
+        }
+        userStore.setCalendarEventIDs(allIDs)
+        isSyncingCalendar = false
     }
 }
 

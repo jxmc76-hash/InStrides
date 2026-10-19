@@ -11,6 +11,7 @@ final class UserStore: ObservableObject {
         var c = DateComponents(); c.hour = 7; c.minute = 0
         return Calendar.current.date(from: c) ?? Date()
     }()
+    @Published var calendarEventsBySessionKey: [String: String] = [:]
 
     private let columnsKey      = "selectedColumns"
     private let energyKey       = "energyByDate"
@@ -18,6 +19,7 @@ final class UserStore: ObservableObject {
     private let gymKey          = "gymWeights"
     private let effortKey       = "effortByWorkout"
     private let reminderTimeKey = "reminderTime"
+    private let calendarKey     = "calendarEventIDs"
 
     init() { load() }
 
@@ -46,6 +48,11 @@ final class UserStore: ObservableObject {
         save()
     }
 
+    func setCalendarEventIDs(_ ids: [String: String]) {
+        calendarEventsBySessionKey = ids
+        save()
+    }
+
     private func key(_ date: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
@@ -62,6 +69,7 @@ final class UserStore: ObservableObject {
             effortByWorkoutID.map { (k, v) in (k.uuidString, v) })
         UserDefaults.standard.set(effortEncoded, forKey: effortKey)
         UserDefaults.standard.set(reminderTime.timeIntervalSinceReferenceDate, forKey: reminderTimeKey)
+        UserDefaults.standard.set(calendarEventsBySessionKey, forKey: calendarKey)
     }
 
     private func load() {
@@ -82,5 +90,6 @@ final class UserStore: ObservableObject {
         if interval != 0 {
             reminderTime = Date(timeIntervalSinceReferenceDate: interval)
         }
+        calendarEventsBySessionKey = UserDefaults.standard.dictionary(forKey: calendarKey) as? [String: String] ?? [:]
     }
 }

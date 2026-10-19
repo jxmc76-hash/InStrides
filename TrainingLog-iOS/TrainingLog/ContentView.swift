@@ -22,7 +22,7 @@ struct ContentView: View {
             GridView()
                 .environment(healthKit)
                 .environmentObject(userStore)
-                .tabItem { Label("Grid", systemImage: "grid") }
+                .tabItem { Label("Overview", systemImage: "grid") }
 
             LogView()
                 .environment(healthKit)
@@ -39,9 +39,6 @@ struct ContentView: View {
                 .environmentObject(userStore)
                 .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
 
-            InsightsView()
-                .environment(healthKit)
-                .tabItem { Label("Insights", systemImage: "lightbulb") }
         }
         .tint(.orange)
         .environment(healthKit)

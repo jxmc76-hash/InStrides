@@ -1,11 +1,15 @@
 import SwiftUI
+import SwiftData
 
 struct WorkoutDetailSheet: View {
     let workouts: [HealthWorkout]
     @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
     @State private var gymWeightInput: String = ""
     @State private var editingWorkout: HealthWorkout?
+    @State private var linkingWorkout: HealthWorkout?
 
     private static let timeFmt: DateFormatter = {
         let f = DateFormatter(); f.timeStyle = .short; return f
@@ -49,6 +53,9 @@ struct WorkoutDetailSheet: View {
             .sheet(item: $editingWorkout) { workout in
                 GymWeightEntrySheet(workout: workout)
             }
+            .sheet(item: $linkingWorkout) { workout in
+                LinkToPlanSheet(workout: workout, plans: plans)
+            }
         }
     }
 
@@ -88,6 +95,18 @@ struct WorkoutDetailSheet: View {
         case .sit:
             row("Duration", value: "\(workout.durationMinutes) min")
             depthRow(for: workout)
+        }
+
+        if !plans.isEmpty {
+            let linked = plans.flatMap(\.sessions).first { $0.linkedWorkoutID == workout.id }
+            if let linked {
+                row("Plan Session", value: "\(linked.type) — \(linked.target)")
+            } else {
+                Button("Link to Plan Session") {
+                    linkingWorkout = workout
+                }
+                .font(.subheadline)
+            }
         }
     }
 

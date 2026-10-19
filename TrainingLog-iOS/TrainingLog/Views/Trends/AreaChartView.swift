@@ -16,12 +16,6 @@ struct AreaChartView: View {
     var insight: String? = nil
     var useBarChart: Bool = false
 
-    private func barLabel(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM ''yy"
-        return f.string(from: date)
-    }
-
     private var average: Double {
         guard !data.isEmpty else { return 0 }
         return data.map(\.value).reduce(0, +) / Double(data.count)
@@ -59,9 +53,9 @@ struct AreaChartView: View {
                         ForEach(data) { point in
                             if useBarChart {
                                 BarMark(
-                                    x: .value("Month", barLabel(point.date)),
+                                    x: .value("Month", point.date, unit: .month),
                                     y: .value(unit, point.value),
-                                    width: .fixed(32)
+                                    width: .ratio(0.8)
                                 )
                                 .foregroundStyle(color)
                                 .cornerRadius(4)
@@ -118,12 +112,14 @@ struct AreaChartView: View {
                     }
                     .chartXAxis {
                         if useBarChart {
-                            AxisMarks(values: data.map { barLabel($0.date) }) { value in
+                            AxisMarks(values: .stride(by: .month, count: 6)) { value in
                                 AxisValueLabel {
-                                    if let s = value.as(String.self) {
-                                        Text(s).font(.system(size: 9))
+                                    if let date = value.as(Date.self) {
+                                        Text(date, format: .dateTime.month(.abbreviated).year(.twoDigits))
+                                            .font(.system(size: 9))
                                     }
                                 }
+                                AxisGridLine()
                             }
                         } else {
                             AxisMarks(values: .stride(by: .year)) { value in
@@ -137,7 +133,7 @@ struct AreaChartView: View {
                             }
                         }
                     }
-                    .frame(height: useBarChart ? 160 : 130)
+                    .frame(height: useBarChart ? 200 : 130)
 
                     if data.count > 12 {
                         ScrollView(.horizontal, showsIndicators: false) {
