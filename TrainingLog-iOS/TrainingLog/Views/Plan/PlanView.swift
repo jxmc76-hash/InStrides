@@ -38,8 +38,8 @@ struct PlanView: View {
                 .buttonStyle(.borderedProminent)
             Spacer()
         }
-        .navigationTitle("TrainingLog")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("Plan")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
@@ -77,8 +77,8 @@ struct PlanView: View {
                 }
             }
         }
-        .navigationTitle("TrainingLog")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("Plan")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))

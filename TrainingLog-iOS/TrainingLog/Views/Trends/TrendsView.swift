@@ -31,8 +31,8 @@ struct TrendsView: View {
                 }
                 .padding(.bottom, 32)
             }
-            .navigationTitle("TrainingLog")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Trends")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))

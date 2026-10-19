@@ -34,8 +34,8 @@ struct LogView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationTitle("TrainingLog")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Log")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))

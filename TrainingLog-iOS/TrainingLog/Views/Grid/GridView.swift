@@ -23,8 +23,8 @@ struct GridView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
-            .navigationTitle("TrainingLog")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Grid")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
