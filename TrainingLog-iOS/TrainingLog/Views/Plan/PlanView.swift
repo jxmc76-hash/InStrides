@@ -7,7 +7,7 @@ struct PlanView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
     @EnvironmentObject var userStore: UserStore
-    @State private var showAddPlan = false
+    @State private var showAddPlan: UUID? = nil
     @State private var isSyncingCalendar = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
@@ -26,7 +26,7 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan) {
+        .sheet(item: $showAddPlan) { _ in
             AddPlanSheet { title, start, end in
                 let plan = TrainingPlan(title: title, startDate: start, endDate: end)
                 context.insert(plan)
@@ -48,7 +48,7 @@ struct PlanView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Create Plan") { showAddPlan = true }
+            Button("Create Plan") { showAddPlan = UUID() }
                 .buttonStyle(.borderedProminent)
             Spacer()
         }
@@ -56,7 +56,7 @@ struct PlanView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showAddPlan = true } label: { Image(systemName: "plus") }
+                Button { showAddPlan = UUID() } label: { Image(systemName: "plus") }
             }
         }
     }
@@ -110,7 +110,7 @@ struct PlanView: View {
                 .disabled(isSyncingCalendar || plans.isEmpty)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showAddPlan = true } label: {
+                Button { showAddPlan = UUID() } label: {
                     Image(systemName: "plus")
                 }
             }
