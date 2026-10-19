@@ -69,21 +69,20 @@ struct LogView: View {
         return result
     }
 
-    @ViewBuilder
-    private func weekSummaryHeader(for days: [DailyHealthData]) -> some View {
+    private func weekLabel(for days: [DailyHealthData]) -> String {
         let fmt = DateFormatter()
         fmt.dateFormat = "d MMM"
         let sorted = days.sorted { $0.date < $1.date }
-        let label: String = {
-            guard let first = sorted.first, let last = sorted.last else { return "" }
-            let cal = Calendar.current
-            let d1 = cal.component(.day, from: first.date)
-            return "\(d1)–\(fmt.string(from: last.date))"
-        }()
-        let avgSleep = avg(days.compactMap { $0.sleep?.totalMinutes })
-        let avgEnergy = avgInt(days.compactMap { d in userStore.energy(for: d.date) })
+        guard let first = sorted.first, let last = sorted.last else { return "" }
+        let d1 = Calendar.current.component(.day, from: first.date)
+        return "\(d1)–\(fmt.string(from: last.date))"
+    }
 
-        HStack(spacing: 12) {
+    private func weekSummaryHeader(for days: [DailyHealthData]) -> some View {
+        let label = weekLabel(for: days)
+        let avgSleep = avg(days.compactMap { $0.sleep?.totalMinutes })
+        let avgEnergy = avgInt(days.compactMap { userStore.energy(for: $0.date) })
+        return HStack(spacing: 12) {
             Text(label)
                 .font(.caption.bold())
                 .foregroundStyle(.primary)
