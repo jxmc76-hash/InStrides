@@ -10,7 +10,7 @@ struct LogView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    Text("Log")
+                    Text("TrainingLog")
                         .font(.largeTitle.bold())
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)

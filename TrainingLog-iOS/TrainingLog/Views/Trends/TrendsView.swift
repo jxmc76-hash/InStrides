@@ -15,7 +15,7 @@ struct TrendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    Text("Trends")
+                    Text("TrainingLog")
                         .font(.largeTitle.bold())
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
@@ -30,8 +30,6 @@ struct TrendsView: View {
                     .padding(.horizontal, 16)
 
                     if period == .shortTerm {
-                        InsightCard(summary: buildSummary())
-                            .padding(.horizontal, 16)
                         shortTermCharts
                     } else {
                         longTermCharts
@@ -265,32 +263,4 @@ struct TrendsView: View {
         }
     }
 
-    // MARK: - AI summary
-
-    private func buildSummary() -> String {
-        let weeks = last12Weeks()
-        let runKm = weeklyRunDistance(weeks: weeks)
-        let weights = weeklyAvgWeight(weeks: weeks)
-        let vo2s = weeklyVO2(weeks: weeks)
-        let energy = weeklyAvgEnergy(weeks: weeks)
-        let sleep = weeklyAvgSleepDuration(weeks: weeks)
-
-        var lines: [String] = ["Last 12 weeks summary:"]
-        if let last = runKm.last, let first = runKm.first {
-            lines.append("Weekly run distance: \(String(format: "%.1f", first.value))km → \(String(format: "%.1f", last.value))km")
-        }
-        if let w = weights.last {
-            lines.append("Latest avg weight: \(String(format: "%.1f", w.value))kg")
-        }
-        if let v = vo2s.last {
-            lines.append("Latest VO₂ max: \(String(format: "%.1f", v.value)) mL/kg/min")
-        }
-        if let e = energy.last {
-            lines.append("Latest avg energy: \(String(format: "%.1f", e.value))/5")
-        }
-        if let s = sleep.last {
-            lines.append("Latest avg sleep duration: \(String(format: "%.1f", s.value)) hours")
-        }
-        return lines.joined(separator: "\n")
-    }
 }

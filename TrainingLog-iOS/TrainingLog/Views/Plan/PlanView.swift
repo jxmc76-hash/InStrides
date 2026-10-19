@@ -24,7 +24,7 @@ struct PlanView: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Text("Plan")
+            Text("TrainingLog")
                 .font(.largeTitle.bold())
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
@@ -68,7 +68,7 @@ struct PlanView: View {
     private var planList: some View {
         List {
             Section {
-                Text("Plan")
+                Text("TrainingLog")
                     .font(.largeTitle.bold())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)

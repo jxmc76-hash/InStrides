@@ -17,6 +17,12 @@ struct AreaChartView: View {
     var insight: String? = nil
     var useBarChart: Bool = false
 
+    private func barLabel(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = showYear ? "MMM yy" : "d MMM"
+        return f.string(from: date)
+    }
+
     private var average: Double {
         guard !data.isEmpty else { return 0 }
         return data.map(\.value).reduce(0, +) / Double(data.count)
@@ -58,12 +64,11 @@ struct AreaChartView: View {
                     ForEach(data) { point in
                         if useBarChart {
                             BarMark(
-                                x: .value("Date", point.date),
-                                y: .value(unit, point.value),
-                                width: .ratio(0.75)
+                                x: .value("Week", barLabel(point.date)),
+                                y: .value(unit, point.value)
                             )
                             .foregroundStyle(color)
-                            .cornerRadius(4)
+                            .cornerRadius(3)
                             .annotation(position: .top, alignment: .center, spacing: 2) {
                                 Text(String(format: "%.0f", point.value))
                                     .font(.system(size: 9, weight: .semibold))
@@ -114,13 +119,9 @@ struct AreaChartView: View {
                 }
                 .chartXAxis {
                     if useBarChart {
-                        AxisMarks(values: .stride(by: .month)) { value in
-                            if let date = value.as(Date.self) {
-                                AxisValueLabel {
-                                    Text(date, format: showYear ? .dateTime.month(.abbreviated).year() : .dateTime.month(.abbreviated))
-                                        .font(.caption2)
-                                }
-                            }
+                        AxisMarks(preset: .automatic, values: .automatic) { _ in
+                            AxisValueLabel()
+                                .font(.system(size: 9))
                         }
                     } else {
                         AxisMarks(values: .stride(by: showYear ? .year : .month)) { value in

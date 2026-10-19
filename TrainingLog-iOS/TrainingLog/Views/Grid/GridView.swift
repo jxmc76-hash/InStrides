@@ -13,7 +13,7 @@ struct GridView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    Text("Grid")
+                    Text("TrainingLog")
                         .font(.largeTitle.bold())
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
