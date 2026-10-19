@@ -11,13 +11,12 @@ struct TrainingLogApp: App {
             return try ModelContainer(for: schema, configurations: config)
         } catch {
             // Schema migration failed — wipe and recreate so the app stays usable
-            if let url = config.url {
-                try? FileManager.default.removeItem(at: url)
-                let wal = url.deletingPathExtension().appendingPathExtension("sqlite-wal")
-                let shm = url.deletingPathExtension().appendingPathExtension("sqlite-shm")
-                try? FileManager.default.removeItem(at: wal)
-                try? FileManager.default.removeItem(at: shm)
-            }
+            let url = config.url
+            try? FileManager.default.removeItem(at: url)
+            let wal = url.deletingPathExtension().appendingPathExtension("sqlite-wal")
+            let shm = url.deletingPathExtension().appendingPathExtension("sqlite-shm")
+            try? FileManager.default.removeItem(at: wal)
+            try? FileManager.default.removeItem(at: shm)
             return try! ModelContainer(for: schema, configurations: config)
         }
     }()
