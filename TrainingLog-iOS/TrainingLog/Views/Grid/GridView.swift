@@ -108,22 +108,31 @@ struct GridView: View {
             let d2 = fmt.string(from: last.date)
             return "\(d1)–\(d2)"
         }()
+        let activeTypes = Set(days.flatMap { $0.workouts }.map { $0.type })
+        let allFive = columns.count >= 5 && columns.allSatisfy { activeTypes.contains($0) }
         return HStack(spacing: 0) {
-            Text(label)
-                .font(.caption2.bold())
-                .foregroundStyle(.secondary)
-                .frame(width: 72, alignment: .leading)
-                .padding(.leading, 16)
-                .padding(.vertical, 6)
+            HStack(spacing: 3) {
+                Text(label)
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                if allFive {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .frame(width: 72, alignment: .leading)
+            .padding(.leading, 16)
+            .padding(.vertical, 6)
             ForEach(columns) { col in
-                let total = days.reduce(0) { $0 + $1.totalDuration(for: col) }
-                Text(total > 0 ? "\(total)" : "")
+                let count = days.reduce(0) { $0 + ($1.totalDuration(for: col) > 0 ? 1 : 0) }
+                Text(count > 0 ? "\(count)" : "")
                     .font(.caption2.bold())
                     .foregroundStyle(col.color.opacity(0.8))
                     .frame(maxWidth: .infinity)
             }
         }
-        .background(Color(uiColor: .systemGroupedBackground))
+        .background(allFive ? Color.orange.opacity(0.07) : Color(uiColor: .systemGroupedBackground))
     }
 
     private struct WeekGroup {
