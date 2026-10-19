@@ -12,19 +12,14 @@ struct AreaChartView: View {
     let unit: String
     let data: [ChartDataPoint]
     let color: Color
-    var showYear: Bool = false
     var showAverage: Bool = true
     var insight: String? = nil
     var useBarChart: Bool = false
 
     private func barLabel(_ date: Date) -> String {
+        let month = Calendar.current.component(.month, from: date)
         let f = DateFormatter()
-        if showYear {
-            let month = Calendar.current.component(.month, from: date)
-            f.dateFormat = month == 1 ? "MMM ''yy" : "MMM"
-        } else {
-            f.dateFormat = "d MMM"
-        }
+        f.dateFormat = month == 1 ? "MMM ''yy" : "MMM"
         return f.string(from: date)
     }
 
@@ -58,102 +53,102 @@ struct AreaChartView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-            if data.isEmpty {
-                Text("No data")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(height: 120)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } else {
-                let chartContent = Chart {
-                    ForEach(data) { point in
-                        if useBarChart {
-                            BarMark(
-                                x: .value("Week", barLabel(point.date)),
-                                y: .value(unit, point.value)
-                            )
-                            .foregroundStyle(color)
-                            .cornerRadius(4)
-                            .annotation(position: .overlay, alignment: .top) {
-                                Text(String(format: "%.0f", point.value))
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.top, 5)
-                            }
-                        } else {
-                            LineMark(
-                                x: .value("Date", point.date),
-                                y: .value(unit, point.value)
-                            )
-                            .interpolationMethod(.catmullRom)
-                            .foregroundStyle(color)
-                            .lineStyle(StrokeStyle(lineWidth: 2))
-                        }
-                    }
-
-                    if !useBarChart, let last = data.last {
-                        PointMark(
-                            x: .value("Date", last.date),
-                            y: .value(unit, last.value)
-                        )
-                        .foregroundStyle(color)
-                        .symbolSize(28)
-                        .annotation(position: .trailing, alignment: .center) {
-                            Text(String(format: "%.1f", last.value))
-                                .font(.caption2.bold())
+                if data.isEmpty {
+                    Text("No data")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(height: 120)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    let chartContent = Chart {
+                        ForEach(data) { point in
+                            if useBarChart {
+                                BarMark(
+                                    x: .value("Month", barLabel(point.date)),
+                                    y: .value(unit, point.value)
+                                )
                                 .foregroundStyle(color)
-                        }
-                    }
-
-                    if showAverage {
-                        RuleMark(y: .value("Avg", average))
-                            .foregroundStyle(.secondary.opacity(0.45))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
-                    }
-                }
-                .chartYScale(domain: yDomain)
-                .chartYAxis {
-                    AxisMarks(position: .leading) { value in
-                        AxisValueLabel {
-                            if let v = value.as(Double.self) {
-                                Text(String(format: "%.0f", v))
-                                    .font(.caption2)
+                                .cornerRadius(4)
+                                .annotation(position: .overlay, alignment: .top) {
+                                    Text(String(format: "%.0f", point.value))
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.top, 5)
+                                }
+                            } else {
+                                LineMark(
+                                    x: .value("Date", point.date),
+                                    y: .value(unit, point.value)
+                                )
+                                .interpolationMethod(.catmullRom)
+                                .foregroundStyle(color)
+                                .lineStyle(StrokeStyle(lineWidth: 2))
                             }
                         }
-                        AxisGridLine()
-                    }
-                }
-                .chartXAxis {
-                    if useBarChart {
-                        AxisMarks(values: data.map { barLabel($0.date) }) { _ in
-                            AxisValueLabel()
-                                .font(.system(size: 9))
+
+                        if !useBarChart, let last = data.last {
+                            PointMark(
+                                x: .value("Date", last.date),
+                                y: .value(unit, last.value)
+                            )
+                            .foregroundStyle(color)
+                            .symbolSize(28)
+                            .annotation(position: .trailing, alignment: .center) {
+                                Text(String(format: "%.1f", last.value))
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(color)
+                            }
                         }
-                    } else {
-                        AxisMarks(values: .stride(by: showYear ? .year : .month)) { value in
-                            if let date = value.as(Date.self) {
-                                AxisValueLabel {
-                                    Text(date, format: showYear ? .dateTime.year() : .dateTime.month(.abbreviated))
+
+                        if showAverage {
+                            RuleMark(y: .value("Avg", average))
+                                .foregroundStyle(.secondary.opacity(0.45))
+                                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
+                        }
+                    }
+                    .chartYScale(domain: yDomain)
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { value in
+                            AxisValueLabel {
+                                if let v = value.as(Double.self) {
+                                    Text(String(format: "%.0f", v))
                                         .font(.caption2)
                                 }
-                                AxisGridLine()
+                            }
+                            AxisGridLine()
+                        }
+                    }
+                    .chartXAxis {
+                        if useBarChart {
+                            AxisMarks(values: data.map { barLabel($0.date) }) { _ in
+                                AxisValueLabel()
+                                    .font(.system(size: 9))
+                            }
+                        } else {
+                            AxisMarks(values: .stride(by: .year)) { value in
+                                if let date = value.as(Date.self) {
+                                    AxisValueLabel {
+                                        Text(date, format: .dateTime.year())
+                                            .font(.caption2)
+                                    }
+                                    AxisGridLine()
+                                }
                             }
                         }
                     }
-                }
-                .frame(height: useBarChart ? 160 : 130)
+                    .frame(height: useBarChart ? 160 : 130)
 
-                if data.count > 12 {
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    if data.count > 12 {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            chartContent
+                                .frame(width: CGFloat(data.count) * (useBarChart ? 28 : 20))
+                        }
+                        .defaultScrollAnchor(.trailing)
+                    } else {
                         chartContent
-                            .frame(width: CGFloat(data.count) * (useBarChart ? 28 : 20))
+                            .padding(.trailing, useBarChart ? 0 : 32)
                     }
-                    .defaultScrollAnchor(.trailing)
-                } else {
-                    chartContent
-                        .padding(.trailing, useBarChart ? 0 : 32)
                 }
-            }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
