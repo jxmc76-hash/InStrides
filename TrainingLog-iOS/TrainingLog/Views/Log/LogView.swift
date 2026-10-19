@@ -174,7 +174,7 @@ struct DayLogCard: View {
             // Stats row: energy + vo2 + workouts
             HStack(spacing: 0) {
                 // Energy dots
-                Button(action: onTapEnergy) {
+                Button { onTapEnergy() } label: {
                     VStack(spacing: 3) {
                         HStack(spacing: 3) {
                             ForEach(1...5, id: \.self) { i in
