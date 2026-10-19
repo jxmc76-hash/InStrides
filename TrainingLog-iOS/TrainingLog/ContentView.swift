@@ -21,27 +21,27 @@ struct ContentView: View {
         TabView {
             GridView()
                 .environment(healthKit)
-                .environment(userStore)
+                .environmentObject(userStore)
                 .tabItem { Label("Grid", systemImage: "grid") }
 
             LogView()
                 .environment(healthKit)
-                .environment(userStore)
+                .environmentObject(userStore)
                 .tabItem { Label("Log", systemImage: "list.bullet") }
 
             PlanView()
                 .environment(healthKit)
-                .environment(userStore)
+                .environmentObject(userStore)
                 .tabItem { Label("Plan", systemImage: "calendar") }
 
             TrendsView()
                 .environment(healthKit)
-                .environment(userStore)
+                .environmentObject(userStore)
                 .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
         }
         .tint(.orange)
         .environment(healthKit)
-        .environment(userStore)
+        .environmentObject(userStore)
         .task {
             await healthKit.requestAuthorization()
             await scheduleEnergyReminder(time: userStore.reminderTime)
@@ -59,11 +59,11 @@ struct ContentView: View {
             switch prompt {
             case .depth(let workout):
                 DepthPromptSheet(workout: workout)
-                    .environment(userStore)
+                    .environmentObject(userStore)
                     .environment(healthKit)
             case .gymWeight(let workout):
                 GymWeightEntrySheet(workout: workout)
-                    .environment(userStore)
+                    .environmentObject(userStore)
                     .environment(healthKit)
             }
         }

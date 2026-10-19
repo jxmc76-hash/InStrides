@@ -2,7 +2,7 @@ import SwiftUI
 
 struct EnergyPickerSheet: View {
     let date: Date
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Int = 3
 

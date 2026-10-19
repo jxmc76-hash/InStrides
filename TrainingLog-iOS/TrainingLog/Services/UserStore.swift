@@ -1,15 +1,13 @@
 import Foundation
-import Observation
 
-@Observable
 @MainActor
-final class UserStore {
-    var selectedColumns: [WorkoutType] = WorkoutType.allCases
-    var energyByDate: [String: Int] = [:]
-    var notesByDate: [String: String] = [:]
-    var gymWeightByWorkoutID: [UUID: Double] = [:]
-    var effortByWorkoutID: [UUID: Int] = [:]
-    var reminderTime: Date = {
+final class UserStore: ObservableObject {
+    @Published var selectedColumns: [WorkoutType] = WorkoutType.allCases
+    @Published var energyByDate: [String: Int] = [:]
+    @Published var notesByDate: [String: String] = [:]
+    @Published var gymWeightByWorkoutID: [UUID: Double] = [:]
+    @Published var effortByWorkoutID: [UUID: Int] = [:]
+    @Published var reminderTime: Date = {
         var c = DateComponents(); c.hour = 7; c.minute = 0
         return Calendar.current.date(from: c) ?? Date()
     }()

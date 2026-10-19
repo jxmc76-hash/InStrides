@@ -3,7 +3,7 @@ import Charts
 
 struct TrendsView: View {
     @Environment(HealthKitManager.self) private var hk
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
 
     var body: some View {
         NavigationStack {

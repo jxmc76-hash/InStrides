@@ -3,13 +3,12 @@ import UIKit
 
 struct DepthPromptSheet: View {
     let workout: HealthWorkout
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
 
     private let haptic = UIImpactFeedbackGenerator(style: .light)
 
     var body: some View {
-        @Bindable var store = userStore
         NavigationStack {
             VStack(spacing: 32) {
                 VStack(spacing: 8) {

@@ -2,18 +2,17 @@ import SwiftUI
 import UserNotifications
 
 struct SettingsSheet: View {
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        @Bindable var store = userStore
         NavigationStack {
             Form {
                 Section("Energy Reminder") {
                     DatePicker("Reminder time",
-                               selection: $store.reminderTime,
+                               selection: $userStore.reminderTime,
                                displayedComponents: .hourAndMinute)
-                    .onChange(of: store.reminderTime) { _, _ in
+                    .onChange(of: userStore.reminderTime) { _, _ in
                         Task { await rescheduleReminder() }
                     }
                 }

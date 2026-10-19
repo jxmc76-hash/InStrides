@@ -2,7 +2,7 @@ import SwiftUI
 
 struct GridView: View {
     @Environment(HealthKitManager.self) private var hk
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @State private var selectedWorkouts: [HealthWorkout]? = nil
     @State private var showColumnPicker = false
     @State private var showSettings = false
@@ -45,7 +45,7 @@ struct GridView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsSheet()
-                    .environment(userStore)
+                    .environmentObject(userStore)
             }
             .sheet(isPresented: $showColumnPicker) {
                 ColumnPickerSheet(selected: Binding(
@@ -58,7 +58,7 @@ struct GridView: View {
                 set: { _ in selectedWorkouts = nil }
             )) { item in
                 WorkoutDetailSheet(workouts: item.workouts)
-                    .environment(userStore)
+                    .environmentObject(userStore)
                     .environment(hk)
             }
         }

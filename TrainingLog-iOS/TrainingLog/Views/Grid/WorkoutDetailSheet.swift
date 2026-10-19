@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WorkoutDetailSheet: View {
     let workouts: [HealthWorkout]
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
     @State private var gymWeightInput: String = ""
     @State private var editingWorkout: HealthWorkout?
@@ -127,7 +127,7 @@ struct WorkoutDetailSheet: View {
 
 struct GymWeightEntrySheet: View {
     let workout: HealthWorkout
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
     @State private var input = ""
 

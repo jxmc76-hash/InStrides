@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LogView: View {
     @Environment(HealthKitManager.self) private var hk
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
     @State private var energyPickerDate: Date? = nil
     @State private var selectedWorkouts: [HealthWorkout]? = nil
 
@@ -49,14 +49,14 @@ struct LogView: View {
                 set: { _ in energyPickerDate = nil }
             )) { item in
                 EnergyPickerSheet(date: item.date)
-                    .environment(userStore)
+                    .environmentObject(userStore)
             }
             .sheet(item: Binding(
                 get: { selectedWorkouts.map { SelectedWorkoutsItem(workouts: $0) } },
                 set: { _ in selectedWorkouts = nil }
             )) { item in
                 WorkoutDetailSheet(workouts: item.workouts)
-                    .environment(userStore)
+                    .environmentObject(userStore)
                     .environment(hk)
             }
         }
@@ -152,7 +152,7 @@ struct DayLogCard: View {
     let vo2: Double?
     let onTapEnergy: () -> Void
     let onTapWorkout: ([HealthWorkout]) -> Void
-    @Environment(UserStore.self) private var userStore
+    @EnvironmentObject var userStore: UserStore
 
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f
