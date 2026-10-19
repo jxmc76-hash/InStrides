@@ -45,40 +45,50 @@ struct TrendsView: View {
     @ViewBuilder
     private var shortTermCharts: some View {
         let weeks = last12Weeks()
+        let runData = weeklyRunDistance(weeks: weeks)
+        let weightData = weeklyAvgWeight(weeks: weeks)
+        let vo2Data = weeklyVO2(weeks: weeks)
+        let energyData = weeklyAvgEnergy(weeks: weeks)
+        let sleepData = weeklyAvgSleepDuration(weeks: weeks)
 
         AreaChartView(title: "Weekly Running Distance (km)",
                       unit: "km",
-                      data: weeklyRunDistance(weeks: weeks),
+                      data: runData,
                       color: WorkoutType.run.color,
-                      showAverage: false)
+                      showAverage: false,
+                      insight: shortTermInsight(data: runData, unit: "km", format: "%.1f"))
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Weight (kg)",
                       unit: "kg",
-                      data: weeklyAvgWeight(weeks: weeks),
+                      data: weightData,
                       color: .blue,
-                      showAverage: false)
+                      showAverage: false,
+                      insight: shortTermInsight(data: weightData, unit: "kg", format: "%.1f"))
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly VO₂ Max",
                       unit: "mL/kg/min",
-                      data: weeklyVO2(weeks: weeks),
+                      data: vo2Data,
                       color: .teal,
-                      showAverage: false)
+                      showAverage: false,
+                      insight: shortTermInsight(data: vo2Data, unit: "mL/kg/min", format: "%.1f"))
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Energy",
                       unit: "score",
-                      data: weeklyAvgEnergy(weeks: weeks),
+                      data: energyData,
                       color: .orange,
-                      showAverage: false)
+                      showAverage: false,
+                      insight: shortTermInsight(data: energyData, unit: "/5", format: "%.1f"))
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Sleep Duration",
                       unit: "hours",
-                      data: weeklyAvgSleepDuration(weeks: weeks),
+                      data: sleepData,
                       color: .indigo,
-                      showAverage: false)
+                      showAverage: false,
+                      insight: shortTermInsight(data: sleepData, unit: "hrs", format: "%.1f"))
         .padding(.horizontal, 16)
     }
 
@@ -87,27 +97,62 @@ struct TrendsView: View {
     @ViewBuilder
     private var longTermCharts: some View {
         let months = allMonths()
+        let runData = monthlyRunDistance(months: months)
+        let weightData = monthlyAvgWeight(months: months)
+        let vo2Data = monthlyVO2(months: months)
 
         AreaChartView(title: "Monthly Running Distance (km)",
                       unit: "km",
-                      data: monthlyRunDistance(months: months),
+                      data: runData,
                       color: WorkoutType.run.color,
-                      showYear: true)
+                      showYear: true,
+                      insight: longTermInsight(data: runData, unit: "km", format: "%.1f"))
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Weight (kg)",
                       unit: "kg",
-                      data: monthlyAvgWeight(months: months),
+                      data: weightData,
                       color: .blue,
-                      showYear: true)
+                      showYear: true,
+                      insight: longTermInsight(data: weightData, unit: "kg", format: "%.1f"))
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly VO₂ Max",
                       unit: "mL/kg/min",
-                      data: monthlyVO2(months: months),
+                      data: vo2Data,
                       color: .teal,
-                      showYear: true)
+                      showYear: true,
+                      insight: longTermInsight(data: vo2Data, unit: "mL/kg/min", format: "%.1f"))
         .padding(.horizontal, 16)
+    }
+
+    // MARK: - Insight helpers
+
+    private func shortTermInsight(data: [ChartDataPoint], unit: String, format: String) -> String? {
+        guard data.count >= 2, let first = data.first, let last = data.last else { return nil }
+        let change = last.value - first.value
+        let pct = first.value != 0 ? abs(change / first.value) * 100 : 0
+        let direction = change > 0.01 ? "up" : change < -0.01 ? "down" : "stable"
+        let firstStr = String(format: format, first.value)
+        let lastStr = String(format: format, last.value)
+        if direction == "stable" {
+            return "Holding steady at \(lastStr)\(unit) over the past 12 weeks."
+        }
+        return "Currently \(lastStr)\(unit), \(direction) \(String(format: "%.0f", pct))% from \(firstStr)\(unit) 12 weeks ago."
+    }
+
+    private func longTermInsight(data: [ChartDataPoint], unit: String, format: String) -> String? {
+        guard data.count >= 2, let last = data.last else { return nil }
+        let mean = data.map(\.value).reduce(0, +) / Double(data.count)
+        let diff = last.value - mean
+        let pct = mean != 0 ? abs(diff / mean) * 100 : 0
+        let direction = diff > 0.01 ? "above" : diff < -0.01 ? "below" : "at"
+        let lastStr = String(format: format, last.value)
+        let meanStr = String(format: format, mean)
+        if direction == "at" {
+            return "Current \(lastStr)\(unit) is right at the historical average."
+        }
+        return "Current \(lastStr)\(unit) is \(String(format: "%.0f", pct))% \(direction) the historical average of \(meanStr)\(unit)."
     }
 
     // MARK: - Data aggregation

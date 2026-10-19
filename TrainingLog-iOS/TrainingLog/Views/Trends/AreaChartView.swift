@@ -14,6 +14,7 @@ struct AreaChartView: View {
     let color: Color
     var showYear: Bool = false
     var showAverage: Bool = true
+    var insight: String? = nil
 
     private var average: Double {
         guard !data.isEmpty else { return 0 }
@@ -30,11 +31,19 @@ struct AreaChartView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.footnote.bold())
-                .foregroundStyle(.secondary)
+                .font(.subheadline.bold())
+                .foregroundStyle(.primary)
 
+            if let insight {
+                Text(insight)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
             if data.isEmpty {
                 Text("No data")
                     .font(.caption)
@@ -100,9 +109,10 @@ struct AreaChartView: View {
                 .frame(height: 130)
                 .padding(.trailing, 32)
             }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
     }
 }
