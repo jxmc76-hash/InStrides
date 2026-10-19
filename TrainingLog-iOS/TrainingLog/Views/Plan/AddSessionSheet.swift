@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct AddPlanSheet: View {
-    @Environment(\.modelContext) private var context
+    let context: ModelContext
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var startDate = Date()
