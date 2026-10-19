@@ -212,7 +212,7 @@ struct PlanView: View {
                         Text("✓ Linked to Health workout")
                             .font(.caption)
                             .foregroundStyle(.green)
-                    } else if isPast(session.date) && !session.isComplete {
+                    } else if session.isComplete || isPast(session.date) {
                         Button("Link workout →") {
                             linkSession = (plan, session)
                         }
