@@ -4,11 +4,13 @@ import UIKit
 
 struct PlanView: View {
     @Environment(HealthKitManager.self) private var hk
+    @Environment(\.modelContext) private var context
     @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
     @State private var showAddPlan = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
-    @State private var nlPlan: TrainingPlan? = nil
+    @State private var editPlan: TrainingPlan? = nil
+    @State private var editSession: PlanSession? = nil
     private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
@@ -59,19 +61,27 @@ struct PlanView: View {
             ForEach(plans) { plan in
                 Section {
                     planHeader(plan)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                context.delete(plan)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     ForEach(plan.sessions.sorted { $0.date < $1.date }) { session in
                         sessionRow(session, plan: plan)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    plan.sessions.removeAll { $0.id == session.id }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                     Button {
                         showAddSession = plan
                     } label: {
                         Label("Add Session", systemImage: "plus.circle")
-                            .font(.subheadline)
-                    }
-                    Button {
-                        nlPlan = plan
-                    } label: {
-                        Label(plan.sessions.isEmpty ? "Build plan with AI" : "Edit with AI", systemImage: "sparkles")
                             .font(.subheadline)
                     }
                 }
@@ -103,8 +113,11 @@ struct PlanView: View {
             LinkWorkoutSheet(plan: item.plan, session: item.session,
                              workouts: hk.dailyData.flatMap(\.workouts))
         }
-        .sheet(item: $nlPlan) { plan in
-            NaturalLanguagePlanSheet(plan: plan)
+        .sheet(item: $editPlan) { plan in
+            EditPlanSheet(plan: plan)
+        }
+        .sheet(item: $editSession) { session in
+            EditSessionSheet(session: session)
         }
     }
 
@@ -115,17 +128,22 @@ struct PlanView: View {
         let race = plan.endDate
         let daysLeft = Calendar.current.dateComponents([.day], from: .now, to: race).day ?? 0
 
-        VStack(alignment: .leading, spacing: 8) {
-            Text(plan.title).font(.headline)
-            HStack(spacing: 20) {
-                stat("\(max(0, daysLeft))", label: "days left")
-                stat("\(done)/\(total)", label: "sessions")
-                stat("\(total > 0 ? (done * 100 / total) : 0)%", label: "complete")
+        Button {
+            editPlan = plan
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(plan.title).font(.headline)
+                HStack(spacing: 20) {
+                    stat("\(max(0, daysLeft))", label: "days left")
+                    stat("\(done)/\(total)", label: "sessions")
+                    stat("\(total > 0 ? (done * 100 / total) : 0)%", label: "complete")
+                }
+                ProgressView(value: total > 0 ? Double(done) / Double(total) : 0)
+                    .tint(.orange)
             }
-            ProgressView(value: total > 0 ? Double(done) / Double(total) : 0)
-                .tint(.orange)
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
     }
 
     private func stat(_ value: String, label: String) -> some View {
@@ -142,33 +160,38 @@ struct PlanView: View {
                 .fill(session.isComplete ? Color.green : sessionColor(session.type))
                 .frame(width: 10, height: 10)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text(fmtDate(session.date))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(session.type.uppercased())
-                        .font(.caption.bold())
-                        .foregroundStyle(sessionColor(session.type))
-                }
-                Text(session.target)
-                    .font(.subheadline)
-                    .lineLimit(2)
-
-                if session.isComplete && session.linkedWorkoutID != nil {
-                    Text("✓ Linked to Health workout")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                } else if isPast(session.date) && !session.isComplete {
-                    Button("Link workout →") {
-                        linkSession = (plan, session)
+            Button {
+                editSession = session
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(fmtDate(session.date))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(session.type.uppercased())
+                            .font(.caption.bold())
+                            .foregroundStyle(sessionColor(session.type))
                     }
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .buttonStyle(.plain)
+                    Text(session.target)
+                        .font(.subheadline)
+                        .lineLimit(2)
+
+                    if session.isComplete && session.linkedWorkoutID != nil {
+                        Text("✓ Linked to Health workout")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    } else if isPast(session.date) && !session.isComplete {
+                        Button("Link workout →") {
+                            linkSession = (plan, session)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .buttonStyle(.plain)
+                    }
                 }
             }
+            .buttonStyle(.plain)
 
             Button {
                 haptic.impactOccurred()

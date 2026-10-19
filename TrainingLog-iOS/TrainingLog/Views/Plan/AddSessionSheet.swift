@@ -77,3 +77,93 @@ struct AddSessionSheet: View {
         }
     }
 }
+
+struct EditPlanSheet: View {
+    let plan: TrainingPlan
+    @Environment(\.dismiss) private var dismiss
+    @State private var title: String
+    @State private var startDate: Date
+    @State private var endDate: Date
+
+    init(plan: TrainingPlan) {
+        self.plan = plan
+        _title = State(initialValue: plan.title)
+        _startDate = State(initialValue: plan.startDate)
+        _endDate = State(initialValue: plan.endDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Plan Details") {
+                    TextField("Title", text: $title)
+                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                    DatePicker("Race Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                }
+            }
+            .navigationTitle("Edit Plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        plan.title = title
+                        plan.startDate = startDate
+                        plan.endDate = endDate
+                        dismiss()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+struct EditSessionSheet: View {
+    let session: PlanSession
+    @Environment(\.dismiss) private var dismiss
+    @State private var date: Date
+    @State private var type: WorkoutType
+    @State private var target: String
+    @State private var isComplete: Bool
+
+    init(session: PlanSession) {
+        self.session = session
+        _date = State(initialValue: session.date)
+        _type = State(initialValue: WorkoutType(rawValue: session.type) ?? .run)
+        _target = State(initialValue: session.target)
+        _isComplete = State(initialValue: session.isComplete)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Session") {
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    Picker("Type", selection: $type) {
+                        ForEach(WorkoutType.allCases) { t in
+                            Text(t.displayName).tag(t)
+                        }
+                    }
+                    TextField("Target", text: $target)
+                    Toggle("Complete", isOn: $isComplete)
+                }
+            }
+            .navigationTitle("Edit Session")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        session.date = date
+                        session.type = type.rawValue
+                        session.target = target
+                        session.isComplete = isComplete
+                        dismiss()
+                    }
+                    .disabled(target.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
