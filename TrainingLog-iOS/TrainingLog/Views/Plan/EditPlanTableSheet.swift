@@ -25,11 +25,9 @@ struct EditPlanTableSheet: View {
                         headerRow
                         Divider()
                         ForEach(sortedSessions) { session in
-                            if let idx = plan.sessions.firstIndex(where: { $0.id == session.id }) {
-                                SessionGridRow(session: $plan.sessions[idx],
-                                               colDate: colDate, colType: colType, colDone: colDone)
-                                Divider()
-                            }
+                            SessionGridRow(session: session,
+                                           colDate: colDate, colType: colType, colDone: colDone)
+                            Divider()
                         }
                         addRow
                     }
@@ -202,7 +200,7 @@ struct EditPlanTableSheet: View {
 // MARK: - Session row
 
 struct SessionGridRow: View {
-    @Binding var session: PlanSession
+    @Bindable var session: PlanSession
     let colDate: CGFloat
     let colType: CGFloat
     let colDone: CGFloat
@@ -213,16 +211,10 @@ struct SessionGridRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Row number / delete
-            Button {
-                // handled via swipe or edit mode - leave as visual placeholder
-            } label: {
-                Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(.red.opacity(0.7))
-                    .font(.caption)
-            }
-            .buttonStyle(.plain)
-            .frame(width: 32, alignment: .center)
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                .font(.caption)
+                .frame(width: 32, alignment: .center)
 
             vDivider
 
