@@ -145,10 +145,10 @@ struct AreaChartView: View {
                 }
                 .frame(height: useBarChart ? 160 : 130)
 
-                if useBarChart && data.count > 12 {
+                if data.count > 12 {
                     ScrollView(.horizontal, showsIndicators: false) {
                         chartContent
-                            .frame(width: CGFloat(data.count) * 28)
+                            .frame(width: CGFloat(data.count) * (useBarChart ? 28 : 20))
                     }
                     .defaultScrollAnchor(.trailing)
                 } else {
