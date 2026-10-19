@@ -26,6 +26,7 @@ struct PlanView: View {
                 planList
             }
         }
+        .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
     }
 
     @ViewBuilder
@@ -52,7 +53,6 @@ struct PlanView: View {
                 Button { showAddPlan = true } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
     }
 
     @ViewBuilder
@@ -109,7 +109,6 @@ struct PlanView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddPlan) { AddPlanSheet(context: context) }
         .sheet(item: $showAddSession) { plan in
             AddSessionSheet(plan: plan)
         }
