@@ -11,6 +11,7 @@ struct PlanView: View {
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
     @State private var editPlan: TrainingPlan? = nil
     @State private var editSession: PlanSession? = nil
+    @State private var tablePlan: TrainingPlan? = nil
     private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
@@ -84,6 +85,12 @@ struct PlanView: View {
                         Label("Add Session", systemImage: "plus.circle")
                             .font(.subheadline)
                     }
+                    Button {
+                        tablePlan = plan
+                    } label: {
+                        Label("Edit All Sessions", systemImage: "tablecells")
+                            .font(.subheadline)
+                    }
                 }
             }
         }
@@ -118,6 +125,9 @@ struct PlanView: View {
         }
         .sheet(item: $editSession) { session in
             EditSessionSheet(session: session)
+        }
+        .sheet(item: $tablePlan) { plan in
+            EditPlanTableSheet(plan: plan)
         }
     }
 
