@@ -4,29 +4,11 @@ import UserNotifications
 
 @main
 struct TrainingLogApp: App {
-    let container: ModelContainer
-
-    init() {
-        let schema = Schema([TrainingPlan.self, PlanSession.self])
-        do {
-            container = try ModelContainer(for: schema)
-        } catch {
-            // Migration failed — wipe store and recreate fresh
-            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            for file in (try? FileManager.default.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil)) ?? [] {
-                if file.lastPathComponent.hasPrefix("default") || file.pathExtension == "sqlite" || file.pathExtension == "store" {
-                    try? FileManager.default.removeItem(at: file)
-                }
-            }
-            container = try! ModelContainer(for: schema)
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .modelContainer(container)
         }
+        .modelContainer(for: [TrainingPlan.self, PlanSession.self])
     }
 }
 

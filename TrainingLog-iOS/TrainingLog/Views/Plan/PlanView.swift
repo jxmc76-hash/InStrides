@@ -28,7 +28,7 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan) {
+        .sheet(isPresented: $showAddPlan, onDismiss: { plans = fetchPlans() }) {
             AddPlanSheet { plan in
                 context.insert(plan)
                 do {
@@ -41,7 +41,12 @@ struct PlanView: View {
                 plans.sort { $0.startDate < $1.startDate }
             }
         }
-        .onAppear(perform: fetchPlans)
+        .onAppear {
+            let fetched = fetchPlans()
+            if !fetched.isEmpty || plans.isEmpty {
+                plans = fetched
+            }
+        }
     }
 
     @ViewBuilder
@@ -301,16 +306,18 @@ struct PlanView: View {
         Self.dateFmt.string(from: date)
     }
 
-    private func fetchPlans() {
+    @discardableResult
+    private func fetchPlans() -> [TrainingPlan] {
         let descriptor = FetchDescriptor<TrainingPlan>(
             sortBy: [SortDescriptor(\.startDate)]
         )
         do {
-            plans = try context.fetch(descriptor)
-            debugMessage = "fetch: \(plans.count) plans"
+            let result = try context.fetch(descriptor)
+            debugMessage = "fetch: \(result.count) plans"
+            return result
         } catch {
-            plans = []
             debugMessage = "fetch error: \(error)"
+            return []
         }
     }
 
