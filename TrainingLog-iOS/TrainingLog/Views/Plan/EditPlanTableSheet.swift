@@ -8,6 +8,7 @@ struct EditPlanTableSheet: View {
     @State private var pasteError: String? = nil
     @State private var pasteSuccess: String? = nil
     @State private var linkSession: PlanSession? = nil
+    @State private var refreshTick = 0
 
     private let colDate: CGFloat   = 110
     private let colType: CGFloat   = 70
@@ -26,14 +27,16 @@ struct EditPlanTableSheet: View {
                     VStack(spacing: 0) {
                         headerRow
                         Divider()
-                        ForEach(sortedSessions) { session in
-                            SessionGridRow(session: session,
-                                           colDate: colDate, colType: colType, colDone: colDone)
-                            if session.isComplete {
-                                linkSubRow(session: session)
-                            }
-                            Divider()
-                        }
+                        let _ = refreshTick
+                ForEach(sortedSessions) { session in
+                    SessionGridRow(session: session,
+                                   colDate: colDate, colType: colType, colDone: colDone,
+                                   onToggle: { refreshTick += 1 })
+                    if session.isComplete {
+                        linkSubRow(session: session)
+                    }
+                    Divider()
+                }
                         addRow
                     }
                     .background(Color(uiColor: .systemBackground))
@@ -243,6 +246,7 @@ struct SessionGridRow: View {
     let colDate: CGFloat
     let colType: CGFloat
     let colDone: CGFloat
+    let onToggle: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -275,6 +279,7 @@ struct SessionGridRow: View {
             vDivider
             Button {
                 session.isComplete.toggle()
+                onToggle()
             } label: {
                 Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(session.isComplete ? .green : .secondary)
