@@ -50,45 +50,54 @@ struct TrendsView: View {
                       unit: "kg",
                       data: weightData,
                       color: .blue,
-                      insight: longTermInsight(data: weightData, unit: "kg", format: "%.1f"))
+                      insight: longTermInsight(data: weightData, unit: "kg", format: "%.1f"),
+                      useBarChart: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly VO₂ Max",
                       unit: "mL/kg/min",
                       data: vo2Data,
                       color: .teal,
-                      insight: longTermInsight(data: vo2Data, unit: "mL/kg/min", format: "%.1f"))
+                      insight: longTermInsight(data: vo2Data, unit: "mL/kg/min", format: "%.1f"),
+                      useBarChart: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Energy",
                       unit: "score",
                       data: energyData,
                       color: .orange,
-                      insight: longTermInsight(data: energyData, unit: "/5", format: "%.1f"))
+                      insight: longTermInsight(data: energyData, unit: "/5", format: "%.1f"),
+                      useBarChart: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Sleep Duration",
                       unit: "hours",
                       data: sleepData,
                       color: .indigo,
-                      insight: longTermInsight(data: sleepData, unit: "hrs", format: "%.1f"))
+                      insight: longTermInsight(data: sleepData, unit: "hrs", format: "%.1f"),
+                      useBarChart: true)
         .padding(.horizontal, 16)
     }
 
     // MARK: - Insight
 
+    private static let monthFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM yyyy"; return f
+    }()
+
     private func longTermInsight(data: [ChartDataPoint], unit: String, format: String) -> String? {
-        guard data.count >= 2, let last = data.last else { return nil }
+        guard data.count >= 2, let recent = data.first else { return nil }
         let mean = data.map(\.value).reduce(0, +) / Double(data.count)
-        let diff = last.value - mean
+        let diff = recent.value - mean
         let pct = mean != 0 ? abs(diff / mean) * 100 : 0
         let direction = diff > 0.01 ? "above" : diff < -0.01 ? "below" : "at"
-        let lastStr = String(format: format, last.value)
+        let recentStr = String(format: format, recent.value)
         let meanStr = String(format: format, mean)
+        let monthLabel = Self.monthFmt.string(from: recent.date)
         if direction == "at" {
-            return "Current \(lastStr)\(unit) is right at the historical average."
+            return "\(monthLabel): \(recentStr)\(unit) — right at the 3-year average."
         }
-        return "Current \(lastStr)\(unit) is \(String(format: "%.0f", pct))% \(direction) the historical average of \(meanStr)\(unit)."
+        return "\(monthLabel): \(recentStr)\(unit) — \(String(format: "%.0f", pct))% \(direction) the 3-year average of \(meanStr)\(unit)."
     }
 
     // MARK: - Data aggregation
@@ -120,7 +129,7 @@ struct TrendsView: View {
             let vals = m.days.compactMap(\.weight)
             guard !vals.isEmpty else { return nil }
             return ChartDataPoint(date: m.start, value: vals.reduce(0, +) / Double(vals.count))
-        }
+        }.reversed()
     }
 
     private func monthlyVO2(months: [MonthBucket]) -> [ChartDataPoint] {
@@ -128,7 +137,7 @@ struct TrendsView: View {
             let vals = m.days.compactMap(\.vo2Max)
             guard !vals.isEmpty else { return nil }
             return ChartDataPoint(date: m.start, value: vals.max()!)
-        }
+        }.reversed()
     }
 
     private func monthlyAvgEnergy(months: [MonthBucket]) -> [ChartDataPoint] {
@@ -136,7 +145,7 @@ struct TrendsView: View {
             let vals = m.days.compactMap { userStore.energy(for: $0.date) }
             guard !vals.isEmpty else { return nil }
             return ChartDataPoint(date: m.start, value: Double(vals.reduce(0, +)) / Double(vals.count))
-        }
+        }.reversed()
     }
 
     private func monthlyAvgSleep(months: [MonthBucket]) -> [ChartDataPoint] {
@@ -144,6 +153,6 @@ struct TrendsView: View {
             let vals = m.days.compactMap { $0.sleep?.totalMinutes }
             guard !vals.isEmpty else { return nil }
             return ChartDataPoint(date: m.start, value: vals.reduce(0, +) / Double(vals.count) / 60)
-        }
+        }.reversed()
     }
 }
