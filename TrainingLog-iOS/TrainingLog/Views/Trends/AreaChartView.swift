@@ -118,9 +118,12 @@ struct AreaChartView: View {
                     }
                     .chartXAxis {
                         if useBarChart {
-                            AxisMarks(values: data.map { barLabel($0.date) }) { _ in
-                                AxisValueLabel()
-                                    .font(.system(size: 9))
+                            AxisMarks(values: data.map { barLabel($0.date) }) { value in
+                                AxisValueLabel {
+                                    if let s = value.as(String.self) {
+                                        Text(s).font(.system(size: 9))
+                                    }
+                                }
                             }
                         } else {
                             AxisMarks(values: .stride(by: .year)) { value in
