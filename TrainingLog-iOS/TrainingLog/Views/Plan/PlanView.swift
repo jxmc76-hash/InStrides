@@ -124,19 +124,18 @@ struct PlanView: View {
         .sheet(item: $tablePlan) { plan in
             EditPlanTableSheet(plan: plan)
         }
-        .alert("Delete Plan?", isPresented: Binding(
-            get: { planToDelete != nil },
-            set: { if !$0 { planToDelete = nil } }
-        )) {
+        .alert(
+            "Delete Plan?",
+            isPresented: Binding(get: { planToDelete != nil }, set: { if !$0 { planToDelete = nil } }),
+            presenting: planToDelete
+        ) { plan in
             Button("Delete", role: .destructive) {
-                if let plan = planToDelete { context.delete(plan) }
+                context.delete(plan)
                 planToDelete = nil
             }
             Button("Cancel", role: .cancel) { planToDelete = nil }
-        } message: {
-            if let plan = planToDelete {
-                Text(""\(plan.title)" and all its sessions will be permanently deleted.")
-            }
+        } message: { plan in
+            Text(""\(plan.title)" and all its sessions will be permanently deleted.")
         }
     }
 
