@@ -208,10 +208,9 @@ struct PlanView: View {
                         .font(.subheadline)
                         .lineLimit(2)
 
-                    if session.isComplete && session.linkedWorkoutID != nil {
-                        Text("✓ Linked to Health workout")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+                    if session.isComplete, let wid = session.linkedWorkoutID,
+                       let wo = hk.dailyData.flatMap(\.workouts).first(where: { $0.id == wid }) {
+                        linkedWorkoutSummary(wo)
                     } else if session.isComplete || isPast(session.date) {
                         Button("Link workout →") {
                             linkSession = (plan, session)
@@ -235,6 +234,35 @@ struct PlanView: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private func linkedWorkoutSummary(_ wo: HealthWorkout) -> some View {
+        let timeFmt: DateFormatter = {
+            let f = DateFormatter(); f.dateFormat = "h:mm a"; return f
+        }()
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
+            Text(timeFmt.string(from: wo.startDate))
+            Text("·")
+            Text("\(wo.durationMinutes) min")
+            if let km = wo.distanceKm {
+                Text("·")
+                Text(String(format: "%.2f km", km))
+            }
+            if let pace = wo.avgPacePerKm {
+                Text("·")
+                Text(pace)
+            }
+            if let cal = wo.calories {
+                Text("·")
+                Text("\(Int(cal)) kcal")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.green)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
     }
 
     private func sessionColor(_ type: String) -> Color {
