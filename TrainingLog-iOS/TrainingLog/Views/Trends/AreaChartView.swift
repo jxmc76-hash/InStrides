@@ -140,7 +140,10 @@ struct AreaChartView: View {
                         }
                     }
                 }
-                .frame(height: 130)
+                .chartPlotStyle { plot in
+                    plot.padding(.top, useBarChart ? 20 : 0)
+                }
+                .frame(height: useBarChart ? 160 : 130)
 
                 if useBarChart && data.count > 12 {
                     ScrollView(.horizontal, showsIndicators: false) {
