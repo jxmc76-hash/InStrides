@@ -13,6 +13,7 @@ struct PlanView: View {
     @State private var editSession: PlanSession? = nil
     @State private var tablePlan: TrainingPlan? = nil
     @State private var planToDelete: TrainingPlan? = nil
+    @State private var showDeleteAlert = false
     private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
@@ -66,6 +67,7 @@ struct PlanView: View {
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 planToDelete = plan
+                                showDeleteAlert = true
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -124,18 +126,14 @@ struct PlanView: View {
         .sheet(item: $tablePlan) { plan in
             EditPlanTableSheet(plan: plan)
         }
-        .alert(
-            "Delete Plan?",
-            isPresented: Binding(get: { planToDelete != nil }, set: { if !$0 { planToDelete = nil } }),
-            presenting: planToDelete
-        ) { plan in
+        .alert("Delete Plan?", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
-                context.delete(plan)
+                if let plan = planToDelete { context.delete(plan) }
                 planToDelete = nil
             }
             Button("Cancel", role: .cancel) { planToDelete = nil }
-        } message: { plan in
-            Text("\(plan.title) and all its sessions will be permanently deleted.")
+        } message: {
+            Text(planToDelete.map { "\($0.title) and all its sessions will be permanently deleted." } ?? "")
         }
     }
 
