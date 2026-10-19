@@ -15,6 +15,7 @@ struct AreaChartView: View {
     var showYear: Bool = false
     var showAverage: Bool = true
     var insight: String? = nil
+    var useBarChart: Bool = false
 
     private var average: Double {
         guard !data.isEmpty else { return 0 }
@@ -53,17 +54,25 @@ struct AreaChartView: View {
             } else {
                 Chart {
                     ForEach(data) { point in
-                        LineMark(
-                            x: .value("Date", point.date),
-                            y: .value(unit, point.value)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(color)
-                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        if useBarChart {
+                            BarMark(
+                                x: .value("Date", point.date),
+                                y: .value(unit, point.value)
+                            )
+                            .foregroundStyle(color.opacity(0.85))
+                            .cornerRadius(3)
+                        } else {
+                            LineMark(
+                                x: .value("Date", point.date),
+                                y: .value(unit, point.value)
+                            )
+                            .interpolationMethod(.catmullRom)
+                            .foregroundStyle(color)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                        }
                     }
 
-                    // Single dot on the last data point, with latest value label
-                    if let last = data.last {
+                    if !useBarChart, let last = data.last {
                         PointMark(
                             x: .value("Date", last.date),
                             y: .value(unit, last.value)

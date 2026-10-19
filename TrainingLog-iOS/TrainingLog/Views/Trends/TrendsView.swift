@@ -56,7 +56,8 @@ struct TrendsView: View {
                       data: runData,
                       color: WorkoutType.run.color,
                       showAverage: false,
-                      insight: shortTermInsight(data: runData, unit: "km", format: "%.1f"))
+                      insight: shortTermInsight(data: runData, unit: "km", format: "%.1f"),
+                      useBarChart: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Avg Weight (kg)",
@@ -106,7 +107,8 @@ struct TrendsView: View {
                       data: runData,
                       color: WorkoutType.run.color,
                       showYear: true,
-                      insight: longTermInsight(data: runData, unit: "km", format: "%.1f"))
+                      insight: longTermInsight(data: runData, unit: "km", format: "%.1f"),
+                      useBarChart: true)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Weight (kg)",
