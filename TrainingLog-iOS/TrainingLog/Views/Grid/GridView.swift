@@ -97,13 +97,20 @@ struct GridView: View {
             let d2 = fmt.string(from: last.date)
             return "\(d1)–\(d2)"
         }()
-        return HStack {
+        return HStack(spacing: 0) {
             Text(label)
                 .font(.caption2.bold())
                 .foregroundStyle(.secondary)
+                .frame(width: 72, alignment: .leading)
                 .padding(.leading, 16)
                 .padding(.vertical, 6)
-            Spacer()
+            ForEach(columns) { col in
+                let total = days.reduce(0) { $0 + $1.totalDuration(for: col) }
+                Text(total > 0 ? "\(total)" : "")
+                    .font(.caption2.bold())
+                    .foregroundStyle(col.color.opacity(0.8))
+                    .frame(maxWidth: .infinity)
+            }
         }
         .background(Color(uiColor: .systemGroupedBackground))
     }

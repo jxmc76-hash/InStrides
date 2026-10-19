@@ -37,7 +37,8 @@ struct PlanView: View {
                 .buttonStyle(.borderedProminent)
         }
         .padding(32)
-        .navigationTitle("Plan")
+        .navigationTitle("TrainingLog")
+        .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showAddPlan) {
             AddPlanSheet()
         }
@@ -67,7 +68,8 @@ struct PlanView: View {
                 }
             }
         }
-        .navigationTitle("Plan")
+        .navigationTitle("TrainingLog")
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showAddPlan = true } label: {

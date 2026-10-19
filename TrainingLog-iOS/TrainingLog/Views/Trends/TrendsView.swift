@@ -35,7 +35,8 @@ struct TrendsView: View {
                 }
                 .padding(.bottom, 32)
             }
-            .navigationTitle("Trends")
+            .navigationTitle("TrainingLog")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 
