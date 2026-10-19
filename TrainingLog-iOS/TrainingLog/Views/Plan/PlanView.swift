@@ -5,10 +5,9 @@ import UIKit
 struct PlanView: View {
     @Environment(HealthKitManager.self) private var hk
     @Environment(\.modelContext) private var context
-    @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
     @EnvironmentObject var userStore: UserStore
+    @State private var plans: [TrainingPlan] = []
     @State private var showAddPlan = false
-    @State private var queryRefreshID = UUID()
     @State private var isSyncingCalendar = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
@@ -27,12 +26,10 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan, onDismiss: {
-            queryRefreshID = UUID()
-        }) {
+        .sheet(isPresented: $showAddPlan, onDismiss: fetchPlans) {
             AddPlanSheet(context: context)
         }
-        .id(queryRefreshID)
+        .onAppear(perform: fetchPlans)
     }
 
     @ViewBuilder
@@ -287,6 +284,13 @@ struct PlanView: View {
 
     private func fmtDate(_ date: Date) -> String {
         Self.dateFmt.string(from: date)
+    }
+
+    private func fetchPlans() {
+        let descriptor = FetchDescriptor<TrainingPlan>(
+            sortBy: [SortDescriptor(\.startDate)]
+        )
+        plans = (try? context.fetch(descriptor)) ?? []
     }
 
     private func syncCalendar() async {
