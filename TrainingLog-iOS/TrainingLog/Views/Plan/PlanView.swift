@@ -309,7 +309,7 @@ struct PlanView: View {
     @discardableResult
     private func fetchPlans() -> [TrainingPlan] {
         let descriptor = FetchDescriptor<TrainingPlan>(
-            sortBy: [SortDescriptor(\.startDate)]
+            sortBy: [SortDescriptor(\TrainingPlan.startDate)]
         )
         do {
             let result = try context.fetch(descriptor)
