@@ -128,13 +128,14 @@ struct InsightsView: View {
 
         let session = LanguageModelSession()
         let prompt = """
-        You are a personal training coach analysing an athlete's recent workout data. \
+        You are a personal training coach analysing an athlete's workout data. \
         Based on the data below, provide exactly 5 concise, personalised insights. \
         Each insight should be on its own line starting with a relevant emoji. \
-        Focus on patterns, trends, consistency, and actionable observations. \
-        Be specific with numbers where possible. Keep each insight to 1-2 sentences.
+        Focus on: (1) what the athlete has done in the past 4 weeks, \
+        (2) how that compares to their previous activity, and \
+        (3) what will happen if they continue at the current trajectory — are they building, maintaining, or declining? \
+        Be specific with numbers. Be honest but encouraging. Keep each insight to 1-2 sentences.
 
-        Training data (last 90 days):
         \(summary)
         """
 
@@ -154,73 +155,71 @@ struct InsightsView: View {
 
     private func buildSummary() -> String {
         let cal = Calendar.current
-        let cutoff = cal.date(byAdding: .day, value: -90, to: .now) ?? .now
-        let recent = hk.dailyData.filter { $0.date >= cutoff }
+        let now = Date.now
+        let w4start  = cal.date(byAdding: .day, value: -28, to: now) ?? now
+        let w8start  = cal.date(byAdding: .day, value: -56, to: now) ?? now
+
+        let last4  = hk.dailyData.filter { $0.date >= w4start }
+        let prev4  = hk.dailyData.filter { $0.date >= w8start && $0.date < w4start }
 
         var lines: [String] = []
 
-        // Overall workout counts by type
-        let allWorkouts = recent.flatMap(\.workouts)
-        let byType = Dictionary(grouping: allWorkouts, by: \.type)
-        lines.append("Workout counts (90 days):")
-        for (type, workouts) in byType.sorted(by: { $0.value.count > $1.value.count }) {
-            let totalMins = workouts.reduce(0) { $0 + $1.durationMinutes }
-            lines.append("  \(type.displayName): \(workouts.count) sessions, \(totalMins) min total")
+        func sessionSummary(_ days: [DailyHealthData]) -> String {
+            let workouts = days.flatMap(\.workouts)
+            let byType = Dictionary(grouping: workouts, by: \.type)
+            let parts = byType.sorted { $0.value.count > $1.value.count }.map { type, wos in
+                let mins = wos.reduce(0) { $0 + $1.durationMinutes }
+                return "\(type.displayName): \(wos.count)x (\(mins) min)"
+            }
+            return parts.isEmpty ? "no workouts" : parts.joined(separator: ", ")
         }
 
-        // Weekly breakdown (last 12 weeks)
-        let weekCutoff = cal.date(byAdding: .weekOfYear, value: -12, to: .now) ?? .now
-        let recentWeeks = recent.filter { $0.date >= weekCutoff }
-        var weekGroups: [Date: [DailyHealthData]] = [:]
-        for day in recentWeeks {
-            let weekStart = cal.dateInterval(of: .weekOfYear, for: day.date)?.start ?? day.date
-            weekGroups[weekStart, default: []].append(day)
+        lines.append("LAST 4 WEEKS: \(sessionSummary(last4))")
+        lines.append("PREVIOUS 4 WEEKS: \(sessionSummary(prev4))")
+
+        // Weekly session totals for trend
+        func weeklyCounts(_ days: [DailyHealthData]) -> [Int] {
+            var groups: [Date: Int] = [:]
+            for day in days {
+                let w = cal.dateInterval(of: .weekOfYear, for: day.date)?.start ?? day.date
+                groups[w, default: 0] += day.workouts.count
+            }
+            return groups.values.sorted()
         }
-        let weeklySessionCounts = weekGroups.values.map { days in
-            days.flatMap(\.workouts).count
-        }
-        if !weeklySessionCounts.isEmpty {
-            let avg = weeklySessionCounts.reduce(0, +) / weeklySessionCounts.count
-            let max = weeklySessionCounts.max() ?? 0
-            lines.append("Weekly average: \(avg) sessions, peak week: \(max) sessions")
+        let last4weeks = weeklyCounts(last4)
+        let prev4weeks = weeklyCounts(prev4)
+        if !last4weeks.isEmpty && !prev4weeks.isEmpty {
+            let avgLast = last4weeks.reduce(0,+) / last4weeks.count
+            let avgPrev = prev4weeks.reduce(0,+) / prev4weeks.count
+            lines.append("Weekly avg sessions: \(avgLast) (last 4w) vs \(avgPrev) (prior 4w)")
         }
 
-        // Sleep data
-        let sleepDays = recent.compactMap(\.sleep)
-        if !sleepDays.isEmpty {
-            let avgSleep = sleepDays.map(\.totalMinutes).reduce(0, +) / Double(sleepDays.count)
-            let avgScore = sleepDays.map { Double($0.score) }.reduce(0, +) / Double(sleepDays.count)
-            lines.append("Average sleep: \(Int(avgSleep / 60))h \(Int(avgSleep.truncatingRemainder(dividingBy: 60)))min, avg sleep score: \(Int(avgScore))/100")
+        // Run distances comparison
+        func runStats(_ days: [DailyHealthData]) -> String? {
+            let kms = days.flatMap(\.workouts).filter { $0.type == .run }.compactMap(\.distanceKm)
+            guard !kms.isEmpty else { return nil }
+            let avg = kms.reduce(0,+) / Double(kms.count)
+            let total = kms.reduce(0,+)
+            return "\(kms.count) runs, \(String(format: "%.0f", total))km total, avg \(String(format: "%.1f", avg))km"
+        }
+        if let r4 = runStats(last4) { lines.append("Running last 4w: \(r4)") }
+        if let rp = runStats(prev4) { lines.append("Running prior 4w: \(rp)") }
+
+        // Sleep
+        let sleep4 = last4.compactMap(\.sleep)
+        if !sleep4.isEmpty {
+            let avg = sleep4.map(\.totalMinutes).reduce(0,+) / Double(sleep4.count)
+            lines.append("Avg sleep last 4w: \(Int(avg/60))h \(Int(avg.truncatingRemainder(dividingBy: 60)))min")
         }
 
-        // Weight trend
-        let weightDays = recent.compactMap { d -> (Date, Double)? in
-            guard let w = d.weight else { return nil }
-            return (d.date, w)
-        }.sorted { $0.0 < $1.0 }
-        if weightDays.count >= 2, let first = weightDays.first, let last = weightDays.last {
-            let diff = last.1 - first.1
+        // Weight trend over last 4 weeks
+        let weights = hk.dailyData
+            .compactMap { d -> (Date, Double)? in d.weight.map { (d.date, $0) } }
+            .sorted { $0.0 < $1.0 }
+        if let wFirst = weights.first(where: { $0.0 >= w4start }), let wLast = weights.last {
+            let diff = wLast.1 - wFirst.1
             let sign = diff >= 0 ? "+" : ""
-            lines.append("Weight: \(String(format: "%.1f", first.1))kg → \(String(format: "%.1f", last.1))kg (\(sign)\(String(format: "%.1f", diff))kg over 90 days)")
-        }
-
-        // Run distances
-        let runs = allWorkouts.filter { $0.type == .run }.compactMap(\.distanceKm)
-        if !runs.isEmpty {
-            let avg = runs.reduce(0, +) / Double(runs.count)
-            let longest = runs.max() ?? 0
-            lines.append("Running: avg \(String(format: "%.1f", avg))km per run, longest \(String(format: "%.1f", longest))km")
-        }
-
-        // Day-of-week pattern
-        var dayWorkouts: [Int: Int] = [:]
-        for wo in allWorkouts {
-            let weekday = cal.component(.weekday, from: wo.startDate)
-            dayWorkouts[weekday, default: 0] += 1
-        }
-        if let busiest = dayWorkouts.max(by: { $0.value < $1.value }) {
-            let dayName = cal.weekdaySymbols[busiest.key - 1]
-            lines.append("Most active day: \(dayName) (\(busiest.value) workouts)")
+            lines.append("Weight last 4w: \(String(format: "%.1f", wFirst.1))kg → \(String(format: "%.1f", wLast.1))kg (\(sign)\(String(format: "%.1f", diff))kg)")
         }
 
         return lines.joined(separator: "\n")

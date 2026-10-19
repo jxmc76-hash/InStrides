@@ -41,7 +41,7 @@ struct ContentView: View {
 
             InsightsView()
                 .environment(healthKit)
-                .tabItem { Label("Insights", systemImage: "brain") }
+                .tabItem { Label("Insights", systemImage: "lightbulb") }
         }
         .tint(.orange)
         .environment(healthKit)
