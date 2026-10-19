@@ -28,10 +28,6 @@ struct AreaChartView: View {
     }
 
     private var yDomain: ClosedRange<Double> {
-        if useBarChart {
-            let hi = data.map(\.value).max() ?? 1
-            return 0...(hi * 1.05)
-        }
         let vals = data.map(\.value)
         guard let lo = vals.min(), let hi = vals.max(), lo < hi else { return 0...1 }
         let pad = (hi - lo) * 0.15
