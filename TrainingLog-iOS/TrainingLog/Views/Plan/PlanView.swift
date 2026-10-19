@@ -8,6 +8,7 @@ struct PlanView: View {
     @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
     @EnvironmentObject var userStore: UserStore
     @State private var showAddPlan = false
+    @State private var queryRefreshID = UUID()
     @State private var isSyncingCalendar = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
@@ -26,9 +27,12 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan) {
+        .sheet(isPresented: $showAddPlan, onDismiss: {
+            queryRefreshID = UUID()
+        }) {
             AddPlanSheet(context: context)
         }
+        .id(queryRefreshID)
     }
 
     @ViewBuilder
