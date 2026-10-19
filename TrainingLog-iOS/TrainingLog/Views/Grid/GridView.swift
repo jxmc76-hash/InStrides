@@ -117,8 +117,8 @@ struct GridView: View {
                     .foregroundStyle(.secondary)
                 if allFive {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.orange)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.yellow)
                 }
             }
             .frame(width: 72, alignment: .leading)
@@ -128,11 +128,12 @@ struct GridView: View {
                 let count = days.reduce(0) { $0 + ($1.totalDuration(for: col) > 0 ? 1 : 0) }
                 Text(count > 0 ? "\(count)" : "")
                     .font(.caption2.bold())
-                    .foregroundStyle(col.color.opacity(0.8))
+                    .foregroundStyle(allFive ? Color.yellow.opacity(0.9) : col.color.opacity(0.8))
                     .frame(maxWidth: .infinity)
             }
         }
-        .background(allFive ? Color.orange.opacity(0.07) : Color(uiColor: .systemGroupedBackground))
+        .background(allFive ? Color.yellow.opacity(0.18) : Color(uiColor: .systemGroupedBackground))
+        .overlay(allFive ? RoundedRectangle(cornerRadius: 6).stroke(Color.yellow.opacity(0.7), lineWidth: 1.5).padding(.horizontal, 8) : nil)
     }
 
     private struct WeekGroup {
