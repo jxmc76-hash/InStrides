@@ -145,7 +145,7 @@ struct AreaChartView: View {
                             chartContent
                                 .frame(width: CGFloat(data.count) * (useBarChart ? 44 : 20))
                         }
-                        .defaultScrollAnchor(.trailing)
+                        .defaultScrollAnchor(useBarChart ? .leading : .trailing)
                     } else {
                         chartContent
                             .padding(.trailing, useBarChart ? 0 : 32)

@@ -112,7 +112,7 @@ struct TrendsView: View {
         months.compactMap { m in
             let km = m.days.flatMap { $0.workouts(for: .run) }.compactMap(\.distanceKm).reduce(0, +)
             return km > 0 ? ChartDataPoint(date: m.start, value: km) : nil
-        }
+        }.reversed()
     }
 
     private func monthlyAvgWeight(months: [MonthBucket]) -> [ChartDataPoint] {
