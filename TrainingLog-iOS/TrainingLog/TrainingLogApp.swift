@@ -4,27 +4,10 @@ import UserNotifications
 
 @main
 struct TrainingLogApp: App {
-    let container: ModelContainer = {
-        let schema = Schema([TrainingPlan.self, PlanSession.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        do {
-            return try ModelContainer(for: schema, configurations: config)
-        } catch {
-            // Schema migration failed — wipe and recreate so the app stays usable
-            let url = config.url
-            try? FileManager.default.removeItem(at: url)
-            let wal = url.deletingPathExtension().appendingPathExtension("sqlite-wal")
-            let shm = url.deletingPathExtension().appendingPathExtension("sqlite-shm")
-            try? FileManager.default.removeItem(at: wal)
-            try? FileManager.default.removeItem(at: shm)
-            return try! ModelContainer(for: schema, configurations: config)
-        }
-    }()
-
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .modelContainer(container)
+                .modelContainer(for: [TrainingPlan.self, PlanSession.self])
         }
     }
 }
