@@ -142,7 +142,9 @@ struct PlanView: View {
         let total = plan.sessions.count
         let done = plan.sessions.filter(\.isComplete).count
         let race = plan.endDate
-        let daysLeft = Calendar.current.dateComponents([.day], from: .now, to: race).day ?? 0
+        let daysLeft = max(0, Calendar.current.dateComponents([.day], from: .now, to: race).day ?? 0)
+        let pct = total > 0 ? done * 100 / total : 0
+        let progress = total > 0 ? Double(done) / Double(total) : 0.0
 
         HStack(alignment: .top) {
             Button {
@@ -151,11 +153,11 @@ struct PlanView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(plan.title).font(.headline)
                     HStack(spacing: 20) {
-                        stat("\(max(0, daysLeft))", label: "days left")
+                        stat("\(daysLeft)", label: "days left")
                         stat("\(done)/\(total)", label: "sessions")
-                        stat("\(total > 0 ? (done * 100 / total) : 0)%", label: "complete")
+                        stat("\(pct)%", label: "complete")
                     }
-                    ProgressView(value: total > 0 ? Double(done) / Double(total) : 0)
+                    ProgressView(value: progress)
                         .tint(.orange)
                 }
                 .padding(.vertical, 4)
