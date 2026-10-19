@@ -28,8 +28,10 @@ struct EditPlanTableSheet: View {
                         Divider()
                         ForEach(sortedSessions) { session in
                             SessionGridRow(session: session,
-                                           colDate: colDate, colType: colType, colDone: colDone,
-                                           onLink: { linkSession = session })
+                                           colDate: colDate, colType: colType, colDone: colDone)
+                            if session.isComplete {
+                                linkSubRow(session: session)
+                            }
                             Divider()
                         }
                         addRow
@@ -110,6 +112,36 @@ struct EditPlanTableSheet: View {
         }
         .frame(height: 32)
         .background(Color(uiColor: .secondarySystemBackground))
+    }
+
+    // MARK: - Link sub-row
+
+    @ViewBuilder
+    private func linkSubRow(session: PlanSession) -> some View {
+        HStack(spacing: 8) {
+            if session.linkedWorkoutID != nil {
+                Label("Linked to Health workout", systemImage: "checkmark.seal.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                Spacer()
+                Button("Change") { linkSession = session }
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            } else {
+                Button {
+                    linkSession = session
+                } label: {
+                    Label("Link to workout", systemImage: "link")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .tertiarySystemBackground))
     }
 
     // MARK: - Add row
@@ -211,88 +243,46 @@ struct SessionGridRow: View {
     let colDate: CGFloat
     let colType: CGFloat
     let colDone: CGFloat
-    let onLink: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                Image(systemName: "line.3.horizontal")
-                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
-                    .font(.caption)
-                    .frame(width: 32, alignment: .center)
-
-                vDivider
-
-                DatePicker("", selection: $session.date, displayedComponents: .date)
-                    .labelsHidden()
-                    .frame(width: colDate)
-                    .scaleEffect(0.78, anchor: .leading)
-                    .padding(.leading, 4)
-
-                vDivider
-
-                Picker("", selection: Binding(
-                    get: { WorkoutType(rawValue: session.type) ?? .run },
-                    set: { session.type = $0.rawValue }
-                )) {
-                    ForEach(WorkoutType.allCases) { t in
-                        Text(t.displayName).tag(t)
-                    }
-                }
+        HStack(spacing: 0) {
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                .font(.caption)
+                .frame(width: 32, alignment: .center)
+            vDivider
+            DatePicker("", selection: $session.date, displayedComponents: .date)
                 .labelsHidden()
-                .frame(width: colType)
-
-                vDivider
-
-                TextField("Target", text: $session.target)
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 8)
-
-                vDivider
-
-                Button {
-                    session.isComplete.toggle()
-                } label: {
-                    Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(session.isComplete ? .green : .secondary)
+                .frame(width: colDate)
+                .scaleEffect(0.78, anchor: .leading)
+                .padding(.leading, 4)
+            vDivider
+            Picker("", selection: Binding(
+                get: { WorkoutType(rawValue: session.type) ?? .run },
+                set: { session.type = $0.rawValue }
+            )) {
+                ForEach(WorkoutType.allCases) { t in
+                    Text(t.displayName).tag(t)
                 }
-                .buttonStyle(.plain)
-                .frame(width: colDone, alignment: .center)
             }
-            .frame(minHeight: 44)
-
-            if session.isComplete {
-                HStack {
-                    Spacer().frame(width: 32)
-                    vDivider
-                    if session.linkedWorkoutID != nil {
-                        Label("Linked to Health workout", systemImage: "checkmark.seal.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                        Button("Change") { onLink() }
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                            .padding(.trailing, 10)
-                    } else {
-                        Button {
-                            onLink()
-                        } label: {
-                            Label("Link to workout", systemImage: "link")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                    }
-                    Spacer()
-                }
-                .background(Color(uiColor: .tertiarySystemBackground))
+            .labelsHidden()
+            .frame(width: colType)
+            vDivider
+            TextField("Target", text: $session.target)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 8)
+            vDivider
+            Button {
+                session.isComplete.toggle()
+            } label: {
+                Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(session.isComplete ? .green : .secondary)
             }
+            .buttonStyle(.plain)
+            .frame(width: colDone, alignment: .center)
         }
+        .frame(minHeight: 44)
     }
 
     private var vDivider: some View {
