@@ -4,27 +4,10 @@ import UserNotifications
 
 @main
 struct TrainingLogApp: App {
-    let container: ModelContainer
-
-    init() {
-        do {
-            container = try ModelContainer(for: TrainingPlan.self, PlanSession.self)
-        } catch {
-            // Store is corrupted or schema mismatch — wipe and start fresh
-            let config = ModelConfiguration(isStoredInMemoryOnly: false)
-            do {
-                let url = config.url
-                try? FileManager.default.removeItem(at: url)
-            }
-            container = try! ModelContainer(for: TrainingPlan.self, PlanSession.self,
-                                             configurations: ModelConfiguration(isStoredInMemoryOnly: false))
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .modelContainer(container)
+                .modelContainer(for: [TrainingPlan.self, PlanSession.self])
         }
     }
 }
