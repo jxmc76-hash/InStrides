@@ -25,7 +25,7 @@ struct AreaChartView: View {
     private var yDomain: ClosedRange<Double> {
         if useBarChart {
             let hi = data.map(\.value).max() ?? 1
-            return 0...(hi * 1.15)
+            return 0...(hi * 1.3)  // extra headroom for value labels above bars
         }
         let vals = data.map(\.value)
         guard let lo = vals.min(), let hi = vals.max(), lo < hi else { return 0...1 }
@@ -59,10 +59,16 @@ struct AreaChartView: View {
                         if useBarChart {
                             BarMark(
                                 x: .value("Date", point.date),
-                                y: .value(unit, point.value)
+                                y: .value(unit, point.value),
+                                width: .ratio(0.75)
                             )
                             .foregroundStyle(color)
                             .cornerRadius(4)
+                            .annotation(position: .top, alignment: .center, spacing: 2) {
+                                Text(String(format: "%.0f", point.value))
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(color)
+                            }
                         } else {
                             LineMark(
                                 x: .value("Date", point.date),

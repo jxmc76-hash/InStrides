@@ -45,9 +45,12 @@ struct PlanView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
+            ToolbarItem(placement: .topBarLeading) {
                 HStack(spacing: 4) {
-                    Image(systemName: "figure.run")
+                    Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
+                            .resizable()
+                            .frame(width: 26, height: 26)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         .font(.caption.bold())
                         .foregroundStyle(.orange)
                     Text("TrainingLog")
@@ -94,9 +97,12 @@ struct PlanView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
+            ToolbarItem(placement: .topBarLeading) {
                 HStack(spacing: 4) {
-                    Image(systemName: "figure.run")
+                    Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
+                            .resizable()
+                            .frame(width: 26, height: 26)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         .font(.caption.bold())
                         .foregroundStyle(.orange)
                     Text("TrainingLog")
