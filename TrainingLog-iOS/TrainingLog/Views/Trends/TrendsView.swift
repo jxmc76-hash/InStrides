@@ -33,6 +33,14 @@ struct TrendsView: View {
             }
             .navigationTitle("TrainingLog")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(uiImage: (UIImage(named: "AppIcon") ?? UIImage()))
+                        .resizable()
+                        .frame(width: 28, height: 28)
+                        .clipShape(RoundedRectangle(cornerRadius: 7))
+                }
+            }
         }
     }
 
