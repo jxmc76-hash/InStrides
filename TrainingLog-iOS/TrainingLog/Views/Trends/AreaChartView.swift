@@ -36,7 +36,7 @@ struct AreaChartView: View {
     private var yDomain: ClosedRange<Double> {
         if useBarChart {
             let hi = data.map(\.value).max() ?? 1
-            return 0...(hi * 1.35)
+            return 0...(hi * 1.05)
         }
         let vals = data.map(\.value)
         guard let lo = vals.min(), let hi = vals.max(), lo < hi else { return 0...1 }
@@ -74,10 +74,11 @@ struct AreaChartView: View {
                             )
                             .foregroundStyle(color)
                             .cornerRadius(4)
-                            .annotation(position: .top, alignment: .center, spacing: 3) {
+                            .annotation(position: .overlay, alignment: .top) {
                                 Text(String(format: "%.0f", point.value))
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(color)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.top, 5)
                             }
                         } else {
                             LineMark(
@@ -140,10 +141,7 @@ struct AreaChartView: View {
                         }
                     }
                 }
-                .chartPlotStyle { plot in
-                    if useBarChart { plot.padding(.top, 22) } else { plot }
-                }
-                .frame(height: useBarChart ? 180 : 130)
+                .frame(height: useBarChart ? 160 : 130)
 
                 if data.count > 12 {
                     ScrollView(.horizontal, showsIndicators: false) {
