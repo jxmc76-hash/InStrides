@@ -135,7 +135,7 @@ struct PlanView: View {
             }
             Button("Cancel", role: .cancel) { planToDelete = nil }
         } message: { plan in
-            Text(""\(plan.title)" and all its sessions will be permanently deleted.")
+            Text("\(plan.title) and all its sessions will be permanently deleted.")
         }
     }
 
