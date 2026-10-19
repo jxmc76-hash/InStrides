@@ -232,10 +232,10 @@ struct InsightCardView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(emoji)
+            Text(leadingEmoji)
                 .font(.title2)
                 .frame(width: 36)
-            Text(body)
+            Text(insightText)
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -244,7 +244,7 @@ struct InsightCardView: View {
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private var emoji: String {
+    private var leadingEmoji: String {
         let parts = text.components(separatedBy: " ")
         if let first = parts.first, first.unicodeScalars.first?.properties.isEmoji == true {
             return first
@@ -252,7 +252,7 @@ struct InsightCardView: View {
         return "💡"
     }
 
-    private var body: String {
+    private var insightText: String {
         let parts = text.components(separatedBy: " ")
         if let first = parts.first, first.unicodeScalars.first?.properties.isEmoji == true {
             return parts.dropFirst().joined(separator: " ")
