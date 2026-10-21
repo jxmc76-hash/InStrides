@@ -1,13 +1,17 @@
 import SwiftUI
+import SwiftData
 
 struct GridView: View {
     @Environment(HealthKitManager.self) private var hk
     @EnvironmentObject var userStore: UserStore
+    @Environment(\.modelContainer) private var container
+    private var context: ModelContext { container.mainContext }
     @State private var selectedWorkouts: [HealthWorkout]? = nil
     @State private var showColumnPicker = false
     @State private var showSettings = false
     @State private var collapsedWeeks: Set<Date> = []
     @State private var collapseInitialised = false
+    @State private var todaySessions: [(plan: TrainingPlan, session: PlanSession)] = []
 
     private let collapseThreshold = 12 // weeks
 
@@ -17,6 +21,12 @@ struct GridView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
+                    if !todaySessions.isEmpty {
+                        TodayPlanCard(sessions: todaySessions)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 4)
+                    }
                     LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                         Section {
                             gridBody
@@ -27,6 +37,7 @@ struct GridView: View {
                 }
             }
             .refreshable { await hk.fetchAll() }
+            .onAppear { todaySessions = fetchTodaySessions() }
             .navigationTitle("Overview")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -173,6 +184,23 @@ struct GridView: View {
         let days: [DailyHealthData]
     }
 
+    private func fetchTodaySessions() -> [(plan: TrainingPlan, session: PlanSession)] {
+        let today = Calendar.current.startOfDay(for: .now)
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        let descriptor = FetchDescriptor<TrainingPlan>()
+        guard let plans = try? context.fetch(descriptor) else { return [] }
+        var result: [(TrainingPlan, PlanSession)] = []
+        for plan in plans {
+            for session in plan.sessions {
+                let sessionDay = Calendar.current.startOfDay(for: session.date)
+                if sessionDay >= today && sessionDay < tomorrow {
+                    result.append((plan, session))
+                }
+            }
+        }
+        return result.sorted { $0.1.date < $1.1.date }
+    }
+
     private func groupByWeek(_ data: [DailyHealthData]) -> [WeekGroup] {
         let cal = Calendar.current
         var groups: [Date: [DailyHealthData]] = [:]
@@ -183,6 +211,67 @@ struct GridView: View {
         return groups.keys.sorted(by: >).map { week in
             WeekGroup(week: week, days: groups[week]!.sorted { $0.date > $1.date })
         }
+    }
+}
+
+struct TodayPlanCard: View {
+    let sessions: [(plan: TrainingPlan, session: PlanSession)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Today's Plan", systemImage: "calendar")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.primary)
+                Spacer()
+                let done = sessions.filter { $0.session.isComplete }.count
+                Text("\(done)/\(sessions.count) done")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            ForEach(sessions, id: \.session.id) { pair in
+                HStack(spacing: 10) {
+                    let color = WorkoutType(rawValue: pair.session.type)?.color ?? .orange
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(color)
+                        .frame(width: 4, height: 36)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(pair.session.type.uppercased())
+                                .font(.caption.bold())
+                                .foregroundStyle(color)
+                            Text("·")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text(pair.plan.title)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Text(pair.session.target)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: pair.session.isComplete ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(pair.session.isComplete ? .green : .tertiary)
+                        .font(.title3)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+        )
     }
 }
 

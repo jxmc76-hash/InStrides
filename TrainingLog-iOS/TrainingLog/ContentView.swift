@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var healthKit = HealthKitManager()
     @State private var userStore = UserStore()
     @State private var workoutPrompt: WorkoutPrompt? = nil
+    @State private var showEnergyPicker = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -55,6 +56,13 @@ struct ContentView: View {
             if phase == .active {
                 Task { await healthKit.fetchAll() }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openEnergyPicker)) { _ in
+            showEnergyPicker = true
+        }
+        .sheet(isPresented: $showEnergyPicker) {
+            EnergyPickerSheet(date: Calendar.current.startOfDay(for: .now))
+                .environmentObject(userStore)
         }
         .sheet(item: $workoutPrompt) { prompt in
             switch prompt {

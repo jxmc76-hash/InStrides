@@ -4,11 +4,37 @@ import UserNotifications
 
 @main
 struct TrainingLogApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { url in
+                    if url.scheme == "traininglog", url.host == "energy" {
+                        NotificationCenter.default.post(name: .openEnergyPicker, object: nil)
+                    }
+                }
         }
         .modelContainer(for: [TrainingPlan.self, PlanSession.self])
+    }
+}
+
+extension Notification.Name {
+    static let openEnergyPicker = Notification.Name("openEnergyPicker")
+}
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if response.notification.request.identifier == "energy-reminder" {
+            await MainActor.run {
+                NotificationCenter.default.post(name: .openEnergyPicker, object: nil)
+            }
+        }
     }
 }
 
@@ -23,6 +49,7 @@ func scheduleEnergyReminder(time: Date) async {
     content.title = "Training Log"
     content.body = "How's your energy today? Tap to log it."
     content.sound = .default
+    content.userInfo = ["url": "traininglog://energy"]
 
     let cal = Calendar.current
     var components = DateComponents()
