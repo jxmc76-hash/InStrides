@@ -27,7 +27,7 @@ struct HealthWorkout: Identifiable, Sendable {
         self.startDate = hkWorkout.startDate
         self.duration = hkWorkout.duration
         self.distance = hkWorkout.totalDistance?.doubleValue(for: .meter())
-        self.calories = hkWorkout.totalEnergyBurned?.doubleValue(for: .kilocalorie())
+        self.calories = hkWorkout.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie())
         let name = hkWorkout.sourceRevision.source.name
         self.sourceName = name == "Health" ? nil : name
     }
