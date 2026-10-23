@@ -295,7 +295,7 @@ private struct TodayPlanRow: View {
             }
             Spacer()
             Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(session.isComplete ? .green : .tertiary)
+                .foregroundStyle(session.isComplete ? Color.green : Color(uiColor: .tertiaryLabel))
                 .font(.title3)
         }
     }
