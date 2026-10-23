@@ -183,7 +183,7 @@ struct InjuryFormSheet: View {
                         Slider(value: Binding(
                             get: { Double(pain) },
                             set: { pain = Int($0.rounded()) }
-                        ), in: 1...10, step: 1)
+                        ), in: 1.0...10.0, step: 1.0)
                         .tint(painColor)
                         PainBadge(pain: pain)
                     }
@@ -247,7 +247,7 @@ struct InjuryEditSheet: View {
                         Slider(value: Binding(
                             get: { Double(pain) },
                             set: { pain = Int($0.rounded()) }
-                        ), in: 1...10, step: 1)
+                        ), in: 1.0...10.0, step: 1.0)
                         .tint(painColor)
                         PainBadge(pain: pain)
                     }
