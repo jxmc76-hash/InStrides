@@ -214,16 +214,16 @@ struct DayLogCard: View {
                     HStack(spacing: 6) {
                         ForEach(day.workouts, id: \.id) { workout in
                             Button { onTapWorkout([workout]) } label: {
-                                VStack(spacing: 3) {
-                                    Text("\(workout.durationMinutes)")
+                                VStack(spacing: 4) {
+                                    Image(systemName: workout.type.icon)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(workout.type.color)
+                                    Text("\(workout.durationMinutes)m")
                                         .font(.caption.bold())
                                         .foregroundStyle(workout.type.color)
-                                    Text(workout.type.rawValue)
-                                        .font(.caption2)
-                                        .foregroundStyle(workout.type.color.opacity(0.8))
                                 }
                                 .frame(minWidth: 52)
-                                .padding(.vertical, 6)
+                                .padding(.vertical, 7)
                                 .background(workout.type.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(.plain)

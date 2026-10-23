@@ -12,6 +12,16 @@ enum WorkoutType: String, CaseIterable, Identifiable, Codable {
 
     var displayName: String { rawValue }
 
+    var icon: String {
+        switch self {
+        case .run:  "figure.run"
+        case .yoga: "figure.yoga"
+        case .gym:  "dumbbell"
+        case .swim: "figure.pool.swim"
+        case .sit:  "brain.head.profile"
+        }
+    }
+
     var color: Color {
         switch self {
         case .run:  Color(hex: "#E8593A")

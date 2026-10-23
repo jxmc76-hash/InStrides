@@ -95,9 +95,9 @@ struct GridView: View {
                 .padding(.leading, 16)
 
             ForEach(columns) { col in
-                Text(col.displayName)
+                Image(systemName: col.icon)
                     .frame(maxWidth: .infinity)
-                    .font(.caption.bold())
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(col.color)
             }
         }
@@ -166,10 +166,12 @@ struct GridView: View {
                 .padding(.leading, 12)
                 .padding(.vertical, 6)
                 ForEach(columns) { col in
-                    let count = days.reduce(0) { $0 + $1.totalDuration(for: col) }
-                    Text(count > 0 ? "\(count)" : "")
+                    let mins = days.reduce(0) { $0 + $1.totalDuration(for: col) }
+                    Text(mins > 0 ? "\(mins)" : "–")
                         .font(.caption2.bold())
-                        .foregroundStyle(allFive ? Color.primary : col.color.opacity(0.8))
+                        .foregroundStyle(mins > 0
+                            ? (allFive ? Color.primary : col.color.opacity(0.8))
+                            : Color.secondary.opacity(0.3))
                         .frame(maxWidth: .infinity)
                 }
             }

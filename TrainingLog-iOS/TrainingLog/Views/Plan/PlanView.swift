@@ -233,7 +233,7 @@ struct PlanView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text(session.type.uppercased())
+                        Label(session.type.uppercased(), systemImage: WorkoutType(rawValue: session.type)?.icon ?? "circle")
                             .font(.caption.bold())
                             .foregroundStyle(sessionColor(session.type))
                     }
