@@ -40,6 +40,9 @@ struct ContentView: View {
                 .environmentObject(userStore)
                 .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
 
+            InjuriesView()
+                .tabItem { Label("Injuries", systemImage: "bandage") }
+
         }
         .tint(.orange)
         .environment(healthKit)

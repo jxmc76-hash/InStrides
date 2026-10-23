@@ -15,7 +15,7 @@ struct TrainingLogApp: App {
                     }
                 }
         }
-        .modelContainer(for: [TrainingPlan.self, PlanSession.self])
+        .modelContainer(for: [TrainingPlan.self, PlanSession.self, Injury.self])
     }
 }
 
