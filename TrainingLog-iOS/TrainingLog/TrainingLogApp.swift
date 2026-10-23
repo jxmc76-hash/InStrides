@@ -29,12 +29,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if response.notification.request.identifier == "energy-reminder" {
-            await MainActor.run {
+            DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .openEnergyPicker, object: nil)
             }
         }
+        completionHandler()
     }
 }
 
