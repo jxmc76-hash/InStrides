@@ -175,60 +175,63 @@ struct DayLogCard: View {
 
             Divider().padding(.horizontal, 14)
 
-            // Stats row: energy + vo2 + workouts
-            HStack(spacing: 0) {
-                // Energy dots
-                Button { onTapEnergy() } label: {
-                    VStack(spacing: 3) {
-                        HStack(spacing: 3) {
-                            ForEach(1...5, id: \.self) { i in
-                                Circle()
-                                    .fill(i <= (userStore.energy(for: day.date) ?? 0)
-                                          ? Color.orange : Color.secondary.opacity(0.2))
-                                    .frame(width: 8, height: 8)
-                            }
-                        }
-                        Text("Energy")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-
-                // VO2
-                if let v = vo2 {
-                    VStack(spacing: 3) {
-                        Text(String(format: "%.1f", v))
-                            .font(.caption.bold())
-                            .foregroundStyle(day.vo2Max != nil ? Color.teal : Color.secondary)
-                        Text("VO₂")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-
-                // Workouts
-                ForEach(day.workouts, id: \.id) { workout in
-                    Button { onTapWorkout([workout]) } label: {
+            // Stats row: energy + vo2 fixed left, workouts scroll right
+            HStack(spacing: 10) {
+                // Fixed left column: energy + VO2
+                VStack(spacing: 8) {
+                    Button { onTapEnergy() } label: {
                         VStack(spacing: 3) {
-                            Text("\(workout.durationMinutes)")
-                                .font(.caption.bold())
-                                .foregroundStyle(workout.type.color)
-                            Text(workout.type.rawValue)
+                            HStack(spacing: 3) {
+                                ForEach(1...5, id: \.self) { i in
+                                    Circle()
+                                        .fill(i <= (userStore.energy(for: day.date) ?? 0)
+                                              ? Color.orange : Color.secondary.opacity(0.2))
+                                        .frame(width: 7, height: 7)
+                                }
+                            }
+                            Text("Energy")
                                 .font(.caption2)
-                                .foregroundStyle(workout.type.color.opacity(0.8))
+                                .foregroundStyle(.secondary)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .background(workout.type.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-                        .padding(.horizontal, 3)
                     }
                     .buttonStyle(.plain)
+
+                    if let v = vo2 {
+                        VStack(spacing: 2) {
+                            Text(String(format: "%.1f", v))
+                                .font(.caption.bold())
+                                .foregroundStyle(day.vo2Max != nil ? Color.teal : Color.secondary)
+                            Text("VO₂")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .frame(width: 52)
+
+                // Scrollable workouts
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(day.workouts, id: \.id) { workout in
+                            Button { onTapWorkout([workout]) } label: {
+                                VStack(spacing: 3) {
+                                    Text("\(workout.durationMinutes)")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(workout.type.color)
+                                    Text(workout.type.rawValue)
+                                        .font(.caption2)
+                                        .foregroundStyle(workout.type.color.opacity(0.8))
+                                }
+                                .frame(minWidth: 52)
+                                .padding(.vertical, 6)
+                                .background(workout.type.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 12)
             .padding(.vertical, 10)
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))

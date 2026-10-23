@@ -166,7 +166,7 @@ struct GridView: View {
                 .padding(.leading, 12)
                 .padding(.vertical, 6)
                 ForEach(columns) { col in
-                    let count = days.reduce(0) { $0 + ($1.totalDuration(for: col) > 0 ? 1 : 0) }
+                    let count = days.reduce(0) { $0 + $1.totalDuration(for: col) }
                     Text(count > 0 ? "\(count)" : "")
                         .font(.caption2.bold())
                         .foregroundStyle(allFive ? Color.primary : col.color.opacity(0.8))

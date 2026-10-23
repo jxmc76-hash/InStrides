@@ -92,7 +92,15 @@ struct PlanView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
-                    ForEach(plan.sessions.sorted { $0.date < $1.date }) { session in
+                    ForEach(plan.sessions.sorted { lhs, rhs in
+                        let today = Calendar.current.startOfDay(for: .now)
+                        let lhsDay = Calendar.current.startOfDay(for: lhs.date)
+                        let rhsDay = Calendar.current.startOfDay(for: rhs.date)
+                        let lhsIsToday = lhsDay == today
+                        let rhsIsToday = rhsDay == today
+                        if lhsIsToday != rhsIsToday { return lhsIsToday }
+                        return lhs.date < rhs.date
+                    }) { session in
                         sessionRow(session, plan: plan)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
