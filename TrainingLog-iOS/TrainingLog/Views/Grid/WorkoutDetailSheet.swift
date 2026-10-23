@@ -96,6 +96,9 @@ struct WorkoutDetailSheet: View {
         case .sit:
             row("Duration", value: "\(workout.durationMinutes) min")
             depthRow(for: workout)
+
+        case .flexibility:
+            row("Duration", value: "\(workout.durationMinutes) min")
         }
 
         if !plans.isEmpty {
