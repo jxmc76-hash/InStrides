@@ -253,37 +253,7 @@ struct TodayPlanCard: View {
             Divider()
 
             ForEach(sessions, id: \.session.id) { pair in
-                HStack(spacing: 10) {
-                    let color = WorkoutType(rawValue: pair.session.type)?.color ?? .orange
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(color)
-                        .frame(width: 4, height: 36)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(pair.session.type.uppercased())
-                                .font(.caption.bold())
-                                .foregroundStyle(color)
-                            Text("·")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                            Text(pair.plan.title)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        Text(pair.session.target)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                            .lineLimit(2)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: pair.session.isComplete ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(pair.session.isComplete ? .green : .tertiary)
-                        .font(.title3)
-                }
+                TodayPlanRow(plan: pair.plan, session: pair.session)
             }
         }
         .padding(14)
@@ -292,6 +262,42 @@ struct TodayPlanCard: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.orange.opacity(0.25), lineWidth: 1)
         )
+    }
+}
+
+private struct TodayPlanRow: View {
+    let plan: TrainingPlan
+    let session: PlanSession
+
+    var body: some View {
+        let color: Color = WorkoutType(rawValue: session.type)?.color ?? .orange
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(color)
+                .frame(width: 4, height: 36)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(session.type.uppercased())
+                        .font(.caption.bold())
+                        .foregroundStyle(color)
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text(plan.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Text(session.target)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+            }
+            Spacer()
+            Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(session.isComplete ? .green : .tertiary)
+                .font(.title3)
+        }
     }
 }
 
