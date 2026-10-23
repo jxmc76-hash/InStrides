@@ -16,70 +16,84 @@ struct GridView: View {
 
     private var columns: [WorkoutType] { userStore.selectedColumns }
 
+    private var collapseIconName: String {
+        collapsedWeeks.count == groupByWeek(hk.dailyData).count
+            ? "arrow.down.right.and.arrow.up.left"
+            : "arrow.up.left.and.arrow.down.right"
+    }
+
+    private var detailSheetBinding: Binding<SelectedWorkoutList?> {
+        Binding(
+            get: { selectedWorkouts.map { SelectedWorkoutList(workouts: $0) } },
+            set: { _ in selectedWorkouts = nil }
+        )
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    if !todaySessions.isEmpty {
-                        TodayPlanCard(sessions: todaySessions)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-                            .padding(.bottom, 4)
-                    }
-                    LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-                        Section {
-                            gridBody
-                        } header: {
-                            headerRow
-                        }
+            scrollContent
+                .refreshable { await hk.fetchAll() }
+                .onAppear { todaySessions = fetchTodaySessions() }
+                .navigationTitle("Overview")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { toolbarContent }
+                .sheet(isPresented: $showSettings) {
+                    SettingsSheet().environmentObject(userStore)
+                }
+                .sheet(isPresented: $showColumnPicker) {
+                    ColumnPickerSheet(selected: Binding(
+                        get: { userStore.selectedColumns },
+                        set: { userStore.selectedColumns = $0 }
+                    ))
+                }
+                .sheet(item: detailSheetBinding) { item in
+                    WorkoutDetailSheet(workouts: item.workouts)
+                        .environmentObject(userStore)
+                        .environment(hk)
+                }
+        }
+    }
+
+    private var scrollContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if !todaySessions.isEmpty {
+                    TodayPlanCard(sessions: todaySessions)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
+                }
+                LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                    Section {
+                        gridBody
+                    } header: {
+                        headerRow
                     }
                 }
             }
-            .refreshable { await hk.fetchAll() }
-            .onAppear { todaySessions = fetchTodaySessions() }
-            .navigationTitle("Overview")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        Button {
-                            let grouped = groupByWeek(hk.dailyData)
-                            if collapsedWeeks.count == grouped.count {
-                                collapsedWeeks = []
-                            } else {
-                                collapsedWeeks = Set(grouped.map(\.week))
-                            }
-                        } label: {
-                            Image(systemName: collapsedWeeks.count == groupByWeek(hk.dailyData).count
-                                  ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 13))
-                        }
-                        Button { showSettings = true } label: {
-                            Image(systemName: "gear")
-                        }
-                        Button { showColumnPicker = true } label: {
-                            Image(systemName: "slider.horizontal.3")
-                        }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 16) {
+                Button {
+                    let grouped = groupByWeek(hk.dailyData)
+                    if collapsedWeeks.count == grouped.count {
+                        collapsedWeeks = []
+                    } else {
+                        collapsedWeeks = Set(grouped.map(\.week))
                     }
+                } label: {
+                    Image(systemName: collapseIconName).font(.system(size: 13))
                 }
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsSheet()
-                    .environmentObject(userStore)
-            }
-            .sheet(isPresented: $showColumnPicker) {
-                ColumnPickerSheet(selected: Binding(
-                    get: { userStore.selectedColumns },
-                    set: { userStore.selectedColumns = $0 }
-                ))
-            }
-            .sheet(item: Binding(
-                get: { selectedWorkouts.map { SelectedWorkoutList(workouts: $0) } },
-                set: { _ in selectedWorkouts = nil }
-            )) { item in
-                WorkoutDetailSheet(workouts: item.workouts)
-                    .environmentObject(userStore)
-                    .environment(hk)
+                Button { showSettings = true } label: {
+                    Image(systemName: "gear")
+                }
+                Button { showColumnPicker = true } label: {
+                    Image(systemName: "slider.horizontal.3")
+                }
             }
         }
     }
