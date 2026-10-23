@@ -166,18 +166,23 @@ struct GridView: View {
                 .padding(.vertical, 6)
                 ForEach(columns) { col in
                     let mins = days.reduce(0) { $0 + $1.totalDuration(for: col) }
-                    Text(mins > 0 ? "\(mins)" : "–")
+                    let fg: Color = mins > 0 ? (allFive ? Color.primary : col.color.opacity(0.8)) : Color.secondary.opacity(0.3)
+                Text(mins > 0 ? "\(mins)" : "–")
                         .font(.caption2.bold())
-                        .foregroundStyle(mins > 0
-                            ? (allFive ? Color.primary : col.color.opacity(0.8))
-                            : Color.secondary.opacity(0.3))
+                        .foregroundStyle(fg)
                         .frame(maxWidth: .infinity)
                 }
             }
         }
         .buttonStyle(.plain)
         .background(allFive ? Color.yellow.opacity(0.18) : Color(uiColor: .systemGroupedBackground))
-        .overlay(allFive ? RoundedRectangle(cornerRadius: 6).stroke(Color.yellow.opacity(0.7), lineWidth: 1.5).padding(.horizontal, 8) : nil)
+        .overlay {
+            if allFive {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.yellow.opacity(0.7), lineWidth: 1.5)
+                    .padding(.horizontal, 8)
+            }
+        }
     }
 
     private struct WeekGroup {
