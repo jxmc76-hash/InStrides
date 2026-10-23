@@ -4,8 +4,7 @@ import SwiftData
 struct GridView: View {
     @Environment(HealthKitManager.self) private var hk
     @EnvironmentObject var userStore: UserStore
-    @Environment(\.modelContainer) private var container
-    private var context: ModelContext { container.mainContext }
+    @Environment(\.modelContext) private var context
     @State private var selectedWorkouts: [HealthWorkout]? = nil
     @State private var showColumnPicker = false
     @State private var showSettings = false
