@@ -12,7 +12,7 @@ final class HealthKitManager {
     private let store = HKHealthStore()
 
     private var readTypes: Set<HKObjectType> {
-        var types: Set<HKObjectType> = [
+        let types: Set<HKObjectType> = [
             HKObjectType.workoutType(),
             HKObjectType.quantityType(forIdentifier: .bodyMass)!,
             HKObjectType.quantityType(forIdentifier: .vo2Max)!,
