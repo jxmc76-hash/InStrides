@@ -9,7 +9,6 @@ struct PlanView: View {
     @State private var plans: [TrainingPlan] = []
     @State private var showAddPlan = false
     @State private var isSyncingCalendar = false
-    @State private var debugMessage: String = ""
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
     @State private var editPlan: TrainingPlan? = nil
@@ -30,12 +29,7 @@ struct PlanView: View {
         .sheet(isPresented: $showAddPlan, onDismiss: { plans = fetchPlans() }) {
             AddPlanSheet { plan in
                 context.insert(plan)
-                do {
-                    try context.save()
-                    debugMessage = "saved ok"
-                } catch {
-                    debugMessage = "save error: \(error)"
-                }
+                try? context.save()
                 plans.append(plan)
                 plans.sort { $0.startDate < $1.startDate }
             }
@@ -63,9 +57,6 @@ struct PlanView: View {
                 .multilineTextAlignment(.center)
             Button("Create Plan") { showAddPlan = true }
                 .buttonStyle(.borderedProminent)
-            if !debugMessage.isEmpty {
-                Text(debugMessage).font(.caption).foregroundStyle(.red)
-            }
             Spacer()
         }
         .navigationTitle("Plan")
@@ -313,17 +304,9 @@ struct PlanView: View {
         Self.dateFmt.string(from: date)
     }
 
-    @discardableResult
     private func fetchPlans() -> [TrainingPlan] {
         let descriptor = FetchDescriptor<TrainingPlan>()
-        do {
-            let result = try context.fetch(descriptor)
-            debugMessage = "fetch: \(result.count) plans"
-            return result.sorted { $0.startDate < $1.startDate }
-        } catch {
-            debugMessage = "fetch error: \(error)"
-            return []
-        }
+        return (try? context.fetch(descriptor))?.sorted { $0.startDate < $1.startDate } ?? []
     }
 
     private func syncCalendar() async {
