@@ -14,7 +14,9 @@
         "UIApplicationSceneManifest": {
           "UIApplicationSupportsMultipleScenes": false,
           "UISceneConfigurations": {}
-        }
+        },
+        "NSHealthShareUsageDescription": "TrainingLog reads your workouts, sleep, weight and VO₂ max to show your training history.",
+        "NSHealthUpdateUsageDescription": "TrainingLog does not write to Apple Health."
       }
     },
     "android": {
@@ -29,7 +31,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": false
+        }
+      ]
     ]
   }
 }

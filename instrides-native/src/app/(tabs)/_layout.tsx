@@ -5,25 +5,33 @@ import { Colors } from '../../constants/Colors';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ name, color }: { name: IoniconsName; color: string }) {
-  return <Ionicons name={name} size={24} color={color} />;
+function TabIcon({ name, color }: { name: IoniconsName; color: string | import('react-native').ColorValue }) {
+  return <Ionicons name={name} size={24} color={color as string} />;
 }
 
 export default function TabLayout() {
-  const scheme = useColorScheme() ?? 'light';
+  const rawScheme = useColorScheme();
+  const scheme = (rawScheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
   const c = Colors[scheme];
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: c.textMuted,
-        tabBarStyle: { backgroundColor: c.card, borderTopColor: c.border },
-        headerStyle: { backgroundColor: c.header },
-        headerTintColor: c.text,
+        tabBarInactiveTintColor: c.textMuted as string,
+        tabBarStyle: { backgroundColor: c.card },
+        headerStyle: { backgroundColor: c.card },
+        headerTintColor: c.text as string,
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
+      <Tabs.Screen
+        name="grid"
+        options={{
+          title: 'Grid',
+          tabBarIcon: ({ color }) => <TabIcon name="grid-outline" color={color} />,
+        }}
+      />
       <Tabs.Screen
         name="log"
         options={{
@@ -41,16 +49,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="insights"
         options={{
-          title: 'Insights',
-          tabBarIcon: ({ color }) => <TabIcon name="bar-chart-outline" color={color} />,
+          title: 'Trends',
+          tabBarIcon: ({ color }) => <TabIcon name="trending-up-outline" color={color} />,
         }}
       />
+      {/* Hide goals tab — not part of new spec */}
       <Tabs.Screen
         name="goals"
-        options={{
-          title: 'Goals',
-          tabBarIcon: ({ color }) => <TabIcon name="trophy-outline" color={color} />,
-        }}
+        options={{ href: null }}
       />
     </Tabs>
   );
