@@ -20,29 +20,29 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            GridView()
-                .environment(healthKit)
-                .environmentObject(userStore)
-                .tabItem { Label("Overview", systemImage: "grid") }
-
-            LogView()
-                .environment(healthKit)
-                .environmentObject(userStore)
-                .tabItem { Label("Log", systemImage: "list.bullet") }
-
-            PlanView()
-                .environment(healthKit)
-                .environmentObject(userStore)
-                .tabItem { Label("Plan", systemImage: "calendar") }
-
-            TrendsView()
-                .environment(healthKit)
-                .environmentObject(userStore)
-                .tabItem { Label("Trends", systemImage: "chart.line.uptrend.xyaxis") }
-
-            InjuriesView()
-                .tabItem { Label("Injuries", systemImage: "bandage") }
-
+            Tab("Overview", systemImage: "grid") {
+                GridView()
+                    .environment(healthKit)
+                    .environmentObject(userStore)
+            }
+            Tab("Log", systemImage: "list.bullet") {
+                LogView()
+                    .environment(healthKit)
+                    .environmentObject(userStore)
+            }
+            Tab("Plan", systemImage: "calendar") {
+                PlanView()
+                    .environment(healthKit)
+                    .environmentObject(userStore)
+            }
+            Tab("Injuries", systemImage: "bandage") {
+                InjuriesView()
+            }
+            Tab("Trends", systemImage: "chart.line.uptrend.xyaxis") {
+                TrendsView()
+                    .environment(healthKit)
+                    .environmentObject(userStore)
+            }
         }
         .tint(.orange)
         .environment(healthKit)
