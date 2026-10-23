@@ -6,7 +6,8 @@ struct WorkoutDetailSheet: View {
     @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
-    @Query(sort: \TrainingPlan.startDate) private var plans: [TrainingPlan]
+    @Query private var allPlans: [TrainingPlan]
+    private var plans: [TrainingPlan] { allPlans.sorted { $0.startDate < $1.startDate } }
     @State private var gymWeightInput: String = ""
     @State private var editingWorkout: HealthWorkout?
     @State private var linkingWorkout: HealthWorkout?
