@@ -2,8 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct InjuriesView: View {
-    @Environment(\.modelContainer) private var container
-    private var context: ModelContext { container.mainContext }
+    @Environment(\.modelContext) private var context
     @State private var injuries: [Injury] = []
     @State private var showAdd = false
     @State private var editInjury: Injury? = nil
