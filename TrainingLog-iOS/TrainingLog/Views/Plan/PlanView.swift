@@ -86,7 +86,7 @@ struct PlanView: View {
                         sessionRow(session, plan: plan)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
-                                    plan.sessions.removeAll { $0.id == session.id }
+                                    context.delete(session)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }

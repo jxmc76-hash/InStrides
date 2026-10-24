@@ -3,10 +3,10 @@ import SwiftData
 
 @Model
 final class Injury {
-    var date: Date
-    var bodyPart: String
-    var pain: Int
-    var notes: String
+    var date: Date = Date()
+    var bodyPart: String = ""
+    var pain: Int = 5
+    var notes: String = ""
 
     init(date: Date, bodyPart: String, pain: Int, notes: String = "") {
         self.date = date
