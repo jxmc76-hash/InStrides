@@ -13,8 +13,37 @@ struct SettingsSheet: View {
                                selection: $userStore.reminderTime,
                                displayedComponents: .hourAndMinute)
                     .onChange(of: userStore.reminderTime) { _, _ in
+                        userStore.persist()
                         Task { await rescheduleReminder() }
                     }
+                }
+
+                Section {
+                    Toggle("Remind me of planned sessions", isOn: $userStore.sessionReminderEnabled)
+                        .onChange(of: userStore.sessionReminderEnabled) { _, _ in userStore.persist() }
+                    if userStore.sessionReminderEnabled {
+                        DatePicker("Reminder time",
+                                   selection: $userStore.sessionReminderTime,
+                                   displayedComponents: .hourAndMinute)
+                            .onChange(of: userStore.sessionReminderTime) { _, _ in userStore.persist() }
+                    }
+                } header: {
+                    Text("Session Reminder")
+                } footer: {
+                    Text("A morning notification on days with a planned session you haven't completed.")
+                }
+
+                Section {
+                    Picker("Session length", selection: $userStore.sessionLengthMinutes) {
+                        ForEach([30, 45, 60, 75, 90, 120], id: \.self) { minutes in
+                            Text("\(minutes) min").tag(minutes)
+                        }
+                    }
+                    .onChange(of: userStore.sessionLengthMinutes) { _, _ in userStore.persist() }
+                } header: {
+                    Text("Calendar")
+                } footer: {
+                    Text("How long each session appears in your calendar. Tap the calendar button on the Plan tab to update it.")
                 }
             }
             .navigationTitle("Settings")

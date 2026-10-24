@@ -145,7 +145,7 @@ struct NaturalLanguagePlanSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(input.trimmingCharacters(in: .whitespaces).isEmpty ? Color.secondary : Color.orange)
+                .background(input.trimmingCharacters(in: .whitespaces).isEmpty ? Color.secondary : Color.appTeal)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
@@ -190,7 +190,7 @@ struct NaturalLanguagePlanSheet: View {
                     ForEach(edit.updates, id: \.index) { u in
                         Label("\(u.type.capitalized) — \(u.target) (\(u.date))",
                               systemImage: "pencil.circle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.appTeal)
                             .font(.subheadline)
                     }
                 }

@@ -8,6 +8,9 @@ final class HealthKitManager {
     var dailyData: [DailyHealthData] = []
     var isLoading = false
     var authorizationStatus: HKAuthorizationStatus = .notDetermined
+    /// nil until we know; false on devices with no Health data (Mac, or Health not set up).
+    var hasLocalHealthData: Bool? = nil
+    var lastFetch: Date? = nil
 
     private let store = HKHealthStore()
 
@@ -23,13 +26,17 @@ final class HealthKitManager {
 
     func requestAuthorization() async {
         print("[HK] isHealthDataAvailable=\(HKHealthStore.isHealthDataAvailable())")
-        guard HKHealthStore.isHealthDataAvailable() else { return }
+        guard HKHealthStore.isHealthDataAvailable() else {
+            hasLocalHealthData = false
+            return
+        }
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
             print("[HK] authorization succeeded, fetching...")
             await fetchAll()
         } catch {
             print("[HK] authorization failed: \(error)")
+            hasLocalHealthData = false
         }
     }
 
@@ -52,6 +59,8 @@ final class HealthKitManager {
         dailyData = buildDailyData(workouts: ws, weights: wts, vo2s: vs, sleep: sl,
                                     from: start, to: end)
         print("[HK] dailyData set: \(dailyData.count) days")
+        hasLocalHealthData = (ws.count + wts.count + vs.count + sl.count) > 0
+        lastFetch = Date()
     }
 
     // MARK: - Private fetch helpers

@@ -15,6 +15,8 @@ struct AreaChartView: View {
     var showAverage: Bool = true
     var insight: String? = nil
     var useBarChart: Bool = false
+    var decimals: Int = 0
+    var emptyMessage: String = "No data"
 
     private var average: Double {
         guard !data.isEmpty else { return 0 }
@@ -23,7 +25,11 @@ struct AreaChartView: View {
 
     private var yDomain: ClosedRange<Double> {
         let vals = data.map(\.value)
-        guard let lo = vals.min(), let hi = vals.max(), lo < hi else { return 0...1 }
+        guard let lo = vals.min(), let hi = vals.max() else { return 0...1 }
+        guard lo < hi else {
+            let pad = max(abs(lo) * 0.1, 1)
+            return (lo - pad)...(hi + pad)
+        }
         let pad = (hi - lo) * 0.15
         return (lo - pad)...(hi + pad)
     }
@@ -31,7 +37,7 @@ struct AreaChartView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.subheadline.bold())
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.primary)
 
             if let insight {
@@ -43,7 +49,7 @@ struct AreaChartView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 if data.isEmpty {
-                    Text("No data")
+                    Text(emptyMessage)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(height: 120)
@@ -54,13 +60,14 @@ struct AreaChartView: View {
                             if useBarChart {
                                 BarMark(
                                     x: .value("Month", point.date, unit: .month),
-                                    y: .value(unit, point.value),
+                                    yStart: .value("Base", yDomain.lowerBound),
+                                    yEnd: .value(unit, point.value),
                                     width: .ratio(0.8)
                                 )
                                 .foregroundStyle(color)
                                 .cornerRadius(4)
                                 .annotation(position: .overlay, alignment: .top) {
-                                    Text(String(format: "%.0f", point.value))
+                                    Text(String(format: "%.\(decimals)f", point.value))
                                         .font(.system(size: 9, weight: .bold))
                                         .foregroundStyle(.white)
                                         .padding(.top, 4)
@@ -92,18 +99,23 @@ struct AreaChartView: View {
                             }
                         }
 
-                        if showAverage {
-                            RuleMark(y: .value("Avg", average))
+                        if showAverage, let first = data.first, let last = data.last {
+                            RuleMark(
+                                xStart: .value("Start", first.date),
+                                xEnd: .value("End", last.date),
+                                y: .value("Avg", average)
+                            )
                                 .foregroundStyle(.secondary.opacity(0.45))
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
                         }
                     }
                     .chartYScale(domain: yDomain)
+                    .chartXScale(domain: .automatic(includesZero: false, reversed: useBarChart))
                     .chartYAxis {
                         AxisMarks(position: .leading) { value in
                             AxisValueLabel {
                                 if let v = value.as(Double.self) {
-                                    Text(String(format: "%.0f", v))
+                                    Text(String(format: "%.\(decimals)f", v))
                                         .font(.caption2)
                                 }
                             }
@@ -112,14 +124,22 @@ struct AreaChartView: View {
                     }
                     .chartXAxis {
                         if useBarChart {
-                            AxisMarks(values: .stride(by: .month, count: 6)) { value in
+                            AxisMarks(values: data.map(\.date)) { value in
                                 AxisValueLabel {
                                     if let date = value.as(Date.self) {
-                                        Text(date, format: .dateTime.month(.abbreviated).year(.twoDigits))
-                                            .font(.system(size: 9))
+                                        let isJan = Calendar.current.component(.month, from: date) == 1
+                                        let isFirst = date == data.first?.date
+                                        VStack(spacing: 0) {
+                                            Text(date, format: .dateTime.month(.abbreviated))
+                                            if isJan || isFirst {
+                                                Text(date, format: .dateTime.year(.twoDigits))
+                                                    .fontWeight(.bold)
+                                            }
+                                        }
+                                        .font(.system(size: 9))
+                                        .fixedSize()
                                     }
                                 }
-                                AxisGridLine()
                             }
                         } else {
                             AxisMarks(values: .stride(by: .year)) { value in
@@ -133,7 +153,8 @@ struct AreaChartView: View {
                             }
                         }
                     }
-                    .frame(height: useBarChart ? 200 : 130)
+                    .frame(height: useBarChart ? 220 : 130)
+                    .clipped()
 
                     if data.count > 12 {
                         ScrollView(.horizontal, showsIndicators: false) {

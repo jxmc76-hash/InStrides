@@ -32,6 +32,7 @@ struct LogView: View {
                 }
                 .padding(.bottom, 32)
                 }
+                .contentWidth(760)
             }
             .refreshable { await hk.fetchAll() }
             .navigationTitle("Log")
@@ -100,7 +101,7 @@ struct LogView: View {
             if let e = avgEnergy {
                 Label("\(e)/5 energy", systemImage: "bolt.fill")
                     .font(.caption2)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.appTeal)
             }
         }
         .padding(.horizontal, 20)
@@ -185,7 +186,7 @@ struct DayLogCard: View {
                         ForEach(1...5, id: \.self) { i in
                             Circle()
                                 .fill(i <= (userStore.energy(for: day.date) ?? 0)
-                                      ? Color.orange : Color.secondary.opacity(0.2))
+                                      ? Color.appTeal : Color.secondary.opacity(0.2))
                                 .frame(width: 8, height: 8)
                         }
                     }

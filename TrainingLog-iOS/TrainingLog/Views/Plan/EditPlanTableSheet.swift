@@ -73,7 +73,7 @@ struct EditPlanTableSheet: View {
                     .font(.subheadline.bold())
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(.appTeal)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -122,7 +122,7 @@ struct EditPlanTableSheet: View {
         } label: {
             Label("Add Session", systemImage: "plus.circle")
                 .font(.subheadline)
-                .foregroundStyle(.orange)
+                .foregroundStyle(.appTeal)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -265,10 +265,10 @@ struct SessionGridRow: View {
                             Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
                             Text("Linked to workout").foregroundStyle(.green)
                             Spacer()
-                            Text("Change").foregroundStyle(.orange)
+                            Text("Change").foregroundStyle(.appTeal)
                         } else {
-                            Image(systemName: "link").foregroundStyle(.orange)
-                            Text("Link to workout").foregroundStyle(.orange)
+                            Image(systemName: "link").foregroundStyle(.appTeal)
+                            Text("Link to workout").foregroundStyle(.appTeal)
                             Spacer()
                         }
                     }
@@ -277,7 +277,7 @@ struct SessionGridRow: View {
                     .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
-                .background(Color.orange.opacity(0.06))
+                .background(Color.appTeal.opacity(0.06))
             }
         }
     }

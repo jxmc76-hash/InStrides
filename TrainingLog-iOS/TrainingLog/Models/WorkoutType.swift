@@ -7,11 +7,13 @@ enum WorkoutType: String, CaseIterable, Identifiable, Codable {
     case gym = "GYM"
     case swim = "SWIM"
     case sit = "SIT"
-    case flexibility = "FLEX"
+    case flexibility = "FLEXIBILITY"
 
     var id: String { rawValue }
 
-    var displayName: String { rawValue }
+    var displayName: String {
+        self == .flexibility ? "FLEX" : rawValue
+    }
 
     var icon: String {
         switch self {
@@ -26,23 +28,23 @@ enum WorkoutType: String, CaseIterable, Identifiable, Codable {
 
     var color: Color {
         switch self {
-        case .run:         Color(hex: "#E8593A")
-        case .yoga:        Color(hex: "#E8A23A")
-        case .gym:         Color(hex: "#7C4DCA")
-        case .swim:        Color(hex: "#2BB5C8")
-        case .sit:         Color(hex: "#E85A5A")
-        case .flexibility: Color(hex: "#4CAF50")
+        case .run:  Color(hex: "#E8593A")
+        case .yoga: Color(hex: "#E8A23A")
+        case .gym:  Color(hex: "#7C4DCA")
+        case .swim: Color(hex: "#2BB5C8")
+        case .sit:          Color(hex: "#E85A5A")
+        case .flexibility:  Color(hex: "#5BAD6F")
         }
     }
 
     var hkWorkoutActivityType: HKWorkoutActivityType {
         switch self {
-        case .run:         .running
-        case .yoga:        .yoga
-        case .gym:         .traditionalStrengthTraining
-        case .swim:        .swimming
-        case .sit:         .mindAndBody
-        case .flexibility: .flexibility
+        case .run:  .running
+        case .yoga: .yoga
+        case .gym:  .traditionalStrengthTraining
+        case .swim: .swimming
+        case .sit:          .mindAndBody
+        case .flexibility:  .flexibility
         }
     }
 
@@ -53,7 +55,13 @@ enum WorkoutType: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+extension ShapeStyle where Self == Color {
+    static var appTeal: Color { Color(hex: "#0BB5AC") }
+}
+
 extension Color {
+    static let appTeal = Color(hex: "#0BB5AC")
+
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0

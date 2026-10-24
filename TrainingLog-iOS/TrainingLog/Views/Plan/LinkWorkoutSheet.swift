@@ -48,7 +48,7 @@ struct LinkWorkoutSheet: View {
                                 }
                                 Spacer()
                                 Image(systemName: "link")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.appTeal)
                             }
                         }
                         .buttonStyle(.plain)

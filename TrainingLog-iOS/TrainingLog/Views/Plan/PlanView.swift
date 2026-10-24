@@ -25,12 +25,18 @@ struct PlanView: View {
                 emptyState
             } else {
                 planList
+                    .contentWidth(760)
+                    .background(Color(.systemGroupedBackground))
             }
         }
         .sheet(isPresented: $showAddPlan) {
             AddPlanSheet { plan in
                 context.insert(plan)
+                try? context.save()
             }
+        }
+        .task(id: "\(hk.dailyData.count)-\(plans.reduce(0) { $0 + $1.sessions.count })") {
+            autoMatchSessions()
         }
     }
 
@@ -74,18 +80,13 @@ struct PlanView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
-                    ForEach(plan.sessions.sorted { lhs, rhs in
-                        let today = Calendar.current.startOfDay(for: .now)
-                        let lhsDay = Calendar.current.startOfDay(for: lhs.date)
-                        let rhsDay = Calendar.current.startOfDay(for: rhs.date)
-                        let lhsIsToday = lhsDay == today
-                        let rhsIsToday = rhsDay == today
-                        if lhsIsToday != rhsIsToday { return lhsIsToday }
-                        return lhs.date < rhs.date
-                    }) { session in
+                    ForEach(todayFirst(plan.sessions)) { session in
                         sessionRow(session, plan: plan)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
+                                    let ids = CalendarSyncManager.shared.removeEvents(
+                                        for: [session], eventIDs: userStore.calendarEventsBySessionKey)
+                                    userStore.setCalendarEventIDs(ids)
                                     context.delete(session)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
@@ -143,7 +144,13 @@ struct PlanView: View {
         }
         .alert("Delete Plan?", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
-                if let plan = planToDelete { context.delete(plan) }
+                if let plan = planToDelete {
+                    let ids = CalendarSyncManager.shared.removeEvents(
+                        for: plan.sessions, eventIDs: userStore.calendarEventsBySessionKey)
+                    userStore.setCalendarEventIDs(ids)
+                    context.delete(plan)
+                    try? context.save()
+                }
                 planToDelete = nil
             }
             Button("Cancel", role: .cancel) { planToDelete = nil }
@@ -173,7 +180,7 @@ struct PlanView: View {
                         stat("\(pct)%", label: "complete")
                     }
                     ProgressView(value: progress)
-                        .tint(.orange)
+                        .tint(.appTeal)
                 }
                 .padding(.vertical, 4)
             }
@@ -185,16 +192,29 @@ struct PlanView: View {
                 tablePlan = plan
             } label: {
                 Image(systemName: "tablecells")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.appTeal)
                     .padding(.top, 4)
             }
             .buttonStyle(.plain)
+        }
+        .contextMenu {
+            ShareLink(item: ICSExporter.fileURL(for: plan)) {
+                Label("Export Calendar File", systemImage: "square.and.arrow.up")
+            }
+            Button(role: .destructive) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    planToDelete = plan
+                    showDeleteAlert = true
+                }
+            } label: {
+                Label("Delete Plan", systemImage: "trash")
+            }
         }
     }
 
     private func stat(_ value: String, label: String) -> some View {
         VStack(alignment: .center, spacing: 2) {
-            Text(value).font(.title3.bold()).foregroundStyle(.orange)
+            Text(value).font(.title3.bold()).foregroundStyle(.appTeal)
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -231,7 +251,7 @@ struct PlanView: View {
                             linkSession = (plan, session)
                         }
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.appTeal)
                         .buttonStyle(.plain)
                     }
                 }
@@ -281,7 +301,7 @@ struct PlanView: View {
     }
 
     private func sessionColor(_ type: String) -> Color {
-        WorkoutType(rawValue: type)?.color ?? .orange
+        WorkoutType(rawValue: type)?.color ?? .appTeal
     }
 
     private func isPast(_ date: Date) -> Bool {
@@ -296,14 +316,51 @@ struct PlanView: View {
         Self.dateFmt.string(from: date)
     }
 
+    private func todayFirst(_ sessions: [PlanSession]) -> [PlanSession] {
+        let cal = Calendar.current
+        return sessions.sorted { lhs, rhs in
+            let lhsToday = cal.isDateInToday(lhs.date)
+            let rhsToday = cal.isDateInToday(rhs.date)
+            if lhsToday != rhsToday { return lhsToday }
+            return lhs.date < rhs.date
+        }
+    }
+
+    /// Links unlinked sessions to a same-day, same-type workout from Apple Health
+    /// and marks them complete.
+    private func autoMatchSessions() {
+        let cal = Calendar.current
+        let allWorkouts = hk.dailyData.flatMap(\.workouts)
+        guard !allWorkouts.isEmpty else { return }
+        var used = Set(plans.flatMap(\.sessions).compactMap(\.linkedWorkoutID))
+        var changed = false
+
+        for plan in plans {
+            for session in plan.sessions.sorted(by: { $0.date < $1.date }) where session.linkedWorkoutID == nil {
+                guard let type = WorkoutType(rawValue: session.type.uppercased()) else { continue }
+                let match = allWorkouts
+                    .filter { !used.contains($0.id) && $0.type == type
+                              && cal.isDate($0.startDate, inSameDayAs: session.date) }
+                    .min { abs($0.startDate.timeIntervalSince(session.date))
+                         < abs($1.startDate.timeIntervalSince(session.date)) }
+                if let match {
+                    session.linkedWorkoutID = match.id
+                    session.isComplete = true
+                    used.insert(match.id)
+                    changed = true
+                }
+            }
+        }
+        if changed { try? context.save() }
+    }
+
     private func syncCalendar() async {
         isSyncingCalendar = true
-        var allIDs = userStore.calendarEventsBySessionKey
-        for plan in plans {
-            let updated = await CalendarSyncManager.shared.sync(plan: plan, eventIDs: allIDs)
-            allIDs.merge(updated) { _, new in new }
-        }
-        userStore.setCalendarEventIDs(allIDs)
+        let updated = await CalendarSyncManager.shared.sync(
+            plans: plans,
+            eventIDs: userStore.calendarEventsBySessionKey,
+            lengthMinutes: userStore.sessionLengthMinutes)
+        userStore.setCalendarEventIDs(updated)
         isSyncingCalendar = false
     }
 }

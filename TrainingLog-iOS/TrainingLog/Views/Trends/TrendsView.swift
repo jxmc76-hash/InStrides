@@ -8,10 +8,11 @@ struct TrendsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 20)], spacing: 20) {
                     charts
                 }
                 .padding(.bottom, 32)
+                .contentWidth(1200)
             }
             .navigationTitle("Trends")
             .navigationBarTitleDisplayMode(.inline)
@@ -43,7 +44,8 @@ struct TrendsView: View {
                       data: weightData,
                       color: .blue,
                       insight: longTermInsight(data: weightData, unit: "kg", format: "%.1f"),
-                      useBarChart: true)
+                      useBarChart: true,
+                      decimals: 1)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly VO₂ Max",
@@ -51,15 +53,17 @@ struct TrendsView: View {
                       data: vo2Data,
                       color: .teal,
                       insight: longTermInsight(data: vo2Data, unit: "mL/kg/min", format: "%.1f"),
-                      useBarChart: true)
+                      useBarChart: true,
+                      decimals: 1)
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Energy",
                       unit: "score",
                       data: energyData,
-                      color: .orange,
+                      color: .appTeal,
                       insight: longTermInsight(data: energyData, unit: "/5", format: "%.1f"),
-                      useBarChart: true)
+                      useBarChart: true,
+                      emptyMessage: "No data yet. This fills in once you've logged energy for a full month.")
         .padding(.horizontal, 16)
 
         AreaChartView(title: "Monthly Avg Sleep Duration",
@@ -67,7 +71,8 @@ struct TrendsView: View {
                       data: sleepData,
                       color: .indigo,
                       insight: longTermInsight(data: sleepData, unit: "hrs", format: "%.1f"),
-                      useBarChart: true)
+                      useBarChart: true,
+                      decimals: 1)
         .padding(.horizontal, 16)
     }
 

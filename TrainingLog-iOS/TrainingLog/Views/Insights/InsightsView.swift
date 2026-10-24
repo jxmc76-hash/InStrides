@@ -69,7 +69,7 @@ struct InsightsView: View {
                 .multilineTextAlignment(.center)
             Button("Generate Insights") { Task { await generate() } }
                 .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .tint(.appTeal)
             Spacer(minLength: 60)
         }
         .frame(maxWidth: .infinity)
@@ -81,14 +81,14 @@ struct InsightsView: View {
             Spacer(minLength: 40)
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
-                .foregroundStyle(.orange)
+                .foregroundStyle(.appTeal)
             Text(msg)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button("Try Again") { Task { await generate() } }
                 .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .tint(.appTeal)
             Spacer(minLength: 40)
         }
         .frame(maxWidth: .infinity)
@@ -116,7 +116,7 @@ struct InsightsView: View {
                 .padding(.top, 8)
 
             ForEach(Array(focusItems.enumerated()), id: \.offset) { _, focus in
-                InsightCardView(text: focus, accent: .orange)
+                InsightCardView(text: focus, accent: .appTeal)
             }
         }
     }

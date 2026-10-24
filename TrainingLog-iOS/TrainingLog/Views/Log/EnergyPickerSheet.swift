@@ -28,7 +28,7 @@ struct EnergyPickerSheet: View {
                         } label: {
                             VStack(spacing: 6) {
                                 Circle()
-                                    .fill(i <= selected ? Color.orange : Color.secondary.opacity(0.25))
+                                    .fill(i <= selected ? Color.appTeal : Color.secondary.opacity(0.25))
                                     .frame(width: 44, height: 44)
                                     .overlay(
                                         Text("\(i)")

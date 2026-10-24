@@ -1,7 +1,8 @@
 import Foundation
 import HealthKit
+import SwiftData
 
-struct HealthWorkout: Identifiable, Sendable {
+struct HealthWorkout: Identifiable, Sendable, Codable {
     let id: UUID
     let type: WorkoutType
     let startDate: Date
@@ -71,5 +72,58 @@ struct DailyHealthData: Identifiable, Sendable {
 
     func totalDuration(for type: WorkoutType) -> Int {
         workouts(for: type).reduce(0) { $0 + $1.durationMinutes }
+    }
+}
+
+
+// MARK: - iCloud copy of recent Health data
+
+/// A copy of one day of Health data, saved by the iPhone to iCloud so devices without
+/// Apple Health (Mac, iPad) can show the last 12 weeks. Follows CloudKit rules: every
+/// property has a default value and there are no unique constraints.
+@Model
+final class HealthDaySnapshot {
+    var dayKey: String = ""
+    var date: Date = Date()
+    var weight: Double? = nil
+    var vo2Max: Double? = nil
+    var sleepMinutes: Double? = nil
+    var sleepBedtime: Date? = nil
+    var sleepInterruptions: Int = 0
+    var workoutsData: Data? = nil
+    var updatedAt: Date = Date()
+
+    init(dayKey: String, date: Date) {
+        self.dayKey = dayKey
+        self.date = date
+    }
+
+    static func key(for date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    /// Copies the day's values in. Returns true if anything changed.
+    @discardableResult
+    func update(from day: DailyHealthData, workoutsData newWorkouts: Data?) -> Bool {
+        var changed = false
+        if weight != day.weight { weight = day.weight; changed = true }
+        if vo2Max != day.vo2Max { vo2Max = day.vo2Max; changed = true }
+        if sleepMinutes != day.sleep?.totalMinutes { sleepMinutes = day.sleep?.totalMinutes; changed = true }
+        if sleepBedtime != day.sleep?.bedtime { sleepBedtime = day.sleep?.bedtime; changed = true }
+        let interruptions = day.sleep?.interruptions ?? 0
+        if sleepInterruptions != interruptions { sleepInterruptions = interruptions; changed = true }
+        if workoutsData != newWorkouts { workoutsData = newWorkouts; changed = true }
+        if changed { updatedAt = Date() }
+        return changed
+    }
+
+    func toDaily() -> DailyHealthData {
+        let workouts = workoutsData.flatMap { try? JSONDecoder().decode([HealthWorkout].self, from: $0) } ?? []
+        let sleep = sleepMinutes.map {
+            DailySleepData(date: date, totalMinutes: $0, bedtime: sleepBedtime, interruptions: sleepInterruptions)
+        }
+        return DailyHealthData(date: date, workouts: workouts, sleep: sleep, weight: weight, vo2Max: vo2Max)
     }
 }
