@@ -3,7 +3,8 @@ import SwiftData
 
 struct InjuriesView: View {
     @Environment(\.modelContext) private var context
-    @State private var injuries: [Injury] = []
+    @Query private var allInjuries: [Injury]
+    private var injuries: [Injury] { allInjuries.sorted { $0.date > $1.date } }
     @State private var showAdd = false
     @State private var editInjury: Injury? = nil
     @State private var injuryToDelete: Injury? = nil
@@ -25,21 +26,17 @@ struct InjuriesView: View {
                     Button { showAdd = true } label: { Image(systemName: "plus") }
                 }
             }
-            .onAppear { injuries = fetch() }
-            .sheet(isPresented: $showAdd, onDismiss: { injuries = fetch() }) {
+            .sheet(isPresented: $showAdd) {
                 InjuryFormSheet { injury in
                     context.insert(injury)
-                    try? context.save()
-                    injuries = fetch()
                 }
             }
-            .sheet(item: $editInjury, onDismiss: { injuries = fetch() }) { injury in
+            .sheet(item: $editInjury) { injury in
                 InjuryEditSheet(injury: injury)
             }
             .alert("Delete entry?", isPresented: $showDeleteAlert) {
                 Button("Delete", role: .destructive) {
-                    if let i = injuryToDelete { context.delete(i); try? context.save() }
-                    injuries = fetch()
+                    if let i = injuryToDelete { context.delete(i) }
                 }
                 Button("Cancel", role: .cancel) {}
             }
@@ -99,11 +96,6 @@ struct InjuriesView: View {
         .listStyle(.plain)
     }
 
-    private func fetch() -> [Injury] {
-        let descriptor = FetchDescriptor<Injury>()
-        let result = (try? context.fetch(descriptor)) ?? []
-        return result.sorted { $0.date > $1.date }
-    }
 }
 
 struct InjuryRow: View {

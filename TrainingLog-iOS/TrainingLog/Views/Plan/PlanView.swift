@@ -6,7 +6,8 @@ struct PlanView: View {
     @Environment(HealthKitManager.self) private var hk
     @Environment(\.modelContext) private var context
     @EnvironmentObject var userStore: UserStore
-    @State private var plans: [TrainingPlan] = []
+    @Query private var allPlans: [TrainingPlan]
+    private var plans: [TrainingPlan] { allPlans.sorted { $0.startDate < $1.startDate } }
     @State private var showAddPlan = false
     @State private var isSyncingCalendar = false
     @State private var showAddSession: TrainingPlan? = nil
@@ -26,18 +27,9 @@ struct PlanView: View {
                 planList
             }
         }
-        .sheet(isPresented: $showAddPlan, onDismiss: { plans = fetchPlans() }) {
+        .sheet(isPresented: $showAddPlan) {
             AddPlanSheet { plan in
                 context.insert(plan)
-                try? context.save()
-                plans.append(plan)
-                plans.sort { $0.startDate < $1.startDate }
-            }
-        }
-        .onAppear {
-            let fetched = fetchPlans()
-            if !fetched.isEmpty || plans.isEmpty {
-                plans = fetched
             }
         }
     }
@@ -302,11 +294,6 @@ struct PlanView: View {
 
     private func fmtDate(_ date: Date) -> String {
         Self.dateFmt.string(from: date)
-    }
-
-    private func fetchPlans() -> [TrainingPlan] {
-        let descriptor = FetchDescriptor<TrainingPlan>()
-        return (try? context.fetch(descriptor))?.sorted { $0.startDate < $1.startDate } ?? []
     }
 
     private func syncCalendar() async {
