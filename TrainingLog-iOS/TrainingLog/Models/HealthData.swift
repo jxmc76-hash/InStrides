@@ -34,7 +34,7 @@ struct HealthWorkout: Identifiable, Sendable, Codable {
     }
 }
 
-struct DailySleepData: Sendable {
+struct DailySleepData: Sendable, Codable {
     let date: Date
     let totalMinutes: Double
     let bedtime: Date?
@@ -57,7 +57,7 @@ struct DailySleepData: Sendable {
     }
 }
 
-struct DailyHealthData: Identifiable, Sendable {
+struct DailyHealthData: Identifiable, Sendable, Codable {
     let date: Date
     let workouts: [HealthWorkout]
     let sleep: DailySleepData?
@@ -65,6 +65,10 @@ struct DailyHealthData: Identifiable, Sendable {
     let vo2Max: Double?             // mL/kg/min
 
     var id: Date { date }
+
+    var hasData: Bool {
+        !workouts.isEmpty || sleep != nil || weight != nil || vo2Max != nil
+    }
 
     func workouts(for type: WorkoutType) -> [HealthWorkout] {
         workouts.filter { $0.type == type }

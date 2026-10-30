@@ -13,6 +13,22 @@ final class HealthKitManager {
     var lastFetch: Date? = nil
 
     private let store = HKHealthStore()
+    /// Days read from this device's Health. Kept apart from `dailyData`, which devices
+    /// without Health fill from the iPhone's iCloud copy instead.
+    private var healthDays: [DailyHealthData] = []
+
+    private static let historyYears = 3
+    private static let recentDays = 14
+    /// Opening the app and becoming active both ask for a refresh; skip repeats within this gap.
+    private static let minRefreshInterval: TimeInterval = 60
+
+    private static var cacheURL: URL {
+        URL.applicationSupportDirectory.appendingPathComponent("health-cache.json")
+    }
+
+    init() {
+        loadCache()
+    }
 
     private var readTypes: Set<HKObjectType> {
         let types: Set<HKObjectType> = [
@@ -33,34 +49,98 @@ final class HealthKitManager {
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
             print("[HK] authorization succeeded, fetching...")
-            await fetchAll()
+            await refresh()
         } catch {
             print("[HK] authorization failed: \(error)")
             hasLocalHealthData = false
         }
     }
 
+    /// Quick refresh for app open / return: re-reads only the last two weeks and merges them
+    /// into the saved copy. Falls back to a full read when there's no usable saved copy.
+    func refresh() async {
+        guard HKHealthStore.isHealthDataAvailable(), !isLoading else { return }
+        if let lastFetch, Date().timeIntervalSince(lastFetch) < Self.minRefreshInterval { return }
+
+        let cal = Calendar.current
+        let end = Date()
+        let recentStart = cal.date(byAdding: .day, value: -Self.recentDays, to: cal.startOfDay(for: end))!
+
+        // A saved copy older than the two-week window would leave a gap, so read everything.
+        guard let newestSaved = healthDays.first?.date, newestSaved >= recentStart else {
+            await fetchAll()
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        let (recent, sampleCount) = await fetchDays(from: recentStart, to: end)
+        let historyStart = cal.startOfDay(for: cal.date(byAdding: .year, value: -Self.historyYears, to: end)!)
+        let older = healthDays.filter { $0.date < recentStart && $0.date >= historyStart }
+        let hadSavedData = older.contains { $0.hasData }
+
+        healthDays = recent + older
+        dailyData = healthDays
+        print("[HK] refresh: \(recent.count) recent days merged with \(older.count) saved days")
+        // Two quiet weeks shouldn't make the phone look like a device without Health.
+        hasLocalHealthData = sampleCount > 0 || hadSavedData
+        lastFetch = Date()
+        saveCache()
+    }
+
+    /// Full read of the last three years. Used for pull-to-refresh and when there's no saved copy.
     func fetchAll() async {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
         print("[HK] fetchAll start")
         isLoading = true
         defer { isLoading = false }
 
         let end = Date()
-        let start = Calendar.current.date(byAdding: .year, value: -3, to: end)!
+        let start = Calendar.current.date(byAdding: .year, value: -Self.historyYears, to: end)!
+        let (days, sampleCount) = await fetchDays(from: start, to: end)
 
+        healthDays = days
+        dailyData = days
+        print("[HK] fetchAll complete: \(days.count) days, \(sampleCount) samples")
+        hasLocalHealthData = sampleCount > 0
+        lastFetch = Date()
+        saveCache()
+    }
+
+    private func fetchDays(from start: Date, to end: Date) async -> (days: [DailyHealthData], sampleCount: Int) {
         async let workouts = fetchWorkouts(from: start, to: end)
         async let weights = fetchWeight(from: start, to: end)
         async let vo2s = fetchVO2Max(from: start, to: end)
         async let sleepRaw = fetchSleep(from: start, to: end)
 
         let (ws, wts, vs, sl) = await (workouts, weights, vo2s, sleepRaw)
+        let days = buildDailyData(workouts: ws, weights: wts, vo2s: vs, sleep: sl, from: start, to: end)
+        return (days, ws.count + wts.count + vs.count + sl.count)
+    }
 
-        print("[HK] fetchAll complete: \(ws.count) workouts, \(wts.count) weights, \(vs.count) vo2, \(sl.count) sleep")
-        dailyData = buildDailyData(workouts: ws, weights: wts, vo2s: vs, sleep: sl,
-                                    from: start, to: end)
-        print("[HK] dailyData set: \(dailyData.count) days")
-        hasLocalHealthData = (ws.count + wts.count + vs.count + sl.count) > 0
-        lastFetch = Date()
+    // MARK: - Saved copy on this device
+
+    private func loadCache() {
+        guard let data = try? Data(contentsOf: Self.cacheURL),
+              let days = try? JSONDecoder().decode([DailyHealthData].self, from: data) else { return }
+        healthDays = days
+        dailyData = days
+        print("[HK] loaded \(days.count) saved days")
+    }
+
+    private func saveCache() {
+        let days = healthDays
+        let url = Self.cacheURL
+        Task.detached(priority: .utility) {
+            do {
+                try FileManager.default.createDirectory(
+                    at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try JSONEncoder().encode(days).write(to: url, options: .atomic)
+            } catch {
+                print("[HK] failed to save Health copy: \(error)")
+            }
+        }
     }
 
     // MARK: - Private fetch helpers

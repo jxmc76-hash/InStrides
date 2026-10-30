@@ -160,7 +160,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await healthKit.fetchAll() }
+                Task { await healthKit.refresh() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openEnergyPicker)) { _ in
