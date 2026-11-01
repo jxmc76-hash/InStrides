@@ -118,7 +118,7 @@ struct GridView: View {
         let grouped = groupByWeek(hk.dailyData)
         let cutoff = Calendar.current.date(byAdding: .weekOfYear, value: -collapseThreshold, to: .now) ?? .now
         ForEach(grouped, id: \.week) { group in
-            weekHeader(for: group.days, collapsed: collapsedWeeks.contains(group.week)) {
+            weekHeader(for: group.days, previous: group.previousDays, collapsed: collapsedWeeks.contains(group.week)) {
                 if collapsedWeeks.contains(group.week) {
                     collapsedWeeks.remove(group.week)
                 } else {
@@ -142,7 +142,7 @@ struct GridView: View {
         }
     }
 
-    private func weekHeader(for days: [DailyHealthData], collapsed: Bool, onTap: @escaping () -> Void) -> some View {
+    private func weekHeader(for days: [DailyHealthData], previous: [DailyHealthData]?, collapsed: Bool, onTap: @escaping () -> Void) -> some View {
         let cal = Calendar.current
         let fmt = DateFormatter()
         fmt.dateFormat = "d MMM"
@@ -176,10 +176,14 @@ struct GridView: View {
                 ForEach(columns) { col in
                     let mins = days.reduce(0) { $0 + $1.totalDuration(for: col) }
                     let fg: Color = mins > 0 ? (allFive ? Color.primary : col.color.opacity(0.8)) : Color.secondary.opacity(0.3)
-                Text(mins > 0 ? "\(mins)" : "–")
-                        .font(.caption2.bold())
-                        .foregroundStyle(fg)
-                        .frame(maxWidth: .infinity)
+                    let lastWeek = previous.map { $0.reduce(0) { $0 + $1.totalDuration(for: col) } }
+                    HStack(spacing: 2) {
+                        Text(mins > 0 ? "\(mins)" : "–")
+                            .font(.caption2.bold())
+                            .foregroundStyle(fg)
+                        WeekChangeArrow(minutes: mins, lastWeek: lastWeek)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -197,6 +201,8 @@ struct GridView: View {
     private struct WeekGroup {
         let week: Date
         let days: [DailyHealthData]
+        /// The week before, for the up/down arrows. nil when there's no data that far back.
+        let previousDays: [DailyHealthData]?
     }
 
     private func groupByWeek(_ data: [DailyHealthData]) -> [WeekGroup] {
@@ -207,7 +213,26 @@ struct GridView: View {
             groups[start, default: []].append(day)
         }
         return groups.keys.sorted(by: >).map { week in
-            WeekGroup(week: week, days: groups[week]!.sorted { $0.date > $1.date })
+            let previousWeek = cal.date(byAdding: .weekOfYear, value: -1, to: week) ?? week
+            return WeekGroup(week: week,
+                             days: groups[week]!.sorted { $0.date > $1.date },
+                             previousDays: groups[previousWeek])
+        }
+    }
+}
+
+/// Small up/down arrow showing whether this week's minutes beat last week's.
+private struct WeekChangeArrow: View {
+    let minutes: Int
+    let lastWeek: Int?
+
+    var body: some View {
+        if let lastWeek, minutes != lastWeek {
+            let up = minutes > lastWeek
+            Image(systemName: up ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                .font(.system(size: 7))
+                .foregroundStyle(up ? Color.green : Color.red.opacity(0.7))
+                .accessibilityLabel(up ? "Up on last week" : "Down on last week")
         }
     }
 }
