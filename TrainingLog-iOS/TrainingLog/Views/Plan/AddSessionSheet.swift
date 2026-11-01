@@ -73,6 +73,7 @@ struct AddSessionSheet: View {
                     Button("Add") {
                         let session = PlanSession(date: date, type: type.rawValue, target: target)
                         plan.sessions.append(session)
+                        try? context.save()
                         dismiss()
                     }
                     .disabled(target.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -114,6 +115,7 @@ struct EditPlanSheet: View {
                         plan.title = title
                         plan.startDate = startDate
                         plan.endDate = endDate
+                        try? plan.modelContext?.save()
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -163,6 +165,7 @@ struct EditSessionSheet: View {
                         session.type = type.rawValue
                         session.target = target
                         session.isComplete = isComplete
+                        try? session.modelContext?.save()
                         dismiss()
                     }
                     .disabled(target.trimmingCharacters(in: .whitespaces).isEmpty)

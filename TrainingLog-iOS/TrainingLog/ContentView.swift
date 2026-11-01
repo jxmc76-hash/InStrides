@@ -161,6 +161,9 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task { await healthKit.refresh() }
+            } else if context.hasChanges {
+                // Safety net: anything not yet saved gets saved (and sent to iCloud) on leaving the app.
+                try? context.save()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openEnergyPicker)) { _ in

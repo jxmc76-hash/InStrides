@@ -265,6 +265,7 @@ struct NaturalLanguagePlanSheet: View {
             }
         }
 
+        try? modelContext.save()
         dismiss()
     }
 }

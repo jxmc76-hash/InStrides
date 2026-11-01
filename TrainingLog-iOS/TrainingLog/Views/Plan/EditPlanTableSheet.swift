@@ -47,6 +47,8 @@ struct EditPlanTableSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+            // Edits in this table change the plan directly; save when it closes so iCloud picks them up.
+            .onDisappear { try? plan.modelContext?.save() }
             .sheet(item: $linkSession) { session in
                 LinkWorkoutSheet(plan: plan, session: session,
                                  workouts: hk.dailyData.flatMap(\.workouts))

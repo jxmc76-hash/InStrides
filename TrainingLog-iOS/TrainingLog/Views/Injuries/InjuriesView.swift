@@ -29,6 +29,7 @@ struct InjuriesView: View {
             .sheet(isPresented: $showAdd) {
                 InjuryFormSheet { injury in
                     context.insert(injury)
+                    try? context.save()
                 }
             }
             .sheet(item: $editInjury) { injury in
@@ -36,7 +37,10 @@ struct InjuriesView: View {
             }
             .alert("Delete entry?", isPresented: $showDeleteAlert) {
                 Button("Delete", role: .destructive) {
-                    if let i = injuryToDelete { context.delete(i) }
+                    if let i = injuryToDelete {
+                        context.delete(i)
+                        try? context.save()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             }
@@ -258,6 +262,7 @@ struct InjuryEditSheet: View {
                         injury.bodyPart = bodyPart.trimmingCharacters(in: .whitespaces)
                         injury.pain = pain
                         injury.notes = notes.trimmingCharacters(in: .whitespaces)
+                        try? injury.modelContext?.save()
                         dismiss()
                     }
                     .disabled(bodyPart.trimmingCharacters(in: .whitespaces).isEmpty)

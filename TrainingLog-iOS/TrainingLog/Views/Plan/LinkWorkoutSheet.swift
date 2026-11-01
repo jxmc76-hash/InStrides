@@ -34,6 +34,7 @@ struct LinkWorkoutSheet: View {
                         Button {
                             session.linkedWorkoutID = workout.id
                             session.isComplete = true
+                            try? session.modelContext?.save()
                             dismiss()
                         } label: {
                             HStack {

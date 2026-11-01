@@ -88,6 +88,7 @@ struct PlanView: View {
                                         for: [session], eventIDs: userStore.calendarEventsBySessionKey)
                                     userStore.setCalendarEventIDs(ids)
                                     context.delete(session)
+                                    try? context.save()
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
