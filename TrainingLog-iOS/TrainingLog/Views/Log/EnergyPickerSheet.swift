@@ -4,7 +4,7 @@ struct EnergyPickerSheet: View {
     let date: Date
     @EnvironmentObject var userStore: UserStore
     @Environment(\.dismiss) private var dismiss
-    @State private var selected: Int = 3
+    @State private var selected: Int = 6
 
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter(); f.dateStyle = .medium; return f
@@ -21,15 +21,16 @@ struct EnergyPickerSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                HStack(spacing: 16) {
-                    ForEach(1...5, id: \.self) { i in
-                        Button {
-                            selected = i
-                        } label: {
-                            VStack(spacing: 6) {
+                VStack(spacing: 20) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5),
+                              spacing: 16) {
+                        ForEach(1...10, id: \.self) { i in
+                            Button {
+                                selected = i
+                            } label: {
                                 Circle()
                                     .fill(i <= selected ? Color.appTeal : Color.secondary.opacity(0.25))
-                                    .frame(width: 44, height: 44)
+                                    .frame(width: 48, height: 48)
                                     .overlay(
                                         Text("\(i)")
                                             .font(.headline)
@@ -37,14 +38,15 @@ struct EnergyPickerSheet: View {
                                     )
                                     .scaleEffect(selected == i ? 1.15 : 1.0)
                                     .animation(.spring(response: 0.2), value: selected)
-
-                                Text(label(for: i))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .frame(maxWidth: 360)
+
+                    Text(label(for: selected))
+                        .font(.headline)
+                        .foregroundStyle(Color.appTeal)
                 }
 
                 Spacer()
@@ -64,19 +66,18 @@ struct EnergyPickerSheet: View {
                 }
             }
             .onAppear {
-                selected = userStore.energy(for: date) ?? 3
+                selected = userStore.energy(for: date) ?? 6
             }
         }
     }
 
     private func label(for i: Int) -> String {
         switch i {
-        case 1: "Drained"
-        case 2: "Low"
-        case 3: "Okay"
-        case 4: "Good"
-        case 5: "Great"
-        default: ""
+        case ...2: "Drained"
+        case 3...4: "Low"
+        case 5...6: "Okay"
+        case 7...8: "Good"
+        default: "Great"
         }
     }
 }

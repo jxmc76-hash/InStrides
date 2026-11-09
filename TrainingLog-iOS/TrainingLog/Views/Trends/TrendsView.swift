@@ -61,7 +61,7 @@ struct TrendsView: View {
                       unit: "score",
                       data: energyData,
                       color: .appTeal,
-                      insight: longTermInsight(data: energyData, unit: "/5", format: "%.1f"),
+                      insight: longTermInsight(data: energyData, unit: "/10", format: "%.1f"),
                       useBarChart: true,
                       emptyMessage: "No data yet. This fills in once you've logged energy for a full month.")
         .padding(.horizontal, 16)

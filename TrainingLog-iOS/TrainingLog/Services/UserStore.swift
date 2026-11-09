@@ -20,7 +20,10 @@ final class UserStore: ObservableObject {
     @Published var sessionLengthMinutes: Int = 60
 
     private let columnsKey      = "selectedColumns"
-    private let energyKey       = "energyByDate"
+    /// Energy scores out of 10.
+    private let energyKey       = "energyByDate10"
+    /// Old scores out of 5. Read only, to convert them; never written again.
+    private let legacyEnergyKey = "energyByDate"
     private let notesKey        = "notesByDate"
     private let gymKey          = "gymWeights"
     private let effortKey       = "effortByWorkout"
@@ -50,7 +53,7 @@ final class UserStore: ObservableObject {
     private func mergeFromCloud() {
         let defaults = UserDefaults.standard
 
-        let energy = merged(energyKey, local: energyByDate)
+        let energy = merged(energyKey, local: withLegacyEnergy(energyByDate))
         if energy != energyByDate {
             energyByDate = energy
             defaults.set(energy, forKey: energyKey)
@@ -79,6 +82,20 @@ final class UserStore: ObservableObject {
                 effort.compactMap { (k, v) in UUID(uuidString: k).map { ($0, v) } })
             defaults.set(effort, forKey: effortKey)
         }
+    }
+
+    /// Brings in scores saved out of 5 by older versions, doubled. Only dates without a
+    /// score out of 10 are filled, so this can run on every device, every launch, and a
+    /// score is never doubled twice.
+    private func withLegacyEnergy(_ current: [String: Int]) -> [String: Int] {
+        let local = UserDefaults.standard.dictionary(forKey: legacyEnergyKey) as? [String: Int] ?? [:]
+        let remote = cloud.dictionary(forKey: legacyEnergyKey) as? [String: Int] ?? [:]
+        var result = current
+        for (k, v) in local.merging(remote, uniquingKeysWith: { _, cloudValue in cloudValue })
+        where result[k] == nil {
+            result[k] = min(v * 2, 10)
+        }
+        return result
     }
 
     private func merged<V: Equatable>(_ key: String, local: [String: V]) -> [String: V] {

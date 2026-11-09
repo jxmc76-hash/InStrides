@@ -99,7 +99,7 @@ struct LogView: View {
                     .foregroundStyle(.indigo)
             }
             if let e = avgEnergy {
-                Label("\(e)/5 energy", systemImage: "bolt.fill")
+                Label("\(e)/10 energy", systemImage: "bolt.fill")
                     .font(.caption2)
                     .foregroundStyle(.appTeal)
             }
@@ -182,13 +182,18 @@ struct DayLogCard: View {
                     Text("Energy")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    HStack(spacing: 4) {
-                        ForEach(1...5, id: \.self) { i in
+                    HStack(spacing: 3) {
+                        ForEach(1...10, id: \.self) { i in
                             Circle()
                                 .fill(i <= (userStore.energy(for: day.date) ?? 0)
                                       ? Color.appTeal : Color.secondary.opacity(0.2))
-                                .frame(width: 8, height: 8)
+                                .frame(width: 7, height: 7)
                         }
+                    }
+                    if let e = userStore.energy(for: day.date) {
+                        Text("\(e)")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.appTeal)
                     }
                     Spacer()
                 }
