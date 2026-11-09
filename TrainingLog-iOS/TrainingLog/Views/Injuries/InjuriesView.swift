@@ -1,35 +1,76 @@
 import SwiftUI
 import SwiftData
 
+/// All entries for one body part, newest first.
+struct InjuryGroup: Identifiable {
+    let id: String
+    let entries: [Injury]
+
+    var name: String { entries[0].bodyPart }
+    var latest: Injury { entries[0] }
+    var firstDate: Date { entries[entries.count - 1].date }
+    var peakPain: Int { entries.map(\.pain).max() ?? 0 }
+    /// Recent injuries start expanded; older ones start folded away.
+    var isRecent: Bool {
+        latest.date >= Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .now
+    }
+
+    static func key(for bodyPart: String) -> String {
+        bodyPart.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+
+/// What the add sheet should start with.
+struct AddInjuryRequest: Identifiable {
+    let id = UUID()
+    var bodyPart = ""
+    var pain = 5
+}
+
 struct InjuriesView: View {
     @Environment(\.modelContext) private var context
     @Query private var allInjuries: [Injury]
-    private var injuries: [Injury] { allInjuries.sorted { $0.date > $1.date } }
-    @State private var showAdd = false
+    @State private var addRequest: AddInjuryRequest? = nil
     @State private var editInjury: Injury? = nil
     @State private var injuryToDelete: Injury? = nil
     @State private var showDeleteAlert = false
+    /// Groups the user has opened or folded by hand.
+    @State private var expandedOverride: [String: Bool] = [:]
+
+    /// Entries grouped by body part, most recently updated injury first.
+    private var groups: [InjuryGroup] {
+        var order: [String] = []
+        var byKey: [String: [Injury]] = [:]
+        for injury in allInjuries.sorted(by: { $0.date > $1.date }) {
+            let key = InjuryGroup.key(for: injury.bodyPart)
+            if byKey[key] == nil { order.append(key) }
+            byKey[key, default: []].append(injury)
+        }
+        return order.map { InjuryGroup(id: $0, entries: byKey[$0] ?? []) }
+    }
 
     var body: some View {
         NavigationStack {
             Group {
-                if injuries.isEmpty {
+                if allInjuries.isEmpty {
                     emptyState
                 } else {
-                    injuryTable
+                    injuryList
                 }
             }
             .navigationTitle("Injuries")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAdd = true } label: { Image(systemName: "plus") }
+                    Button { addRequest = AddInjuryRequest() } label: { Image(systemName: "plus") }
                 }
             }
-            .sheet(isPresented: $showAdd) {
-                InjuryFormSheet { injury in
+            .sheet(item: $addRequest) { request in
+                InjuryFormSheet(request: request, suggestions: groups.prefix(8).map(\.name)) { injury in
                     context.insert(injury)
                     try? context.save()
+                    // Make sure the injury just logged is open.
+                    expandedOverride[InjuryGroup.key(for: injury.bodyPart)] = true
                 }
             }
             .sheet(item: $editInjury) { injury in
@@ -60,79 +101,126 @@ struct InjuriesView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("Add Entry") { showAdd = true }
+            Button("Add Entry") { addRequest = AddInjuryRequest() }
                 .buttonStyle(.borderedProminent)
             Spacer()
         }
     }
 
-    private var injuryTable: some View {
-        List {
-            // Column headers
-            HStack(spacing: 0) {
-                Text("Date")
-                    .frame(width: 80, alignment: .leading)
-                Text("Body Part")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Pain")
-                    .frame(width: 44, alignment: .center)
-            }
-            .font(.caption.bold())
-            .foregroundStyle(.secondary)
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+    private func isExpanded(_ group: InjuryGroup) -> Bool {
+        expandedOverride[group.id] ?? group.isRecent
+    }
 
-            ForEach(injuries) { injury in
-                Button { editInjury = injury } label: {
-                    InjuryRow(injury: injury)
-                }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        injuryToDelete = injury
-                        showDeleteAlert = true
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+    private var injuryList: some View {
+        List {
+            ForEach(groups) { group in
+                Section {
+                    if isExpanded(group) {
+                        ForEach(group.entries) { injury in
+                            Button { editInjury = injury } label: {
+                                InjuryEntryRow(injury: injury)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    injuryToDelete = injury
+                                    showDeleteAlert = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
+                } header: {
+                    InjuryGroupHeader(
+                        group: group,
+                        expanded: isExpanded(group),
+                        onToggle: { expandedOverride[group.id] = !isExpanded(group) },
+                        onAdd: { addRequest = AddInjuryRequest(bodyPart: group.name, pain: group.latest.pain) })
                 }
             }
         }
         .listStyle(.plain)
+        .contentWidth(760)
     }
-
 }
 
-struct InjuryRow: View {
-    let injury: Injury
+struct InjuryGroupHeader: View {
+    let group: InjuryGroup
+    let expanded: Bool
+    let onToggle: () -> Void
+    let onAdd: () -> Void
 
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "d MMM yy"; return f
     }()
 
+    private var summary: String {
+        let count = group.entries.count
+        let entries = count == 1 ? "1 entry" : "\(count) entries"
+        return "\(entries) · since \(Self.dateFmt.string(from: group.firstDate)) · peak \(group.peakPain)"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 0) {
-                Text(Self.dateFmt.string(from: injury.date))
-                    .frame(width: 80, alignment: .leading)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Text(injury.bodyPart)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .font(.subheadline.bold())
-
-                PainBadge(pain: injury.pain)
-                    .frame(width: 44, alignment: .center)
+        HStack(spacing: 10) {
+            Button(action: onToggle) {
+                HStack(spacing: 8) {
+                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 12)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(group.name)
+                            .font(.headline)
+                            .foregroundStyle(Color.primary)
+                        Text(summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    PainBadge(pain: group.latest.pain)
+                }
+                .contentShape(Rectangle())
             }
-            if !injury.notes.isEmpty {
-                Text(injury.notes)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .padding(.leading, 80)
+            // Plain, so the heading isn't tinted like a link.
+            .buttonStyle(.plain)
+
+            Button(action: onAdd) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color.appTeal)
             }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Add today's entry for \(group.name)")
         }
+        .textCase(nil)
         .padding(.vertical, 4)
+    }
+}
+
+/// One day's entry inside an injury group (the body part is in the group heading).
+struct InjuryEntryRow: View {
+    let injury: Injury
+
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f
+    }()
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(Self.dateFmt.string(from: injury.date))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(width: 92, alignment: .leading)
+            Text(injury.notes.isEmpty ? "No notes" : injury.notes)
+                .font(.subheadline)
+                .foregroundStyle(injury.notes.isEmpty ? .tertiary : .primary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            PainBadge(pain: injury.pain)
+        }
+        .padding(.leading, 20)
+        .padding(.vertical, 2)
     }
 }
 
@@ -159,12 +247,21 @@ struct PainBadge: View {
 // MARK: - Add form
 
 struct InjuryFormSheet: View {
+    /// Recent injury names to pick from instead of typing.
+    let suggestions: [String]
     let onCreated: (Injury) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var date = Date()
-    @State private var bodyPart = ""
-    @State private var pain = 5
+    @State private var bodyPart: String
+    @State private var pain: Int
     @State private var notes = ""
+
+    init(request: AddInjuryRequest, suggestions: [String], onCreated: @escaping (Injury) -> Void) {
+        self.suggestions = suggestions
+        self.onCreated = onCreated
+        _bodyPart = State(initialValue: request.bodyPart)
+        _pain = State(initialValue: request.pain)
+    }
 
     var body: some View {
         NavigationStack {
@@ -172,6 +269,9 @@ struct InjuryFormSheet: View {
                 Section {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                     TextField("e.g. Left knee, Achilles", text: $bodyPart)
+                    if !suggestions.isEmpty {
+                        suggestionChips
+                    }
                 }
                 Section("Pain (1 – 10)") {
                     HStack {
@@ -198,6 +298,26 @@ struct InjuryFormSheet: View {
                         dismiss()
                     }
                     .disabled(bodyPart.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
+    private var suggestionChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(suggestions, id: \.self) { name in
+                    let selected = InjuryGroup.key(for: name) == InjuryGroup.key(for: bodyPart)
+                    Button { bodyPart = name } label: {
+                        Text(name)
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .foregroundStyle(selected ? Color.white : Color.primary)
+                            .background(selected ? Color.appTeal : Color(uiColor: .tertiarySystemFill),
+                                        in: Capsule())
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
         }
