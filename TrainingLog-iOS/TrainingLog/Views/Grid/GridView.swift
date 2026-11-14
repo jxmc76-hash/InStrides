@@ -54,8 +54,6 @@ struct GridView: View {
     private var scrollContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                SectionTitle("Today's Training")
-                TodayPlanCard()
                 SectionTitle("Activity")
                 LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                     Section {
@@ -320,74 +318,6 @@ struct ColumnPickerSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
-        }
-    }
-}
-
-
-/// Shows today's planned sessions.
-struct TodayPlanCard: View {
-    @Query private var allSessions: [PlanSession]
-
-    private var today: [PlanSession] {
-        allSessions
-            .filter { $0.plan != nil && Calendar.current.isDateInToday($0.date) }
-            .sorted { $0.date < $1.date }
-    }
-
-    var body: some View {
-        if !today.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(today) { session in
-                    TodayPlanRow(session: session)
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
-        } else {
-            Text("Nothing planned today")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
-        }
-    }
-}
-
-
-private struct TodayPlanRow: View {
-    let session: PlanSession
-
-    var body: some View {
-        let type = WorkoutType(rawValue: session.type.uppercased())
-        let color: Color = type?.color ?? .appTeal
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(color)
-                .frame(width: 3, height: 38)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(type?.displayName ?? session.type.uppercased())
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(color)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(color.opacity(0.12), in: Capsule())
-                    if session.isComplete {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
-                }
-                Text(session.target)
-                    .font(.subheadline)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
         }
     }
 }

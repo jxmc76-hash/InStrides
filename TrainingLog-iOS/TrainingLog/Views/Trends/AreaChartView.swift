@@ -17,6 +17,10 @@ struct AreaChartView: View {
     var useBarChart: Bool = false
     var decimals: Int = 0
     var emptyMessage: String = "No data"
+    /// Length of time each bar covers.
+    var period: Calendar.Component = .month
+
+    private var isWeekly: Bool { period == .weekOfYear }
 
     private var average: Double {
         guard !data.isEmpty else { return 0 }
@@ -42,8 +46,8 @@ struct AreaChartView: View {
 
             if let insight {
                 Text(insight)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -59,7 +63,7 @@ struct AreaChartView: View {
                         ForEach(data) { point in
                             if useBarChart {
                                 BarMark(
-                                    x: .value("Month", point.date, unit: .month),
+                                    x: .value("Period", point.date, unit: period),
                                     yStart: .value("Base", yDomain.lowerBound),
                                     yEnd: .value(unit, point.value),
                                     width: .ratio(0.8)
@@ -127,17 +131,7 @@ struct AreaChartView: View {
                             AxisMarks(values: data.map(\.date)) { value in
                                 AxisValueLabel {
                                     if let date = value.as(Date.self) {
-                                        let isJan = Calendar.current.component(.month, from: date) == 1
-                                        let isFirst = date == data.first?.date
-                                        VStack(spacing: 0) {
-                                            Text(date, format: .dateTime.month(.abbreviated))
-                                            if isJan || isFirst {
-                                                Text(date, format: .dateTime.year(.twoDigits))
-                                                    .fontWeight(.bold)
-                                            }
-                                        }
-                                        .font(.system(size: 9))
-                                        .fixedSize()
+                                        barLabel(for: date)
                                     }
                                 }
                             }
@@ -159,7 +153,7 @@ struct AreaChartView: View {
                     if data.count > 12 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             chartContent
-                                .frame(width: CGFloat(data.count) * (useBarChart ? 44 : 20))
+                                .frame(width: CGFloat(data.count) * (useBarChart ? (isWeekly ? 36 : 44) : 20))
                         }
                         .defaultScrollAnchor(useBarChart ? .leading : .trailing)
                     } else {
@@ -172,5 +166,30 @@ struct AreaChartView: View {
             .padding(.vertical, 14)
             .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
         }
+    }
+
+    /// Monthly bars: "Mar", with the year under January and the first bar.
+    /// Weekly bars: the day the week starts, with the month under the first week of each month.
+    @ViewBuilder
+    private func barLabel(for date: Date) -> some View {
+        let cal = Calendar.current
+        let isFirst = date == data.first?.date
+        VStack(spacing: 0) {
+            if isWeekly {
+                Text(date, format: .dateTime.day())
+                if isFirst || cal.component(.day, from: date) <= 7 {
+                    Text(date, format: .dateTime.month(.abbreviated))
+                        .fontWeight(.bold)
+                }
+            } else {
+                Text(date, format: .dateTime.month(.abbreviated))
+                if isFirst || cal.component(.month, from: date) == 1 {
+                    Text(date, format: .dateTime.year(.twoDigits))
+                        .fontWeight(.bold)
+                }
+            }
+        }
+        .font(.system(size: 9))
+        .fixedSize()
     }
 }

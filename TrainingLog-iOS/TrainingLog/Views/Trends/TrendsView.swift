@@ -23,133 +23,192 @@ struct TrendsView: View {
 
     @ViewBuilder
     private var charts: some View {
-        let months = last36Months()
-        let runData    = monthlyRunDistance(months: months)
-        let weightData = monthlyAvgWeight(months: months)
-        let vo2Data    = monthlyVO2(months: months)
-        let energyData = monthlyAvgEnergy(months: months)
-        let sleepData  = monthlyAvgSleep(months: months)
+        let weeks = lastWeeks()
+        let (recent, previous) = fortnights()
 
-        AreaChartView(title: "Monthly Running Distance (km)",
+        AreaChartView(title: "Weekly Running Distance (km)",
                       unit: "km",
-                      data: runData,
+                      data: weeklyRunDistance(weeks: weeks),
                       color: WorkoutType.run.color,
                       showAverage: false,
-                      insight: longTermInsight(data: runData, unit: "km", format: "%.1f"),
-                      useBarChart: true)
+                      insight: runHeadline(recent: recent, previous: previous),
+                      useBarChart: true,
+                      period: .weekOfYear)
         .padding(.horizontal, 16)
 
-        AreaChartView(title: "Monthly Avg Weight (kg)",
+        AreaChartView(title: "Weekly Avg Weight (kg)",
                       unit: "kg",
-                      data: weightData,
+                      data: weeklyAvgWeight(weeks: weeks),
                       color: .blue,
-                      insight: longTermInsight(data: weightData, unit: "kg", format: "%.1f"),
+                      insight: weightHeadline(recent: recent, previous: previous),
                       useBarChart: true,
-                      decimals: 1)
+                      decimals: 1,
+                      period: .weekOfYear)
         .padding(.horizontal, 16)
 
-        AreaChartView(title: "Monthly VO₂ Max",
+        AreaChartView(title: "Weekly VO₂ Max",
                       unit: "mL/kg/min",
-                      data: vo2Data,
+                      data: weeklyVO2(weeks: weeks),
                       color: .teal,
-                      insight: longTermInsight(data: vo2Data, unit: "mL/kg/min", format: "%.1f"),
+                      insight: vo2Headline(recent: recent, previous: previous),
                       useBarChart: true,
-                      decimals: 1)
+                      decimals: 1,
+                      period: .weekOfYear)
         .padding(.horizontal, 16)
 
-        AreaChartView(title: "Monthly Avg Energy",
+        AreaChartView(title: "Weekly Avg Energy (out of 10)",
                       unit: "score",
-                      data: energyData,
+                      data: weeklyAvgEnergy(weeks: weeks),
                       color: .appTeal,
-                      insight: longTermInsight(data: energyData, unit: "/10", format: "%.1f"),
+                      insight: energyHeadline(recent: recent, previous: previous),
                       useBarChart: true,
-                      emptyMessage: "No data yet. This fills in once you've logged energy for a full month.")
+                      decimals: 1,
+                      emptyMessage: "No data yet. This fills in once you've logged energy for a full week.",
+                      period: .weekOfYear)
         .padding(.horizontal, 16)
 
-        AreaChartView(title: "Monthly Avg Sleep Duration",
+        AreaChartView(title: "Weekly Avg Sleep (hours)",
                       unit: "hours",
-                      data: sleepData,
+                      data: weeklyAvgSleep(weeks: weeks),
                       color: .indigo,
-                      insight: longTermInsight(data: sleepData, unit: "hrs", format: "%.1f"),
+                      insight: sleepHeadline(recent: recent, previous: previous),
                       useBarChart: true,
-                      decimals: 1)
+                      decimals: 1,
+                      period: .weekOfYear)
         .padding(.horizontal, 16)
     }
 
-    // MARK: - Insight
+    // MARK: - Headlines (last 14 days compared with the 14 before)
 
-    private static let monthFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "MMM yyyy"; return f
-    }()
+    /// Days in the last two weeks (including today) and the two weeks before that.
+    private func fortnights() -> (recent: [DailyHealthData], previous: [DailyHealthData]) {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        let recentStart = cal.date(byAdding: .day, value: -13, to: today) ?? today
+        let previousStart = cal.date(byAdding: .day, value: -27, to: today) ?? today
+        let recent = hk.dailyData.filter { $0.date >= recentStart }
+        let previous = hk.dailyData.filter { $0.date >= previousStart && $0.date < recentStart }
+        return (recent, previous)
+    }
 
-    private func longTermInsight(data: [ChartDataPoint], unit: String, format: String) -> String? {
-        guard data.count >= 2, let recent = data.first else { return nil }
-        let mean = data.map(\.value).reduce(0, +) / Double(data.count)
-        let diff = recent.value - mean
-        let pct = mean != 0 ? abs(diff / mean) * 100 : 0
-        let direction = diff > 0.01 ? "above" : diff < -0.01 ? "below" : "at"
-        let recentStr = String(format: format, recent.value)
-        let meanStr = String(format: format, mean)
-        let monthLabel = Self.monthFmt.string(from: recent.date)
-        if direction == "at" {
-            return "\(monthLabel): \(recentStr)\(unit) — right at the 3-year average."
+    private func mean(_ values: [Double]) -> Double? {
+        values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
+    }
+
+    private func runHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        let km: ([DailyHealthData]) -> Double = { days in
+            days.flatMap { $0.workouts(for: .run) }.compactMap(\.distanceKm).reduce(0, +)
         }
-        return "\(monthLabel): \(recentStr)\(unit) — \(String(format: "%.0f", pct))% \(direction) the 3-year average of \(meanStr)\(unit)."
+        let now = km(recent), before = km(previous)
+        guard now > 0 else {
+            return before > 0 ? "No runs in the last two weeks." : "No running logged lately."
+        }
+        let total = String(format: "%.0f km", now)
+        guard before > 0 else { return "Back running: \(total) in the last two weeks." }
+        let change = (now - before) / before * 100
+        if abs(change) < 5 { return "\(total) in two weeks: steady with the fortnight before." }
+        return change > 0
+            ? "\(total) in two weeks, up \(Int(change.rounded()))% on the fortnight before."
+            : "\(total) in two weeks, down \(Int((-change).rounded()))% on the fortnight before."
+    }
+
+    private func weightHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        guard let now = mean(recent.compactMap(\.weight)) else { return "No weigh-ins in the last two weeks." }
+        let current = String(format: "%.1f kg", now)
+        guard let before = mean(previous.compactMap(\.weight)) else { return "Averaging \(current) over the last two weeks." }
+        let diff = now - before
+        if abs(diff) < 0.2 { return "Holding steady at \(current)." }
+        let amount = String(format: "%.1f kg", abs(diff))
+        return diff < 0
+            ? "Down \(amount) in two weeks, now averaging \(current)."
+            : "Up \(amount) in two weeks, now averaging \(current)."
+    }
+
+    private func vo2Headline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        // Days are newest first, so `first` is the latest reading.
+        guard let now = recent.compactMap(\.vo2Max).first else { return "No new VO₂ max readings in the last two weeks." }
+        let current = String(format: "%.1f", now)
+        guard let before = previous.compactMap(\.vo2Max).first else { return "VO₂ max at \(current)." }
+        let diff = now - before
+        if abs(diff) < 0.3 { return "VO₂ max holding at \(current)." }
+        return diff > 0
+            ? "VO₂ max climbing: up \(String(format: "%.1f", diff)) to \(current)."
+            : "VO₂ max slipping: down \(String(format: "%.1f", -diff)) to \(current)."
+    }
+
+    private func energyHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        let scores: ([DailyHealthData]) -> [Double] = { days in
+            days.compactMap { userStore.energy(for: $0.date) }.map(Double.init)
+        }
+        guard let now = mean(scores(recent)) else { return "No energy scores in the last two weeks." }
+        let current = String(format: "%.1f/10", now)
+        guard let before = mean(scores(previous)) else { return "Energy averaging \(current)." }
+        let diff = now - before
+        if abs(diff) < 0.3 { return "Energy steady at \(current)." }
+        return diff > 0
+            ? "Energy on the up: averaging \(current), from \(String(format: "%.1f", before))."
+            : "Energy dipping: averaging \(current), from \(String(format: "%.1f", before))."
+    }
+
+    private func sleepHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        guard let now = mean(recent.compactMap { $0.sleep?.totalMinutes }) else { return "No sleep recorded in the last two weeks." }
+        let current = "\(Int(now) / 60)h \(String(format: "%02d", Int(now) % 60))m"
+        guard let before = mean(previous.compactMap { $0.sleep?.totalMinutes }) else { return "Averaging \(current) a night." }
+        let diff = Int((now - before).rounded())
+        if abs(diff) < 10 { return "Averaging \(current) a night, much as before." }
+        return diff > 0
+            ? "Averaging \(current) a night, \(diff) min more than the fortnight before."
+            : "Averaging \(current) a night, \(-diff) min less than the fortnight before."
     }
 
     // MARK: - Data aggregation
 
-    private struct MonthBucket { let start: Date; let days: [DailyHealthData] }
+    private struct WeekBucket { let start: Date; let days: [DailyHealthData] }
 
-    private func last36Months() -> [MonthBucket] {
+    /// Completed weeks from the last year, oldest first. The current week is left out
+    /// until it's finished, so a part-week doesn't look like a dip.
+    private func lastWeeks(count: Int = 52) -> [WeekBucket] {
         let cal = Calendar.current
-        let currentMonthStart = cal.dateInterval(of: .month, for: .now)?.start ?? .now
-        let cutoff = cal.date(byAdding: .month, value: -36, to: currentMonthStart)!
+        let currentWeekStart = cal.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        let cutoff = cal.date(byAdding: .weekOfYear, value: -count, to: currentWeekStart)!
         var groups: [Date: [DailyHealthData]] = [:]
         for day in hk.dailyData {
-            let ms = cal.dateInterval(of: .month, for: day.date)?.start ?? day.date
-            guard ms >= cutoff && ms < currentMonthStart else { continue }
-            groups[ms, default: []].append(day)
+            let ws = cal.dateInterval(of: .weekOfYear, for: day.date)?.start ?? day.date
+            guard ws >= cutoff && ws < currentWeekStart else { continue }
+            groups[ws, default: []].append(day)
         }
-        return groups.keys.sorted().map { MonthBucket(start: $0, days: groups[$0]!) }
+        return groups.keys.sorted().map { WeekBucket(start: $0, days: groups[$0]!) }
     }
 
-    private func monthlyRunDistance(months: [MonthBucket]) -> [ChartDataPoint] {
-        months.compactMap { m in
-            let km = m.days.flatMap { $0.workouts(for: .run) }.compactMap(\.distanceKm).reduce(0, +)
-            return km > 0 ? ChartDataPoint(date: m.start, value: km) : nil
+    private func weeklyRunDistance(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            let km = w.days.flatMap { $0.workouts(for: .run) }.compactMap(\.distanceKm).reduce(0, +)
+            return km > 0 ? ChartDataPoint(date: w.start, value: km) : nil
         }.reversed()
     }
 
-    private func monthlyAvgWeight(months: [MonthBucket]) -> [ChartDataPoint] {
-        months.compactMap { m in
-            let vals = m.days.compactMap(\.weight)
-            guard !vals.isEmpty else { return nil }
-            return ChartDataPoint(date: m.start, value: vals.reduce(0, +) / Double(vals.count))
+    private func weeklyAvgWeight(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            mean(w.days.compactMap(\.weight)).map { ChartDataPoint(date: w.start, value: $0) }
         }.reversed()
     }
 
-    private func monthlyVO2(months: [MonthBucket]) -> [ChartDataPoint] {
-        months.compactMap { m in
-            let vals = m.days.compactMap(\.vo2Max)
-            guard !vals.isEmpty else { return nil }
-            return ChartDataPoint(date: m.start, value: vals.max()!)
+    private func weeklyVO2(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            w.days.compactMap(\.vo2Max).max().map { ChartDataPoint(date: w.start, value: $0) }
         }.reversed()
     }
 
-    private func monthlyAvgEnergy(months: [MonthBucket]) -> [ChartDataPoint] {
-        months.compactMap { m in
-            let vals = m.days.compactMap { userStore.energy(for: $0.date) }
-            guard !vals.isEmpty else { return nil }
-            return ChartDataPoint(date: m.start, value: Double(vals.reduce(0, +)) / Double(vals.count))
+    private func weeklyAvgEnergy(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            mean(w.days.compactMap { userStore.energy(for: $0.date) }.map(Double.init))
+                .map { ChartDataPoint(date: w.start, value: $0) }
         }.reversed()
     }
 
-    private func monthlyAvgSleep(months: [MonthBucket]) -> [ChartDataPoint] {
-        months.compactMap { m in
-            let vals = m.days.compactMap { $0.sleep?.totalMinutes }
-            guard !vals.isEmpty else { return nil }
-            return ChartDataPoint(date: m.start, value: vals.reduce(0, +) / Double(vals.count) / 60)
+    private func weeklyAvgSleep(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            mean(w.days.compactMap { $0.sleep?.totalMinutes }).map { ChartDataPoint(date: w.start, value: $0 / 60) }
         }.reversed()
     }
 }
