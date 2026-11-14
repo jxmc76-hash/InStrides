@@ -9,6 +9,8 @@ struct PlanView: View {
     @Query private var allPlans: [TrainingPlan]
     private var plans: [TrainingPlan] { allPlans.sorted { $0.startDate < $1.startDate } }
     @State private var showAddPlan = false
+    @State private var showDescribePlan = false
+    @State private var textPlan: TrainingPlan? = nil
     @State private var isSyncingCalendar = false
     @State private var showAddSession: TrainingPlan? = nil
     @State private var linkSession: (plan: TrainingPlan, session: PlanSession)? = nil
@@ -35,6 +37,12 @@ struct PlanView: View {
                 try? context.save()
             }
         }
+        .sheet(isPresented: $showDescribePlan) {
+            NaturalLanguagePlanSheet(plan: nil)
+        }
+        .sheet(item: $textPlan) { plan in
+            NaturalLanguagePlanSheet(plan: plan)
+        }
         .task(id: "\(hk.dailyData.count)-\(plans.reduce(0) { $0 + $1.sessions.count })") {
             autoMatchSessions()
         }
@@ -53,16 +61,30 @@ struct PlanView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Create Plan") { showAddPlan = true }
-                .buttonStyle(.borderedProminent)
+            Button { showDescribePlan = true } label: {
+                Label("Describe a Plan", systemImage: "sparkles")
+            }
+            .buttonStyle(.borderedProminent)
+            Button("Create Plan Manually") { showAddPlan = true }
             Spacer()
         }
         .navigationTitle("Plan")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showAddPlan = true } label: { Image(systemName: "plus") }
+            ToolbarItem(placement: .topBarTrailing) { addPlanMenu }
+        }
+    }
+
+    private var addPlanMenu: some View {
+        Menu {
+            Button { showDescribePlan = true } label: {
+                Label("Describe a Plan…", systemImage: "sparkles")
             }
+            Button { showAddPlan = true } label: {
+                Label("New Plan", systemImage: "calendar.badge.plus")
+            }
+        } label: {
+            Image(systemName: "plus")
         }
     }
 
@@ -118,11 +140,7 @@ struct PlanView: View {
                 }
                 .disabled(isSyncingCalendar || plans.isEmpty)
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showAddPlan = true } label: {
-                    Image(systemName: "plus")
-                }
-            }
+            ToolbarItem(placement: .topBarTrailing) { addPlanMenu }
         }
         .sheet(item: $showAddSession) { plan in
             AddSessionSheet(plan: plan)
@@ -190,6 +208,16 @@ struct PlanView: View {
             Spacer()
 
             Button {
+                textPlan = plan
+            } label: {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.appTeal)
+                    .padding(.top, 4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Change plan by describing it")
+
+            Button {
                 tablePlan = plan
             } label: {
                 Image(systemName: "tablecells")
@@ -197,8 +225,14 @@ struct PlanView: View {
                     .padding(.top, 4)
             }
             .buttonStyle(.plain)
+            .padding(.leading, 12)
         }
         .contextMenu {
+            Button {
+                textPlan = plan
+            } label: {
+                Label("Change by Describing…", systemImage: "sparkles")
+            }
             ShareLink(item: ICSExporter.fileURL(for: plan)) {
                 Label("Export Calendar File", systemImage: "square.and.arrow.up")
             }
