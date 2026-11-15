@@ -47,6 +47,21 @@ struct AddSessionSheet: View {
     @State private var date = Date()
     @State private var type: WorkoutType = .run
     @State private var target = ""
+    @State private var repeatDaily = false
+    @State private var repeatUntil = Date()
+
+    /// Every day from `date` to `repeatUntil` when repeating, otherwise just `date`.
+    private var days: [Date] {
+        let cal = Calendar.current
+        guard repeatDaily else { return [date] }
+        var result: [Date] = []
+        var day = date
+        while cal.startOfDay(for: day) <= cal.startOfDay(for: repeatUntil) && result.count < 400 {
+            result.append(day)
+            day = cal.date(byAdding: .day, value: 1, to: day) ?? repeatUntil.addingTimeInterval(86_400)
+        }
+        return result
+    }
 
     var body: some View {
         NavigationStack {
@@ -62,6 +77,17 @@ struct AddSessionSheet: View {
                     }
                     TextField("Target (e.g. 10km easy run)", text: $target)
                 }
+                Section {
+                    Toggle("Repeat every day", isOn: $repeatDaily)
+                    if repeatDaily {
+                        DatePicker("Until", selection: $repeatUntil, in: date..., displayedComponents: .date)
+                    }
+                } footer: {
+                    Text(footerText)
+                }
+            }
+            .onChange(of: date) { _, newDate in
+                if repeatUntil < newDate { repeatUntil = newDate }
             }
             .navigationTitle("Add Session")
             .navigationBarTitleDisplayMode(.inline)
@@ -70,9 +96,20 @@ struct AddSessionSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let session = PlanSession(date: date, type: type.rawValue, target: target)
-                        plan.sessions.append(session)
+                    Button(days.count > 1 ? "Add \(days.count)" : "Add") {
+                        let cal = Calendar.current
+                        for day in days {
+                            // 7am, matching the default session reminder.
+                            let at = cal.date(bySettingHour: 7, minute: 0, second: 0, of: day) ?? day
+                            plan.sessions.append(PlanSession(date: at, type: type.rawValue, target: target))
+                        }
+                        // Stretch the plan to cover sessions added before its start or after its end.
+                        if let first = days.min(), first < plan.startDate {
+                            plan.startDate = cal.startOfDay(for: first)
+                        }
+                        if let last = days.max(), last > plan.endDate {
+                            plan.endDate = last
+                        }
                         try? context.save()
                         dismiss()
                     }
@@ -80,6 +117,13 @@ struct AddSessionSheet: View {
                 }
             }
         }
+    }
+
+    private var footerText: String {
+        let earlier = Calendar.current.startOfDay(for: date) < Calendar.current.startOfDay(for: plan.startDate)
+        var text = "Pick any date, including days that have already passed."
+        if earlier { text += " The plan's start date will move back to fit." }
+        return text
     }
 }
 

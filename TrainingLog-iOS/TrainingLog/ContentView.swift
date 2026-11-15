@@ -5,10 +5,13 @@ import UIKit
 enum WorkoutPrompt: Identifiable {
     case depth(HealthWorkout)
     case gymWeight(HealthWorkout)
+    case improvement(HealthWorkout)
 
-    var id: UUID {
+    var id: String {
         switch self {
-        case .depth(let w), .gymWeight(let w): return w.id
+        case .depth(let w): return "depth-\(w.id)"
+        case .gymWeight(let w): return "gym-\(w.id)"
+        case .improvement(let w): return "improve-\(w.id)"
         }
     }
 }
@@ -16,6 +19,9 @@ enum WorkoutPrompt: Identifiable {
 struct ContentView: View {
     @State private var healthKit = HealthKitManager()
     @StateObject private var userStore = UserStore()
+    @StateObject private var todoStore = TodoStore()
+    /// Prompts already shown since the app opened, so a dismissed one isn't shown again straight away.
+    @State private var shownPrompts: Set<String> = []
     @State private var workoutPrompt: WorkoutPrompt? = nil
     @State private var showEnergyPicker = false
     @Environment(\.scenePhase) private var scenePhase
@@ -123,6 +129,7 @@ struct ContentView: View {
                 LogView()
                     .environment(healthKit)
                     .environmentObject(userStore)
+                    .environmentObject(todoStore)
             }
             Tab("Plan", systemImage: "calendar") {
                 PlanView()
@@ -158,6 +165,18 @@ struct ContentView: View {
         .onChange(of: healthKit.dailyData.count) { _, _ in
             checkForWorkoutPrompts()
         }
+        .onChange(of: healthKit.lastFetch) { _, _ in
+            checkForWorkoutPrompts()
+        }
+        .onChange(of: workoutPrompt?.id) { _, newValue in
+            // One question at a time: when one closes, see if another is waiting.
+            if newValue == nil {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(600))
+                    checkForWorkoutPrompts()
+                }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task { await healthKit.refresh() }
@@ -183,25 +202,44 @@ struct ContentView: View {
                 GymWeightEntrySheet(workout: workout)
                     .environmentObject(userStore)
                     .environment(healthKit)
+            case .improvement(let workout):
+                ImprovementPromptSheet(workout: workout)
+                    .environmentObject(todoStore)
             }
         }
     }
 
     private func checkForWorkoutPrompts() {
-        let today = Calendar.current.startOfDay(for: Date())
-        guard let todayData = healthKit.dailyData.first(where: {
-            Calendar.current.startOfDay(for: $0.date) == today
-        }) else { return }
+        guard workoutPrompt == nil else { return }
+        if let next = nextWorkoutPrompt() {
+            shownPrompts.insert(next.id)
+            workoutPrompt = next
+        }
+    }
 
-        // Gym with no weight logged takes priority
-        if let gym = todayData.workouts(for: .gym).first(where: { userStore.gymWeight(for: $0.id) == nil }) {
-            workoutPrompt = .gymWeight(gym)
-            return
+    private func nextWorkoutPrompt() -> WorkoutPrompt? {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        if let todayData = healthKit.dailyData.first(where: { cal.startOfDay(for: $0.date) == today }) {
+            // Gym with no weight logged takes priority
+            if let gym = todayData.workouts(for: .gym).first(where: { userStore.gymWeight(for: $0.id) == nil }),
+               !shownPrompts.contains(WorkoutPrompt.gymWeight(gym).id) {
+                return .gymWeight(gym)
+            }
+            // SIT with no depth score
+            if let sit = todayData.workouts(for: .sit).first(where: { userStore.effort(for: $0.id) == nil }),
+               !shownPrompts.contains(WorkoutPrompt.depth(sit).id) {
+                return .depth(sit)
+            }
         }
 
-        // SIT with no depth score
-        if let sit = todayData.workouts(for: .sit).first(where: { userStore.effort(for: $0.id) == nil }) {
-            workoutPrompt = .depth(sit)
-        }
+        // Then ask about improvements for each new workout of the last few days, oldest first.
+        let recent = max(todoStore.promptsSince, cal.date(byAdding: .day, value: -3, to: today) ?? today)
+        let waiting = healthKit.dailyData
+            .flatMap(\.workouts)
+            .filter { $0.startDate >= recent && !todoStore.askedWorkoutIDs.contains($0.id) }
+            .sorted { $0.startDate < $1.startDate }
+            .first { !shownPrompts.contains(WorkoutPrompt.improvement($0).id) }
+        return waiting.map { .improvement($0) }
     }
 }

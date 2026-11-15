@@ -1,13 +1,56 @@
 import SwiftUI
+import SwiftData
 
 struct LogView: View {
     @Environment(HealthKitManager.self) private var hk
     @EnvironmentObject var userStore: UserStore
+    @EnvironmentObject var todoStore: TodoStore
     @State private var energyPickerDate: Date? = nil
     @State private var selectedWorkouts: [HealthWorkout]? = nil
+    @State private var section: LogSection = .sessions
+
+    enum LogSection: Hashable { case sessions, todo }
 
     var body: some View {
         NavigationStack {
+            Group {
+                switch section {
+                case .sessions: sessionsList
+                case .todo: TodoListView()
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Section", selection: $section) {
+                        Text("Sessions").tag(LogSection.sessions)
+                        Text(todoStore.openItems.isEmpty ? "To-Do" : "To-Do (\(todoStore.openItems.count))")
+                            .tag(LogSection.todo)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 240)
+                }
+            }
+            .navigationTitle("Log")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: Binding(
+                get: { energyPickerDate.map { EnergyPickerItem(date: $0) } },
+                set: { _ in energyPickerDate = nil }
+            )) { item in
+                EnergyPickerSheet(date: item.date)
+                    .environmentObject(userStore)
+            }
+            .sheet(item: Binding(
+                get: { selectedWorkouts.map { SelectedWorkoutsItem(workouts: $0) } },
+                set: { _ in selectedWorkouts = nil }
+            )) { item in
+                WorkoutDetailSheet(workouts: item.workouts)
+                    .environmentObject(userStore)
+                    .environment(hk)
+            }
+        }
+    }
+
+    private var sessionsList: some View {
             ScrollView {
                 VStack(spacing: 0) {
                 LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
@@ -35,24 +78,6 @@ struct LogView: View {
                 .contentWidth(760)
             }
             .refreshable { await hk.fetchAll() }
-            .navigationTitle("Log")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: Binding(
-                get: { energyPickerDate.map { EnergyPickerItem(date: $0) } },
-                set: { _ in energyPickerDate = nil }
-            )) { item in
-                EnergyPickerSheet(date: item.date)
-                    .environmentObject(userStore)
-            }
-            .sheet(item: Binding(
-                get: { selectedWorkouts.map { SelectedWorkoutsItem(workouts: $0) } },
-                set: { _ in selectedWorkouts = nil }
-            )) { item in
-                WorkoutDetailSheet(workouts: item.workouts)
-                    .environmentObject(userStore)
-                    .environment(hk)
-            }
-        }
     }
 
     private var carryForwardWeight: [Date: Double] {
@@ -260,4 +285,211 @@ struct EnergyPickerItem: Identifiable {
 struct SelectedWorkoutsItem: Identifiable {
     let id = UUID()
     let workouts: [HealthWorkout]
+}
+
+// MARK: - Improvement to-dos
+
+struct TodoListView: View {
+    @Environment(HealthKitManager.self) private var hk
+    @EnvironmentObject var todoStore: TodoStore
+    @Query private var plans: [TrainingPlan]
+    @State private var showAdd = false
+    @State private var editing: TodoItem? = nil
+    @State private var showDone = false
+
+    var body: some View {
+        List {
+            if todoStore.openItems.isEmpty {
+                Section {
+                    VStack(spacing: 8) {
+                        Image(systemName: "checklist")
+                            .font(.largeTitle)
+                            .foregroundStyle(.secondary)
+                        Text("Nothing to improve yet")
+                            .font(.headline)
+                        Text("After each workout you'll be asked if there's anything to improve. You can also add one with +.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                Section("To do") {
+                    ForEach(todoStore.openItems) { row($0) }
+                }
+            }
+
+            if !todoStore.doneItems.isEmpty {
+                Section {
+                    if showDone {
+                        ForEach(todoStore.doneItems) { row($0) }
+                    }
+                } header: {
+                    Button {
+                        withAnimation { showDone.toggle() }
+                    } label: {
+                        HStack {
+                            Text("Done (\(todoStore.doneItems.count))")
+                            Spacer()
+                            Image(systemName: showDone ? "chevron.down" : "chevron.right")
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .contentWidth(760)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showAdd = true } label: { Image(systemName: "plus") }
+            }
+        }
+        .sheet(isPresented: $showAdd) {
+            TodoEditSheet(item: nil, recentWorkouts: recentWorkouts)
+                .environmentObject(todoStore)
+        }
+        .sheet(item: $editing) { item in
+            TodoEditSheet(item: item, recentWorkouts: recentWorkouts)
+                .environmentObject(todoStore)
+        }
+    }
+
+    /// Workouts from the last two weeks, newest first, for linking a hand-added to-do.
+    private var recentWorkouts: [HealthWorkout] {
+        let from = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .now
+        return hk.dailyData.flatMap(\.workouts).filter { $0.startDate >= from }.sorted { $0.startDate > $1.startDate }
+    }
+
+    /// The plan session this to-do's workout was linked to, if any.
+    private func planSession(for item: TodoItem) -> (plan: TrainingPlan, session: PlanSession)? {
+        guard let wid = item.workoutID else { return nil }
+        for plan in plans {
+            if let s = plan.sessions.first(where: { $0.linkedWorkoutID == wid }) { return (plan, s) }
+        }
+        return nil
+    }
+
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f
+    }()
+
+    private func row(_ item: TodoItem) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                todoStore.setDone(item, !item.isDone)
+            } label: {
+                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(item.isDone ? Color.green : Color.secondary)
+            }
+            .buttonStyle(.plain)
+
+            Button { editing = item } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.text)
+                        .font(.body)
+                        .strikethrough(item.isDone)
+                        .foregroundStyle(item.isDone ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if let type = item.workoutType.flatMap(WorkoutType.init(rawValue:)), let date = item.workoutDate {
+                        HStack(spacing: 4) {
+                            Image(systemName: type.icon).foregroundStyle(type.color)
+                            Text("\(type.displayName.capitalized) · \(Self.dateFmt.string(from: date))"
+                                 + (item.workoutSummary.map { " · \($0)" } ?? ""))
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                    if let link = planSession(for: item) {
+                        Label("\(link.plan.title): \(link.session.target)", systemImage: "calendar")
+                            .font(.caption)
+                            .foregroundStyle(Color.appTeal)
+                            .lineLimit(1)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 2)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                todoStore.delete(item)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+}
+
+/// Add a to-do by hand, or edit one. A hand-added to-do can be linked to a recent workout.
+struct TodoEditSheet: View {
+    let item: TodoItem?
+    let recentWorkouts: [HealthWorkout]
+    @EnvironmentObject var todoStore: TodoStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var text: String
+    @State private var workoutID: UUID?
+
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f
+    }()
+
+    init(item: TodoItem?, recentWorkouts: [HealthWorkout]) {
+        self.item = item
+        self.recentWorkouts = recentWorkouts
+        _text = State(initialValue: item?.text ?? "")
+        _workoutID = State(initialValue: item?.workoutID)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Improvement") {
+                    TextField("e.g. Start the long run slower", text: $text, axis: .vertical)
+                        .lineLimit(2...6)
+                }
+                if item?.workoutID == nil || item == nil {
+                    Section("From a session (optional)") {
+                        Picker("Session", selection: $workoutID) {
+                            Text("None").tag(UUID?.none)
+                            ForEach(recentWorkouts) { w in
+                                Text("\(w.type.displayName.capitalized) · \(Self.dateFmt.string(from: w.startDate)) · \(TodoStore.summary(of: w))")
+                                    .tag(UUID?.some(w.id))
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(item == nil ? "New To-Do" : "Edit To-Do")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func save() {
+        let workout = recentWorkouts.first { $0.id == workoutID }
+        if var existing = item {
+            existing.text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if existing.workoutID == nil, let workout {
+                existing.workoutID = workout.id
+                existing.workoutType = workout.type.rawValue
+                existing.workoutDate = workout.startDate
+                existing.workoutSummary = TodoStore.summary(of: workout)
+            }
+            todoStore.update(existing)
+        } else {
+            todoStore.add(text, from: workout)
+        }
+        dismiss()
+    }
 }

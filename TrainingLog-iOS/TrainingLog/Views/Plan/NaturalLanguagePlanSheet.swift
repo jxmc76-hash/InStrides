@@ -168,6 +168,7 @@ struct NaturalLanguagePlanSheet: View {
                "Run Monday, Wednesday and Friday until Christmas",
                "Gym twice a week, Tuesdays and Thursdays, for 8 weeks"]
             : ["Add a 10km run next Saturday",
+               "Add yoga every day from 1 to 10 November",
                "No yoga on Sundays",
                "Move Thursday's run to Friday",
                "Remove everything after the 20th"]
@@ -315,12 +316,15 @@ struct NaturalLanguagePlanSheet: View {
 
     // MARK: - Asking the model
 
-    /// Existing sessions shown to the model, numbered from 1. Older history is left out
-    /// to keep the prompt small.
+    /// Existing sessions shown to the model, numbered from 1, including past ones so
+    /// earlier days can be changed. Very long plans keep the 150 nearest to today.
     private var listedSessions: [PlanSession] {
         guard let plan else { return [] }
-        let from = Calendar.current.date(byAdding: .day, value: -7, to: Calendar.current.startOfDay(for: .now)) ?? .now
-        return Array(plan.sessions.filter { $0.date >= from }.sorted { $0.date < $1.date }.prefix(150))
+        let now = Date()
+        let nearest = plan.sessions
+            .sorted { abs($0.date.timeIntervalSince(now)) < abs($1.date.timeIntervalSince(now)) }
+            .prefix(150)
+        return nearest.sorted { $0.date < $1.date }
     }
 
     private func process() async {

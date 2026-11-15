@@ -32,7 +32,6 @@ struct TrendsView: View {
                       color: WorkoutType.run.color,
                       showAverage: false,
                       insight: runHeadline(recent: recent, previous: previous),
-                      useBarChart: true,
                       period: .weekOfYear)
         .padding(.horizontal, 16)
 
@@ -41,7 +40,6 @@ struct TrendsView: View {
                       data: weeklyAvgWeight(weeks: weeks),
                       color: .blue,
                       insight: weightHeadline(recent: recent, previous: previous),
-                      useBarChart: true,
                       decimals: 1,
                       period: .weekOfYear)
         .padding(.horizontal, 16)
@@ -51,7 +49,6 @@ struct TrendsView: View {
                       data: weeklyVO2(weeks: weeks),
                       color: .teal,
                       insight: vo2Headline(recent: recent, previous: previous),
-                      useBarChart: true,
                       decimals: 1,
                       period: .weekOfYear)
         .padding(.horizontal, 16)
@@ -61,7 +58,6 @@ struct TrendsView: View {
                       data: weeklyAvgEnergy(weeks: weeks),
                       color: .appTeal,
                       insight: energyHeadline(recent: recent, previous: previous),
-                      useBarChart: true,
                       decimals: 1,
                       emptyMessage: "No data yet. This fills in once you've logged energy for a full week.",
                       period: .weekOfYear)
@@ -72,7 +68,6 @@ struct TrendsView: View {
                       data: weeklyAvgSleep(weeks: weeks),
                       color: .indigo,
                       insight: sleepHeadline(recent: recent, previous: previous),
-                      useBarChart: true,
                       decimals: 1,
                       period: .weekOfYear)
         .padding(.horizontal, 16)
@@ -180,17 +175,28 @@ struct TrendsView: View {
         return groups.keys.sorted().map { WeekBucket(start: $0, days: groups[$0]!) }
     }
 
+    /// Weeks without a run count as 0 km, from the first week with a run onwards.
     private func weeklyRunDistance(weeks: [WeekBucket]) -> [ChartDataPoint] {
-        weeks.compactMap { w in
-            let km = w.days.flatMap { $0.workouts(for: .run) }.compactMap(\.distanceKm).reduce(0, +)
-            return km > 0 ? ChartDataPoint(date: w.start, value: km) : nil
-        }.reversed()
+        let km = weeks.map { w in
+            w.days.flatMap { $0.workouts(for: .run) }.compactMap(\.distanceKm).reduce(0, +)
+        }
+        guard let first = km.firstIndex(where: { $0 > 0 }) else { return [] }
+        return weeks.indices.dropFirst(first).map { ChartDataPoint(date: weeks[$0].start, value: km[$0]) }.reversed()
     }
 
+    /// Weeks without a weigh-in use the most recent earlier reading, marked as carried forward.
     private func weeklyAvgWeight(weeks: [WeekBucket]) -> [ChartDataPoint] {
-        weeks.compactMap { w in
-            mean(w.days.compactMap(\.weight)).map { ChartDataPoint(date: w.start, value: $0) }
-        }.reversed()
+        var last: Double? = nil
+        var points: [ChartDataPoint] = []
+        for w in weeks {
+            if let avg = mean(w.days.compactMap(\.weight)) {
+                last = avg
+                points.append(ChartDataPoint(date: w.start, value: avg))
+            } else if let last {
+                points.append(ChartDataPoint(date: w.start, value: last, isCarriedForward: true))
+            }
+        }
+        return points.reversed()
     }
 
     private func weeklyVO2(weeks: [WeekBucket]) -> [ChartDataPoint] {

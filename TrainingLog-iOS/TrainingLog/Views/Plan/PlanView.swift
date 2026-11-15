@@ -296,6 +296,7 @@ struct PlanView: View {
             Button {
                 haptic.impactOccurred()
                 session.isComplete.toggle()
+                try? context.save()
             } label: {
                 Image(systemName: session.isComplete ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(session.isComplete ? .green : .secondary)
