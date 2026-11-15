@@ -160,8 +160,7 @@ struct TrendsView: View {
 
     private struct WeekBucket { let start: Date; let days: [DailyHealthData] }
 
-    /// Completed weeks from the last year, oldest first. The current week is left out
-    /// until it's finished, so a part-week doesn't look like a dip.
+    /// Weeks from the last year, oldest first, including the current week so far.
     private func lastWeeks(count: Int = 52) -> [WeekBucket] {
         let cal = Calendar.current
         let currentWeekStart = cal.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
@@ -169,7 +168,7 @@ struct TrendsView: View {
         var groups: [Date: [DailyHealthData]] = [:]
         for day in hk.dailyData {
             let ws = cal.dateInterval(of: .weekOfYear, for: day.date)?.start ?? day.date
-            guard ws >= cutoff && ws < currentWeekStart else { continue }
+            guard ws >= cutoff else { continue }
             groups[ws, default: []].append(day)
         }
         return groups.keys.sorted().map { WeekBucket(start: $0, days: groups[$0]!) }

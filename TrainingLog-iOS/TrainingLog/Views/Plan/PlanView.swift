@@ -9,6 +9,8 @@ struct PlanView: View {
     @Query private var allPlans: [TrainingPlan]
     private var plans: [TrainingPlan] { allPlans.sorted { $0.startDate < $1.startDate } }
     @State private var showAddPlan = false
+    /// Plans whose sessions are showing; the rest show just their summary. Kept on this device.
+    @AppStorage("expandedPlans") private var expandedPlansRaw = ""
     @State private var showDescribePlan = false
     @State private var textPlan: TrainingPlan? = nil
     @State private var isSyncingCalendar = false
@@ -102,6 +104,8 @@ struct PlanView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
+                    sessionsToggle(plan)
+                    if isExpanded(plan) {
                     ForEach(todayFirst(plan.sessions)) { session in
                         sessionRow(session, plan: plan)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -121,6 +125,7 @@ struct PlanView: View {
                     } label: {
                         Label("Add Session", systemImage: "plus.circle")
                             .font(.subheadline)
+                    }
                     }
                 }
             }
@@ -176,6 +181,58 @@ struct PlanView: View {
         } message: {
             Text(planToDelete.map { "\($0.title) and all its sessions will be permanently deleted." } ?? "")
         }
+    }
+
+    // MARK: - Showing and hiding a plan's sessions
+
+    /// A key that stays the same for a plan across launches (sorted keys keep the encoding stable).
+    private func planKey(_ plan: TrainingPlan) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return (try? encoder.encode(plan.persistentModelID))?.base64EncodedString() ?? plan.title
+    }
+
+    private var expandedPlans: Set<String> {
+        Set(expandedPlansRaw.split(separator: "\n").map(String.init))
+    }
+
+    private func isExpanded(_ plan: TrainingPlan) -> Bool {
+        expandedPlans.contains(planKey(plan))
+    }
+
+    private func toggleExpanded(_ plan: TrainingPlan) {
+        var set = expandedPlans
+        let key = planKey(plan)
+        if set.contains(key) { set.remove(key) } else { set.insert(key) }
+        expandedPlansRaw = set.sorted().joined(separator: "\n")
+    }
+
+    /// "Show 12 sessions" / "Hide sessions" row under each plan's summary.
+    private func sessionsToggle(_ plan: TrainingPlan) -> some View {
+        let expanded = isExpanded(plan)
+        let count = plan.sessions.count
+        let next = plan.sessions
+            .filter { !$0.isComplete && $0.date >= Calendar.current.startOfDay(for: .now) }
+            .min { $0.date < $1.date }
+        return Button {
+            withAnimation { toggleExpanded(plan) }
+        } label: {
+            HStack {
+                Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                    .font(.caption.bold())
+                    .frame(width: 14)
+                Text(expanded ? "Hide sessions" : "Show \(count) session\(count == 1 ? "" : "s")")
+                Spacer()
+                if !expanded, let next {
+                    Text("Next: \(fmtDate(next.date))")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(Color.appTeal)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
