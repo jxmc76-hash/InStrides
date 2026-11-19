@@ -71,6 +71,37 @@ struct TrendsView: View {
                       decimals: 1,
                       period: .weekOfYear)
         .padding(.horizontal, 16)
+
+        AreaChartView(title: "Weekly Sleep Score (out of 100)",
+                      unit: "score",
+                      data: weeklySleepScore(weeks: weeks),
+                      color: .purple,
+                      insight: sleepScoreHeadline(recent: recent, previous: previous),
+                      period: .weekOfYear)
+        .padding(.horizontal, 16)
+
+        AreaChartView(title: "Weekly Avg Bedtime",
+                      unit: "bedtime",
+                      data: weeklyBedtime(weeks: weeks),
+                      color: .indigo.opacity(0.8),
+                      insight: bedtimeHeadline(recent: recent, previous: previous),
+                      period: .weekOfYear,
+                      format: Self.clockTime24,
+                      yAxisStride: 60)
+        .padding(.horizontal, 16)
+
+        AreaChartView(title: "Heaviest Gym Weight per Week (kg)",
+                      unit: "kg",
+                      data: weeklyGymMax(weeks: weeks),
+                      color: WorkoutType.gym.color,
+                      insight: gymHeadline(recent: recent, previous: previous),
+                      emptyMessage: "No data yet. This fills in as you log the weight used after gym sessions.",
+                      period: .weekOfYear)
+        .padding(.horizontal, 16)
+
+        SleepEnergyChartView(points: sleepEnergyPoints(),
+                             insight: sleepEnergyHeadline())
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Headlines (last 14 days compared with the 14 before)
@@ -156,6 +187,112 @@ struct TrendsView: View {
             : "Averaging \(current) a night, \(-diff) min less than the fortnight before."
     }
 
+    private func sleepScoreHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        let scores: ([DailyHealthData]) -> [Double] = { $0.compactMap { $0.sleep.map { Double($0.score) } } }
+        guard let now = mean(scores(recent)) else { return "No sleep recorded in the last two weeks." }
+        let current = "\(Int(now.rounded()))"
+        guard let before = mean(scores(previous)) else { return "Sleep score averaging \(current)." }
+        let diff = Int((now - before).rounded())
+        if abs(diff) < 3 { return "Sleep score steady at \(current)." }
+        return diff > 0
+            ? "Sleeping better: score \(current), up \(diff) on the fortnight before."
+            : "Sleeping worse: score \(current), down \(-diff) on the fortnight before."
+    }
+
+    private func bedtimeHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        let times: ([DailyHealthData]) -> [Double] = { $0.compactMap { $0.sleep?.bedtime.map(Self.minutesAfterNoon) } }
+        guard let now = mean(times(recent)) else { return "No bedtimes recorded in the last two weeks." }
+        let current = Self.clockTime(now)
+        guard let before = mean(times(previous)) else { return "Going to bed around \(current)." }
+        let diff = Int((now - before).rounded())
+        if abs(diff) < 10 { return "Bed around \(current), much as before." }
+        return diff < 0
+            ? "Bed around \(current), \(-diff) min earlier than the fortnight before."
+            : "Bed around \(current), \(diff) min later than the fortnight before."
+    }
+
+    private func gymHeadline(recent: [DailyHealthData], previous: [DailyHealthData]) -> String {
+        let top: ([DailyHealthData]) -> Double? = { days in
+            days.flatMap { $0.workouts(for: .gym) }.compactMap { userStore.gymWeight(for: $0.id) }.max()
+        }
+        guard let now = top(recent) else { return "No gym weights logged in the last two weeks." }
+        let current = Self.kg(now)
+        guard let before = top(previous) else { return "Top weight \(current) in the last two weeks." }
+        let diff = now - before
+        if abs(diff) < 0.5 { return "Top weight holding at \(current)." }
+        return diff > 0
+            ? "Getting stronger: top weight \(current), up \(Self.kg(diff))."
+            : "Top weight \(current), down \(Self.kg(-diff)) on the fortnight before."
+    }
+
+    /// Days in the last 12 weeks with both sleep and an energy score.
+    private func sleepEnergyPoints() -> [SleepEnergyPoint] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        let from = cal.date(byAdding: .weekOfYear, value: -12, to: today) ?? today
+        let recentFrom = cal.date(byAdding: .day, value: -13, to: today) ?? today
+        return hk.dailyData.compactMap { day in
+            guard day.date >= from,
+                  let minutes = day.sleep?.totalMinutes, minutes > 0,
+                  let energy = userStore.energy(for: day.date) else { return nil }
+            return SleepEnergyPoint(date: day.date, sleepHours: minutes / 60,
+                                    energy: Double(energy), isRecent: day.date >= recentFrom)
+        }
+    }
+
+    /// Compares energy after longer and shorter nights. Uses 12 weeks, as two weeks is too
+    /// few days to show a pattern, but leads with the last two weeks when there's enough.
+    private func sleepEnergyHeadline() -> String {
+        let all = sleepEnergyPoints()
+        guard all.count >= 6 else { return "Log energy on more days to see how sleep affects it." }
+        let recent = all.filter(\.isRecent)
+        let sample = recent.count >= 6 ? recent : all
+        let period = recent.count >= 6 ? "Last two weeks" : "Last 12 weeks"
+        let sortedHours = sample.map(\.sleepHours).sorted()
+        let median = sortedHours[sortedHours.count / 2]
+        let longer = sample.filter { $0.sleepHours >= median }.map(\.energy)
+        let shorter = sample.filter { $0.sleepHours < median }.map(\.energy)
+        guard let hi = mean(longer), let lo = mean(shorter) else { return "\(period): not enough variety in sleep yet." }
+        let cutoff = Self.hoursMinutes(median)
+        if abs(hi - lo) < 0.5 {
+            return "\(period): energy about the same whether you slept more or less than \(cutoff)."
+        }
+        return hi > lo
+            ? "\(period): \(String(format: "%.1f", hi)) energy after \(cutoff)+ of sleep vs \(String(format: "%.1f", lo)) on shorter nights."
+            : "\(period): oddly, energy was higher on shorter nights (\(String(format: "%.1f", lo)) vs \(String(format: "%.1f", hi)))."
+    }
+
+    // MARK: - Formatting
+
+    /// Bedtimes are plotted as minutes after noon so that 11 pm and 1 am sit next to each other.
+    private static func minutesAfterNoon(_ date: Date) -> Double {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        let minutes = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        return Double((minutes - 720 + 1440) % 1440)
+    }
+
+    static func clockTime(_ minutesAfterNoon: Double) -> String {
+        let total = (Int(minutesAfterNoon.rounded()) + 720) % 1440
+        let h = total / 60, m = total % 60
+        let h12 = h % 12 == 0 ? 12 : h % 12
+        return String(format: "%d:%02d %@", h12, m, h < 12 ? "am" : "pm")
+    }
+
+    /// Compact 24-hour time for chart labels, e.g. "23:51".
+    static func clockTime24(_ minutesAfterNoon: Double) -> String {
+        let total = (Int(minutesAfterNoon.rounded()) + 720) % 1440
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+
+    private static func hoursMinutes(_ hours: Double) -> String {
+        let minutes = Int((hours * 60).rounded())
+        return "\(minutes / 60)h \(String(format: "%02d", minutes % 60))m"
+    }
+
+    private static func kg(_ value: Double) -> String {
+        value.rounded() == value ? "\(Int(value)) kg" : String(format: "%.1f kg", value)
+    }
+
     // MARK: - Data aggregation
 
     private struct WeekBucket { let start: Date; let days: [DailyHealthData] }
@@ -207,6 +344,29 @@ struct TrendsView: View {
     private func weeklyAvgEnergy(weeks: [WeekBucket]) -> [ChartDataPoint] {
         weeks.compactMap { w in
             mean(w.days.compactMap { userStore.energy(for: $0.date) }.map(Double.init))
+                .map { ChartDataPoint(date: w.start, value: $0) }
+        }.reversed()
+    }
+
+    private func weeklySleepScore(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            mean(w.days.compactMap { $0.sleep.map { Double($0.score) } }).map { ChartDataPoint(date: w.start, value: $0) }
+        }.reversed()
+    }
+
+    private func weeklyBedtime(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            mean(w.days.compactMap { $0.sleep?.bedtime.map(Self.minutesAfterNoon) })
+                .map { ChartDataPoint(date: w.start, value: $0) }
+        }.reversed()
+    }
+
+    /// The heaviest weight logged for any gym session that week.
+    private func weeklyGymMax(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            w.days.flatMap { $0.workouts(for: .gym) }
+                .compactMap { userStore.gymWeight(for: $0.id) }
+                .max()
                 .map { ChartDataPoint(date: w.start, value: $0) }
         }.reversed()
     }
