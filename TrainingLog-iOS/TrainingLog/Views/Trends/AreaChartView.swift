@@ -22,14 +22,6 @@ struct AreaChartView: View {
     var emptyMessage: String = "No data"
     /// Length of time each point covers.
     var period: Calendar.Component = .month
-    /// Custom text for values (e.g. times of day); otherwise numbers to `decimals` places.
-    var format: ((Double) -> String)? = nil
-    /// Gap between y-axis gridlines (e.g. 60 for whole hours); automatic when nil.
-    var yAxisStride: Double? = nil
-
-    private func label(_ value: Double) -> String {
-        format?(value) ?? String(format: "%.\(decimals)f", value)
-    }
 
     private var isWeekly: Bool { period == .weekOfYear }
     private var hasCarriedForward: Bool { data.contains(where: \.isCarriedForward) }
@@ -131,7 +123,7 @@ struct AreaChartView: View {
                         y: .value(unit, point.value)
                     )
                     .symbol {
-                        Text(label(point.value))
+                        Text(String(format: "%.\(decimals)f", point.value))
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(color)
                             .fixedSize()
@@ -153,10 +145,10 @@ struct AreaChartView: View {
         .chartYScale(domain: yDomain)
         .chartXScale(domain: .automatic(includesZero: false, reversed: true), range: .plotDimension(padding: 18))
         .chartYAxis {
-            AxisMarks(position: .leading, values: yAxisStride.map { .stride(by: $0) } ?? .automatic) { value in
+            AxisMarks(position: .leading) { value in
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text(label(v))
+                        Text(String(format: "%.\(decimals)f", v))
                             .font(.caption2)
                     }
                 }
@@ -199,131 +191,5 @@ struct AreaChartView: View {
         }
         .font(.system(size: 9))
         .fixedSize()
-    }
-}
-
-// MARK: - Energy vs sleep
-
-/// One day: the sleep that ended that morning and the energy score logged that day.
-struct SleepEnergyPoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let sleepHours: Double
-    let energy: Double
-    /// In the last two weeks; drawn solid, older days faded.
-    let isRecent: Bool
-}
-
-/// Scatter of energy against the previous night's sleep, with a best-fit line.
-struct SleepEnergyChartView: View {
-    let points: [SleepEnergyPoint]
-    let insight: String?
-    var color: Color = .appTeal
-
-    /// Least-squares line through the points, as (slope, intercept), when there's enough spread.
-    private var fit: (slope: Double, intercept: Double)? {
-        guard points.count >= 5 else { return nil }
-        let n = Double(points.count)
-        let mx = points.map(\.sleepHours).reduce(0, +) / n
-        let my = points.map(\.energy).reduce(0, +) / n
-        let sxx = points.map { ($0.sleepHours - mx) * ($0.sleepHours - mx) }.reduce(0, +)
-        guard sxx > 0.01 else { return nil }
-        let sxy = points.map { ($0.sleepHours - mx) * ($0.energy - my) }.reduce(0, +)
-        let slope = sxy / sxx
-        return (slope, my - slope * mx)
-    }
-
-    /// The best-fit line's two ends, trimmed so it stays inside the 0–10 energy range.
-    private var fitEnds: [(x: Double, y: Double)] {
-        guard let fit else { return [] }
-        func y(_ x: Double) -> Double { fit.intercept + fit.slope * x }
-        func x(_ y: Double) -> Double { (y - fit.intercept) / fit.slope }
-        var x0 = xRange.lowerBound, x1 = xRange.upperBound
-        if fit.slope != 0 {
-            let xAt0 = x(0), xAt10 = x(10)
-            x0 = max(x0, min(xAt0, xAt10))
-            x1 = min(x1, max(xAt0, xAt10))
-        }
-        guard x0 < x1 else { return [] }
-        return [(x0, y(x0)), (x1, y(x1))]
-    }
-
-    private var xRange: ClosedRange<Double> {
-        let xs = points.map(\.sleepHours)
-        let lo = floor((xs.min() ?? 5) - 0.5), hi = ceil((xs.max() ?? 9) + 0.5)
-        return lo...max(hi, lo + 1)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Energy vs Sleep")
-                .font(.subheadline.weight(.medium))
-            if let insight {
-                Text(insight)
-                    .font(.headline)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                if points.isEmpty {
-                    Text("No data yet. This fills in once you've logged energy on days with sleep recorded.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(height: 120)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    chart
-                    HStack(spacing: 14) {
-                        HStack(spacing: 5) {
-                            Circle().fill(color).frame(width: 8, height: 8)
-                            Text("Last 2 weeks")
-                        }
-                        HStack(spacing: 5) {
-                            Circle().fill(color.opacity(0.25)).frame(width: 8, height: 8)
-                            Text("Earlier (12 weeks)")
-                        }
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
-        }
-    }
-
-    private var chart: some View {
-        Chart {
-            // Older days first so the recent ones draw on top.
-            ForEach(points.sorted { !$0.isRecent && $1.isRecent }) { p in
-                PointMark(
-                    x: .value("Sleep (h)", p.sleepHours),
-                    y: .value("Energy", p.energy)
-                )
-                .foregroundStyle(p.isRecent ? color : color.opacity(0.25))
-                .symbolSize(p.isRecent ? 55 : 35)
-            }
-            ForEach(Array(fitEnds.enumerated()), id: \.offset) { _, end in
-                LineMark(x: .value("Sleep (h)", end.x),
-                         y: .value("Energy", end.y),
-                         series: .value("Line", "fit"))
-                .foregroundStyle(Color.secondary)
-                .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-            }
-        }
-        .chartXScale(domain: xRange)
-        .chartYScale(domain: 0...10)
-        .chartXAxisLabel("Sleep the night before (hours)", alignment: .center)
-        .chartYAxisLabel("Energy")
-        .chartYAxis {
-            AxisMarks(position: .leading, values: [0, 2, 4, 6, 8, 10]) { _ in
-                AxisValueLabel().font(.caption2)
-                AxisGridLine()
-            }
-        }
-        .frame(height: 240)
-        .clipped()
     }
 }
