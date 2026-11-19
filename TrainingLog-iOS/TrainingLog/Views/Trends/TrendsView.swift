@@ -1,9 +1,11 @@
 import SwiftUI
+import SwiftData
 import Charts
 
 struct TrendsView: View {
     @Environment(HealthKitManager.self) private var hk
     @EnvironmentObject var userStore: UserStore
+    @Query private var injuries: [Injury]
 
     var body: some View {
         NavigationStack {
@@ -25,6 +27,23 @@ struct TrendsView: View {
     private var charts: some View {
         let weeks = lastWeeks()
         let (recent, previous) = fortnights()
+
+        AreaChartView(title: "Fitness Score (out of 100)",
+                      unit: "score",
+                      data: weeklyFitness(weeks: weeks),
+                      color: .appTeal,
+                      insight: fitnessHeadline(),
+                      period: .weekOfYear)
+        .padding(.horizontal, 16)
+
+        AreaChartView(title: "Weekly Avg Readiness (out of 100)",
+                      unit: "score",
+                      data: weeklyReadiness(weeks: weeks),
+                      color: .green,
+                      insight: readinessHeadline(),
+                      emptyMessage: "No data yet. Readiness needs sleep or an energy score for the day.",
+                      period: .weekOfYear)
+        .padding(.horizontal, 16)
 
         AreaChartView(title: "Weekly Running Distance (km)",
                       unit: "km",
@@ -177,6 +196,61 @@ struct TrendsView: View {
         return diff > 0
             ? "Getting stronger: top weight \(current), up \(Self.kg(diff))."
             : "Top weight \(current), down \(Self.kg(-diff)) on the fortnight before."
+    }
+
+    // MARK: - Fitness and readiness
+
+    private func readinessOn(_ day: Date) -> Int? {
+        TrainingScores.readiness(days: hk.dailyData, energy: { userStore.energy(for: $0) },
+                                 injuries: injuries, on: day).total
+    }
+
+    private func fitnessHeadline() -> String {
+        let cal = Calendar.current
+        guard let now = TrainingScores.fitness(days: hk.dailyData).total else { return "Not enough data for a fitness score yet." }
+        let then = TrainingScores.fitness(days: hk.dailyData,
+                                          asOf: cal.date(byAdding: .day, value: -14, to: .now) ?? .now).total
+        guard let then else { return "Fitness score \(now)." }
+        let diff = now - then
+        if abs(diff) < 2 { return "Fitness steady at \(now)." }
+        return diff > 0
+            ? "Fitness up \(diff) to \(now) over the last two weeks."
+            : "Fitness down \(-diff) to \(now) over the last two weeks."
+    }
+
+    /// Average daily readiness for the last 14 days against the 14 before.
+    private func readinessHeadline() -> String {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        func avg(_ range: ClosedRange<Int>) -> Double? {
+            mean(range.compactMap { cal.date(byAdding: .day, value: -$0, to: today) }
+                .compactMap(readinessOn).map(Double.init))
+        }
+        guard let now = avg(0...13) else { return "No readiness scores in the last two weeks." }
+        let current = Int(now.rounded())
+        guard let before = avg(14...27) else { return "Readiness averaging \(current)." }
+        let diff = Int((now - before).rounded())
+        if abs(diff) < 3 { return "Readiness steady, averaging \(current)." }
+        return diff > 0
+            ? "Readiness up: averaging \(current), from \(Int(before.rounded()))."
+            : "Readiness down: averaging \(current), from \(Int(before.rounded()))."
+    }
+
+    /// The fitness score at the end of each week (today for the current week).
+    private func weeklyFitness(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        let cal = Calendar.current
+        return weeks.compactMap { w in
+            let weekEnd = cal.date(byAdding: .day, value: 6, to: w.start) ?? w.start
+            return TrainingScores.fitness(days: hk.dailyData, asOf: min(weekEnd, .now)).total
+                .map { ChartDataPoint(date: w.start, value: Double($0)) }
+        }.reversed()
+    }
+
+    private func weeklyReadiness(weeks: [WeekBucket]) -> [ChartDataPoint] {
+        weeks.compactMap { w in
+            mean(w.days.compactMap { readinessOn($0.date) }.map(Double.init))
+                .map { ChartDataPoint(date: w.start, value: $0) }
+        }.reversed()
     }
 
     // MARK: - Formatting
